@@ -7,7 +7,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-2 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">TOW</span></div>
+              <img src="/assets/logo/tow-logo.svg" alt="TOW" className="w-10 h-10" />
               <span className="font-bold text-xl">Tired Of Winning</span>
             </div>
             <p className="text-sm text-gray-600">Too tired to quit. Still here.</p>
