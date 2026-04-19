@@ -8,7 +8,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-white border-b border-black">
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center"><span className="text-white font-bold text-lg">TOW</span></div>
+          <img src="/assets/logo/tow-logo.svg" alt="TOW" className="w-10 h-10" />
           <span className="font-bold text-xl hidden sm:block">Tired Of Winning</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
