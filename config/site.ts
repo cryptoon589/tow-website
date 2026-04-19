@@ -8,6 +8,7 @@ export const navItems = [
   { label: "Home", href: "/" }, { label: "Meme Generator", href: "/meme-generator" },
   { label: "Tired Counter", href: "/tired-counter" }, { label: "NFT Collection", href: "/nft-collection" },
   { label: "Official Links", href: "/links" },
+  { label: "Raid Board", href: "/raid-board" },
 ];
 export const officialLinks = [
   { label: "First Ledger", url: "https://xrpscan.com/tx/YOUR_HASH", description: "The beginning of TOW" },
