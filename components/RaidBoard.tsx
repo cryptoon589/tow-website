@@ -43,7 +43,7 @@ export default function RaidBoard() {
     }
 
     if (hasSubmittedRecently(user.xUsername, 12)) {
-      setError("Please wait 12 minutes between submissions.");
+      setError("Wait 12 minutes between posts. You're tired, not a bot.");
       return;
     }
 
@@ -61,9 +61,9 @@ export default function RaidBoard() {
     setPosts(getPosts(weekId));
     setLeaderboard(getLeaderboard(weekId));
     setPostUrl("");
-    setSuccess("Post submitted!");
+    setSuccess("Posted. Still tired.");
 
-    // Send to Telegram
+    // Always send to Telegram
     sendToTelegram(user.xUsername, postUrl);
   };
 
@@ -74,11 +74,11 @@ export default function RaidBoard() {
   };
 
   const handleClearWeek = () => {
-    if (confirm("Clear all posts for this week? This cannot be undone.")) {
+    if (confirm("Clear all posts for this week?")) {
       clearWeek(weekId);
       setPosts([]);
       setLeaderboard([]);
-      setSuccess("Week cleared!");
+      setSuccess("Week cleared. Everyone's tired again.");
     }
   };
 
@@ -97,8 +97,8 @@ export default function RaidBoard() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-4xl md:text-5xl font-bold mb-4">TOW Raid Board</h1>
-      <p className="text-lg text-gray-600 mb-8">Submit your X posts. Raid together. Win tired.</p>
+      <h1 className="text-4xl md:text-5xl font-bold mb-2">Everyone's Tired</h1>
+      <p className="text-lg text-gray-600 mb-8">Still posting. Still here. Still tired.</p>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -108,17 +108,17 @@ export default function RaidBoard() {
         </div>
         <div className="bg-gray-50 border-2 border-black rounded-lg p-4 text-center">
           <div className="text-3xl font-bold">{totalContributors}</div>
-          <div className="text-sm text-gray-600">Contributors</div>
+          <div className="text-sm text-gray-600">Still Posting</div>
         </div>
         <div className="bg-gray-50 border-2 border-black rounded-lg p-4 text-center">
           <div className="text-3xl font-bold">{userCount}</div>
-          <div className="text-sm text-gray-600">Your Posts</div>
+          <div className="text-sm text-gray-600">Your Posts This Week</div>
         </div>
       </div>
 
       {/* Top 5 Leaderboard */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Top Raiders This Week</h2>
+        <h2 className="text-xl font-bold mb-4">Most Tired This Week</h2>
         <div className="space-y-2">
           {leaderboard.slice(0, 5).map((entry, i) => (
             <div key={entry.xUsername} className="flex items-center justify-between bg-white border-2 border-black rounded-lg p-3">
@@ -129,21 +129,21 @@ export default function RaidBoard() {
               <span className="font-bold">{entry.count} posts</span>
             </div>
           ))}
-          {leaderboard.length === 0 && <p className="text-gray-500 text-sm">No posts yet this week.</p>}
+          {leaderboard.length === 0 && <p className="text-gray-500 text-sm">No one's posted yet. That's on you.</p>}
         </div>
       </div>
 
       {/* Submission Area */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Submit a Post</h2>
+        <h2 className="text-xl font-bold mb-4">Drop Your Post</h2>
         {!user ? (
           <Link href="/register" className="inline-block px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800">
-            Register as Raider
+            Start Posting
           </Link>
         ) : (
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
-              Registered as <span className="font-bold">@{user.xUsername}</span> ({user.wallet.slice(0, 6)}...{user.wallet.slice(-4)})
+              Posting as <span className="font-bold">@{user.xUsername}</span> ({user.wallet.slice(0, 6)}...{user.wallet.slice(-4)})
             </div>
             <div className="flex gap-2">
               <input
@@ -163,9 +163,9 @@ export default function RaidBoard() {
         )}
       </div>
 
-      {/* Live Feed */}
+      {/* Tired Feed */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Live Raid Feed</h2>
+        <h2 className="text-xl font-bold mb-4">Tired Feed</h2>
         <div className="space-y-2">
           {posts.map((post) => (
             <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4">
@@ -187,7 +187,7 @@ export default function RaidBoard() {
               </div>
             </div>
           ))}
-          {posts.length === 0 && <p className="text-gray-500 text-sm">No posts yet. Be the first!</p>}
+          {posts.length === 0 && <p className="text-gray-500 text-sm">Nothing here yet. Be the first.</p>}
         </div>
       </div>
 

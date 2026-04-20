@@ -1,7 +1,8 @@
 import { raidConfig } from "@/config/raidBoard";
 
 export async function sendToTelegram(username: string, postUrl: string): Promise<boolean> {
-  if (!raidConfig.telegramEnabled || !raidConfig.telegramBotToken || !raidConfig.telegramChatId) {
+  if (!raidConfig.telegramBotToken || !raidConfig.telegramChatId) {
+    console.log("Telegram not configured - skipping");
     return false;
   }
 
