@@ -1,187 +1,431 @@
 import {
-  OutcomeResult, Mood, MarketState, VFXType, Rarity,
-  ACTIONS, MARKET_MODIFIERS, BEHAVIOR_ARCS, RANDOM_EVENTS,
-  TONE_VARIANTS, TWIST_LINES, RARITY_WEIGHTS, EventDef,
-  COLLAPSE_CAUSES, END_TITLES
+  ACTIONS,
+  RANDOM_EVENTS,
+  MARKET_MODIFIERS,
+  BEHAVIOR_ARCS,
+  RARITY_WEIGHTS,
+  TWIST_LINES,
+  COLLAPSE_CAUSES,
+  END_TITLES,
+  OutcomeResult as ContentOutcomeResult,
+  MarketState,
+  Mood,
+  VFXType,
+  Rarity,
 } from './content';
 
+export interface GameOutcome {
+  id: string;
+  mainText: string;
+  subText?: string;
+  effects: {
+    tired: number;
+    sanity: number;
+    momentum: number;
+    clout: number;
+    luck: number;
+  };
+  mood: Mood;
+  vfx: VFXType;
+  rarity: Rarity;
+  eventTriggerChance?: number;
+}
+
+export interface ActiveEvent {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  effects: {
+    tiredModifier?: number;
+    luckModifier?: number;
+    sanityModifier?: number;
+    momentumModifier?: number;
+  };
+  vfx: VFXType;
+}
+
 export interface GameState {
-  tired: number;
-  hiddenStats: { luck: number; sanity: number; momentum: number; clout: number; };
-  marketState: MarketState;
   turn: number;
-  actionHistory: string[];
-  activeArcs: Set<string>;
-  activeEvent: EventDef | null;
+  tired: number;
+  sanity: number;
+  momentum: number;
+  clout: number;
+  luck: number;
+
+  marketState: MarketState;
+
+  lastOutcome?: GameOutcome;
+  activeEvent?: ActiveEvent;
   eventTurnsRemaining: number;
+
+  actionHistory: string[];
+  recentOutcomeIds: string[];
+
   gameOver: boolean;
-  lastOutcome: OutcomeResult | null;
-  difficultyMultiplier: number;
 }
 
 export function createInitialState(): GameState {
-  const marketStates: MarketState[] = ['bull', 'bear', 'crab'];
   return {
-    tired: Math.floor(Math.random() * 11),
-    hiddenStats: { luck: 0, sanity: 50, momentum: 0, clout: 0 },
-    marketState: marketStates[Math.floor(Math.random() * marketStates.length)],
     turn: 0,
-    actionHistory: [],
-    activeArcs: new Set(),
-    activeEvent: null,
+    tired: randomInt(0, 10),
+    sanity: 50,
+    momentum: 0,
+    clout: 0,
+    luck: 0,
+
+    marketState: randomFrom<MarketState>(['bull', 'bear', 'crab']),
+
+    lastOutcome: undefined,
+    activeEvent: undefined,
     eventTurnsRemaining: 0,
+
+    actionHistory: [],
+    recentOutcomeIds: [],
+
     gameOver: false,
-    lastOutcome: null,
-    difficultyMultiplier: 1,
   };
 }
 
-export function selectRandomActions(state: GameState, count: number = 3): string[] {
-  const available = ACTIONS.map(a => a.id);
-  const lastTurnActions = state.actionHistory.slice(-3);
-  const filtered = available.filter(id => !lastTurnActions.includes(id));
-  const pool = filtered.length >= count ? filtered : available;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+export function selectRandomActions(state: GameState): string[] {
+  const allIds = ACTIONS.map((a) => a.id);
+
+  // Avoid repeating the exact last few actions too aggressively.
+  const recent = new Set(state.actionHistory.slice(-2));
+  const preferred = allIds.filter((id) => !recent.has(id));
+  const fallback = allIds.filter((id) => recent.has(id));
+
+  const shuffledPreferred = shuffle(preferred);
+  const shuffledFallback = shuffle(fallback);
+
+  const combined = [...shuffledPreferred, ...shuffledFallback];
+
+  return combined.slice(0, 3);
 }
 
-export function generateOutcome(state: GameState, actionId: string): OutcomeResult {
-  const action = ACTIONS.find(a => a.id === actionId);
-  if (!action) throw new Error(`Unknown action: ${actionId}`);
-
-  const baseOutcome = selectWeightedOutcome(action.baseOutcomes);
-  const marketMod = MARKET_MODIFIERS[state.marketState];
-  let tiredDelta = baseOutcome.tiredDelta + marketMod.tiredMod;
-  let sanityDelta = (baseOutcome.sanityDelta || 0) + marketMod.sanityMod;
-
-  if (state.activeEvent) {
-    tiredDelta += state.activeEvent.effects.tiredModifier || 0;
-    sanityDelta += state.activeEvent.effects.sanityModifier || 0;
+export function generateOutcome(
+  state: GameState,
+  actionId: string
+): GameOutcome {
+  const action = ACTIONS.find((a) => a.id === actionId);
+  if (!action) {
+    throw new Error(`Invalid action: ${actionId}`);
   }
 
-  const difficultyScale = 1 + (state.turn * 0.02);
-  if (tiredDelta > 0) tiredDelta = Math.ceil(tiredDelta * difficultyScale);
+  let pool = [...action.baseOutcomes];
 
-  const arcInjection = getBehaviorArcLine(state, actionId);
-  let text = baseOutcome.text;
-  let subText = baseOutcome.subText;
+  // Anti-repetition: try not to reuse the exact same recent outcome.
+  const filtered = pool.filter((o, index) => {
+    const id = makeOutcomeId(actionId, index, o.text, o.subText);
+    return !state.recentOutcomeIds.includes(id);
+  });
 
-  if (arcInjection && Math.random() < 0.4) subText = arcInjection;
-
-  const toneKeys = Object.keys(TONE_VARIANTS) as Array<keyof typeof TONE_VARIANTS>;
-  const selectedTone = toneKeys[Math.floor(Math.random() * toneKeys.length)];
-  const tonePrefixes = TONE_VARIANTS[selectedTone];
-  const prefix = Math.random() < 0.3 ? tonePrefixes[Math.floor(Math.random() * tonePrefixes.length)] : '';
-
-  if (prefix && !text.startsWith(prefix)) {
-    text = prefix + text.charAt(0).toLowerCase() + text.slice(1);
+  if (filtered.length > 0) {
+    pool = filtered;
   }
 
-  if (baseOutcome.rarity === 'epic' || baseOutcome.rarity === 'legendary') {
-    const twist = TWIST_LINES[Math.floor(Math.random() * TWIST_LINES.length)];
-    if (!subText) subText = twist;
-    else subText = `${subText} ${twist}.`;
+  const weightedPool = buildWeightedOutcomePool(pool);
+  let selected = randomFrom(weightedPool);
+
+  // Behavior-aware override chance.
+  const behaviorLine = getBehaviorLine(state, actionId);
+  if (behaviorLine && Math.random() < 0.6) {
+    selected = {
+      ...selected,
+      subText: behaviorLine,
+    };
   }
+
+  // Near-miss / twist line chance.
+  if (Math.random() < 0.18) {
+    selected = {
+      ...selected,
+      subText: randomFrom(TWIST_LINES),
+    };
+  }
+
+  // Apply market modifiers.
+  const market = MARKET_MODIFIERS[state.marketState];
+  const tiredDelta =
+    selected.tiredDelta + (market?.tiredMod ?? 0) + getEventTiredMod(state);
+  const sanityDelta =
+    (selected.sanityDelta ?? 0) +
+    (market?.sanityMod ?? 0) +
+    getEventSanityMod(state);
+  const momentumDelta =
+    (selected.momentumDelta ?? 0) + getEventMomentumMod(state);
+  const cloutDelta = selected.cloutDelta ?? 0;
+  const luckDelta = (selected.luckDelta ?? 0) + getEventLuckMod(state);
+
+  const outcomeIndex = action.baseOutcomes.findIndex(
+    (o) => o.text === selected.text && o.subText === selected.subText
+  );
 
   return {
-    ...baseOutcome, text, subText, tiredDelta, sanityDelta,
-    momentumDelta: (baseOutcome.momentumDelta || 0) + (state.activeEvent?.effects.momentumModifier || 0),
-  };
-}
-
-function selectWeightedOutcome(outcomes: OutcomeResult[]): OutcomeResult {
-  const weighted: OutcomeResult[] = [];
-  for (const outcome of outcomes) {
-    const weight = RARITY_WEIGHTS[outcome.rarity];
-    for (let i = 0; i < weight; i++) weighted.push(outcome);
-  }
-  return weighted[Math.floor(Math.random() * weighted.length)];
-}
-
-function getBehaviorArcLine(state: GameState, actionId: string): string | null {
-  const arcMap: Record<string, string> = {
-    'buy-dip': 'bottom-buyer', 'go-sleep': 'sleep-gambler',
-    'touch-grass': 'grass-escape', 'check-portfolio': 'doom-scroller',
-    'open-telegram': 'doom-scroller', 'post-x': 'clout-farmer',
-  };
-  const arcId = arcMap[actionId];
-  if (!arcId) return null;
-  const recentCount = state.actionHistory.slice(-5).filter(id => id === actionId).length;
-  const arc = BEHAVIOR_ARCS[arcId];
-  if (recentCount >= arc.triggerCount - 1) {
-    return arc.injectedLines[Math.floor(Math.random() * arc.injectedLines.length)];
-  }
-  return null;
-}
-
-export function updateState(state: GameState, actionId: string, outcome: OutcomeResult): GameState {
-  const newState: GameState = {
-    ...state,
-    tired: Math.max(0, state.tired + outcome.tiredDelta),
-    hiddenStats: {
-      luck: clamp(state.hiddenStats.luck + (outcome.luckDelta ?? 0), -2, 2),
-      sanity: clamp(state.hiddenStats.sanity + (outcome.sanityDelta ?? 0), 0, 100),
-      momentum: clamp(state.hiddenStats.momentum + (outcome.momentumDelta ?? 0), -3, 3),
-      clout: clamp(state.hiddenStats.clout + (outcome.cloutDelta ?? 0), 0, 50),
+    id: makeOutcomeId(
+      actionId,
+      outcomeIndex >= 0 ? outcomeIndex : randomInt(0, 9999),
+      selected.text,
+      selected.subText
+    ),
+    mainText: selected.text,
+    subText: selected.subText,
+    effects: {
+      tired: tiredDelta,
+      sanity: sanityDelta,
+      momentum: momentumDelta,
+      clout: cloutDelta,
+      luck: luckDelta,
     },
-    turn: state.turn + 1,
-    actionHistory: [...state.actionHistory, actionId].slice(-10),
+    mood: selected.mood,
+    vfx: selected.vfx,
+    rarity: selected.rarity,
+    eventTriggerChance: selected.eventTriggerChance,
+  };
+}
+
+export function updateState(
+  state: GameState,
+  actionId: string,
+  outcome: GameOutcome
+): GameState {
+  const nextTurn = state.turn + 1;
+
+  const nextState: GameState = {
+    ...state,
+    turn: nextTurn,
+    tired: clamp(state.tired + outcome.effects.tired, 0, 100),
+    sanity: clamp(state.sanity + outcome.effects.sanity, 0, 100),
+    momentum: clamp(state.momentum + outcome.effects.momentum, -10, 10),
+    clout: clamp(state.clout + outcome.effects.clout, 0, 100),
+    luck: clamp(state.luck + outcome.effects.luck, -10, 10),
+
     lastOutcome: outcome,
-    difficultyMultiplier: 1 + ((state.turn + 1) * 0.02),
+    actionHistory: [...state.actionHistory, actionId].slice(-12),
+    recentOutcomeIds: [outcome.id, ...state.recentOutcomeIds].slice(0, 10),
+
+    gameOver: false,
   };
 
-  newState.activeArcs = new Set(state.activeArcs);
-  for (const [arcId, arc] of Object.entries(BEHAVIOR_ARCS)) {
-    const count = newState.actionHistory.filter(id => {
-      if (arcId === 'bottom-buyer') return id === 'buy-dip';
-      if (arcId === 'sleep-gambler') return id === 'go-sleep';
-      if (arcId === 'grass-escape') return id === 'touch-grass';
-      if (arcId === 'doom-scroller') return id === 'check-portfolio' || id === 'open-telegram';
-      if (arcId === 'clout-farmer') return id === 'post-x';
-      return false;
-    }).length;
-    if (count >= arc.triggerCount) newState.activeArcs.add(arcId);
+  // Handle event lifecycle.
+  if (nextState.activeEvent) {
+    nextState.eventTurnsRemaining -= 1;
+    if (nextState.eventTurnsRemaining <= 0) {
+      nextState.activeEvent = undefined;
+      nextState.eventTurnsRemaining = 0;
+    }
   }
 
-  if (newState.eventTurnsRemaining > 0) {
-    newState.eventTurnsRemaining--;
-    if (newState.eventTurnsRemaining === 0) newState.activeEvent = null;
+  // Trigger a new event if none is active.
+  const triggerChance =
+    outcome.eventTriggerChance ??
+    (nextTurn > 8 ? 0.22 : nextTurn > 4 ? 0.18 : 0.12);
+
+  if (!nextState.activeEvent && Math.random() < triggerChance) {
+    const event = randomFrom(RANDOM_EVENTS);
+    nextState.activeEvent = { ...event };
+    nextState.eventTurnsRemaining = event.duration;
   }
 
-  if (!newState.activeEvent && shouldTriggerEvent(newState)) {
-    newState.activeEvent = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
-    newState.eventTurnsRemaining = newState.activeEvent.duration;
+  if (nextState.tired >= 100) {
+    nextState.gameOver = true;
   }
 
-  if (newState.tired >= 100) newState.gameOver = true;
-  return newState;
-}
-
-function shouldTriggerEvent(state: GameState): boolean {
-  return state.turn % 3 === 0 && Math.random() < 0.3;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+  return nextState;
 }
 
 export function getCollapseCause(state: GameState): string {
   const lastAction = state.actionHistory[state.actionHistory.length - 1];
-  const causes = lastAction && COLLAPSE_CAUSES[lastAction] ? COLLAPSE_CAUSES[lastAction] : COLLAPSE_CAUSES['default'];
-  return causes[Math.floor(Math.random() * causes.length)];
+  const pool =
+    (lastAction && COLLAPSE_CAUSES[lastAction]) || COLLAPSE_CAUSES.default;
+
+  return randomFrom(pool);
 }
 
 export function getEndTitle(state: GameState): string {
-  if (state.activeArcs.has('bottom-buyer')) return 'Certified Bottom Buyer';
-  if (state.activeArcs.has('doom-scroller')) return 'Doom Scroll Technician';
-  if (state.activeArcs.has('clout-farmer')) return 'Professional Hope Holder';
-  if (state.activeArcs.has('grass-escape')) return 'Grass-Touching Heretic';
-  if (state.activeArcs.has('sleep-gambler')) return 'Sleep Cycle Survivor';
-  return END_TITLES[Math.floor(Math.random() * END_TITLES.length)];
+  // Bias based on play style.
+  const counts = countActions(state.actionHistory);
+
+  if ((counts['buy-dip'] ?? 0) >= 3) {
+    return randomFrom([
+      'Certified Bottom Buyer',
+      'Liquidity Provider (To Pain)',
+      'Hope-Funded Trader',
+      'Certified Near-Miss',
+      'Bottom Caller, Top Exit',
+    ]);
+  }
+
+  if ((counts['check-portfolio'] ?? 0) >= 3 || (counts['open-telegram'] ?? 0) >= 3) {
+    return randomFrom([
+      'Doom Scroll Technician',
+      'Chart Gazer Supreme',
+      'Portfolio Philosopher',
+      'Signal Collector',
+      'Thread Reader, Profit Avoider',
+    ]);
+  }
+
+  if ((counts['go-sleep'] ?? 0) >= 3) {
+    return randomFrom([
+      'Sleep Cycle Survivor',
+      'Sleep-Deprived Visionary',
+      'Technically Still Here',
+      'Almost Made It',
+    ]);
+  }
+
+  if ((counts['touch-grass'] ?? 0) >= 3) {
+    return randomFrom([
+      'Grass-Touching Heretic',
+      'Clarity Avoider',
+      'Rekt but Reflective',
+      'Permanent Student',
+    ]);
+  }
+
+  if ((counts['post-x'] ?? 0) >= 3) {
+    return randomFrom([
+      'Professional Cope Analyst',
+      'Clout Over Coins',
+      'Content Was the Exit',
+      'Narrative Casualty',
+    ].filter(Boolean));
+  }
+
+  if (state.turn >= 20) {
+    return randomFrom([
+      'Diamond Hands (Emotionally)',
+      'Market Victim',
+      'Temporary Genius',
+      'WAGMI Believer',
+      'Emotionally Margin Called',
+      'The One Who Held',
+    ]);
+  }
+
+  return randomFrom(END_TITLES);
 }
 
 export function formatShareResult(state: GameState): string {
   const cause = getCollapseCause(state);
   const title = getEndTitle(state);
-  return `Too Tired to Win\n\nSurvived: ${state.turn} turns\nCause: ${cause}\nTitle: ${title}\n\n$TOW`;
+
+  return `Too Tired to Win
+
+${title}
+"${cause}"
+
+Survived: ${state.turn} turns
+
+You knew better. You still did it.
+
+#TOW`;
+}
+
+/* ------------------------------ helpers ------------------------------ */
+
+function buildWeightedOutcomePool(
+  outcomes: ContentOutcomeResult[]
+): ContentOutcomeResult[] {
+  return outcomes.flatMap((outcome) => {
+    const weight = RARITY_WEIGHTS[outcome.rarity] ?? 1;
+    return Array.from({ length: weight }, () => outcome);
+  });
+}
+
+function getBehaviorLine(state: GameState, actionId: string): string | null {
+  const recent = state.actionHistory.slice(-5);
+
+  const bottomBuyerCount = recent.filter((a) => a === 'buy-dip').length;
+  if (actionId === 'buy-dip' && bottomBuyerCount >= BEHAVIOR_ARCS['bottom-buyer'].triggerCount) {
+    return randomFrom(BEHAVIOR_ARCS['bottom-buyer'].injectedLines);
+  }
+
+  const sleepCount = recent.filter((a) => a === 'go-sleep').length;
+  if (actionId === 'go-sleep' && sleepCount >= BEHAVIOR_ARCS['sleep-gambler'].triggerCount) {
+    return randomFrom(BEHAVIOR_ARCS['sleep-gambler'].injectedLines);
+  }
+
+  const grassCount = recent.filter((a) => a === 'touch-grass').length;
+  if (actionId === 'touch-grass' && grassCount >= BEHAVIOR_ARCS['grass-escape'].triggerCount) {
+    return randomFrom(BEHAVIOR_ARCS['grass-escape'].injectedLines);
+  }
+
+  const doomScrollCount = recent.filter(
+    (a) => a === 'check-portfolio' || a === 'open-telegram'
+  ).length;
+  if (
+    (actionId === 'check-portfolio' || actionId === 'open-telegram') &&
+    doomScrollCount >= BEHAVIOR_ARCS['doom-scroller'].triggerCount
+  ) {
+    return randomFrom(BEHAVIOR_ARCS['doom-scroller'].injectedLines);
+  }
+
+  const cloutCount = recent.filter((a) => a === 'post-x').length;
+  if (actionId === 'post-x' && cloutCount >= BEHAVIOR_ARCS['clout-farmer'].triggerCount) {
+    return randomFrom(BEHAVIOR_ARCS['clout-farmer'].injectedLines);
+  }
+
+  return null;
+}
+
+function getEventTiredMod(state: GameState): number {
+  return state.activeEvent?.effects?.tiredModifier ?? 0;
+}
+
+function getEventSanityMod(state: GameState): number {
+  return state.activeEvent?.effects?.sanityModifier ?? 0;
+}
+
+function getEventMomentumMod(state: GameState): number {
+  return state.activeEvent?.effects?.momentumModifier ?? 0;
+}
+
+function getEventLuckMod(state: GameState): number {
+  return state.activeEvent?.effects?.luckModifier ?? 0;
+}
+
+function makeOutcomeId(
+  actionId: string,
+  index: number,
+  text: string,
+  subText?: string
+): string {
+  return `${actionId}-${index}-${slugify(text)}-${slugify(subText ?? '')}`;
+}
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function countActions(actions: string[]): Record<string, number> {
+  return actions.reduce<Record<string, number>>((acc, action) => {
+    acc[action] = (acc[action] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
