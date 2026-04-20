@@ -26,7 +26,7 @@ export function TowCharacter({ mood, vfxType }: TowCharacterProps) {
   const animProps = getAnimation();
 
   return (
-    <motion.div className="relative w-48 h-48 mx-auto" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} {...animProps}>
+    <motion.div className="relative w-48 h-48 mx-auto" initial={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.5 }} {...animProps}>
       {mood === 'neutral' && <NeutralTOW />}
       {mood === 'stressed' && <StressedTOW />}
       {mood === 'hopeful' && <HopefulTOW />}
