@@ -3,8 +3,8 @@ import { siteConfig } from "@/config/site";
 export default function HeroSection({ headline }: { headline?: string }) {
   const h = headline || siteConfig.heroHeadlines[0];
   return (
-    <section className="py-16 md:py-12">
-      <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+    <section className="py-8 md:py-8">
+      <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
         <div className="order-2 md:order-1">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">{h}</h1>
           <p className="text-lg text-gray-600 mb-8">{siteConfig.heroSubtext}</p>
