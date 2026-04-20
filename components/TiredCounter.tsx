@@ -25,37 +25,43 @@ export default function TiredCounter({
     setResp(tiredResponses[Math.floor(Math.random() * tiredResponses.length)]);
     setAnim(true);
 
-    setTimeout(() => setAnim(false), 250);
-    setTimeout(() => setResp(null), 3000);
+    setTimeout(() => setAnim(false), 220);
+    setTimeout(() => setResp(null), 2500);
   };
 
   return (
-    <section className="py-12 md:py-16 bg-gray-50">
+    <section className="pt-6 pb-12 md:pt-8 md:pb-14 bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-8">Global Tired Count</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Global Tired Count</h2>
 
-        <div className="mb-8">
+        <div className="mb-4">
           <div
-            className={`text-8xl md:text-[10rem] font-black leading-none font-serif transition-transform duration-200 ${
+            className={`text-8xl md:text-[9rem] font-black leading-none tracking-tight transition-transform duration-200 ${
               anim ? "scale-110" : "scale-100"
             }`}
           >
             {count.toLocaleString()}
           </div>
-          <p className="text-gray-600 mt-4">tired together</p>
+          <p className="text-gray-700 mt-3 text-lg">tired together</p>
         </div>
 
         <button
           onClick={click}
-          className="px-16 py-7 border-2 border-black bg-white text-black text-3xl font-bold rounded-xl hover:bg-black hover:text-white active:scale-95 transition-all duration-200 shadow-sm"
+          className="mt-6 px-20 py-8 border-2 border-black bg-white text-black text-4xl font-black tracking-wide rounded-2xl cursor-pointer transition-all duration-150 shadow-sm hover:bg-black hover:text-white hover:-translate-y-1 active:scale-90 active:translate-y-1"
         >
           TIRED
         </button>
 
-        {resp && <p className="mt-6 text-lg text-gray-600 animate-fade-in">{resp}</p>}
+        {resp && (
+          <p className="mt-5 text-lg font-medium text-gray-800 animate-fade-in">
+            {resp}
+          </p>
+        )}
 
-        <div className="mt-10 max-w-2xl mx-auto">
-          <p className="text-sm text-gray-500">Press it when the market drains you.</p>
+        <div className="mt-8 max-w-2xl mx-auto">
+          <p className="text-base text-gray-600">
+            Press it when the market drains you.
+          </p>
         </div>
       </div>
     </section>
