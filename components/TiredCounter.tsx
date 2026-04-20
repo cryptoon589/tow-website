@@ -42,7 +42,7 @@ export default function TiredCounter({
           >
             {count.toLocaleString()}
           </div>
-          <p className="text-gray-600 mt-4">people too tired to leave</p>
+          <p className="text-gray-600 mt-4">tired together</p>
         </div>
 
         <button

@@ -16,7 +16,7 @@ export const siteConfig = {
   ],
 
   heroSubtext:
-    "Make memes. Press tired. Stay connected. The trenches are still active.",
+    "Make memes. Tired now. Tired of winning later.",
 };
 
 export const navItems = [
@@ -62,9 +62,12 @@ export const tiredResponses = [
   "counted.",
   "valid.",
   "not ideal.",
+  "still tired.",
+  "too tired.",
   "deeply tired.",
+  "just tired.",
   "another one logged.",
-  "the trenches heard you.",
+  "we feel you.",
   "fatigue recognized.",
   "same.",
 ];

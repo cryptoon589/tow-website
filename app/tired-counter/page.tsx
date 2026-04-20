@@ -17,7 +17,7 @@ export default function TiredCounterPage() {
             <div className="space-y-4 text-lg text-gray-600">
               <p>The Tired Counter tracks how many times people press TIRED.</p>
               <p>Every press means someone else gets it.</p>
-              <p>No leaderboard. No utility. No promises. Just proof the tired are still here.</p>
+              <p>No leaderboard. No utility. No promises. Just proof that you're not tired alone.</p>
             </div>
           </div>
         </section>
