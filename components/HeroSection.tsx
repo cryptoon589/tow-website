@@ -3,7 +3,7 @@ import { siteConfig } from "@/config/site";
 export default function HeroSection({ headline }: { headline?: string }) {
   const h = headline || siteConfig.heroHeadlines[0];
   return (
-    <section className="py-8 md:py-8">
+    <section className="pt-2 pb-8 md:pt-4 md:pb-8">
       <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
         <div className="order-2 md:order-1">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">{h}</h1>
