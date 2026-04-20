@@ -15,19 +15,19 @@ export default function HeroSection({ headline }: { headline?: string }) {
               href="/meme-generator"
               className="px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800"
             >
-              Make a Meme
+              Make Memes
             </Link>
             <Link
               href="/tired-counter"
               className="px-6 py-3 border-2 border-black font-bold rounded hover:bg-black hover:text-white"
             >
-              Press Tired
+              Tired Together
             </Link>
             <Link
-              href="/links"
-              className="px-6 py-3 border-2 border-black font-bold rounded hover:bg-black hover:text-white"
+              href="/play"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
             >
-              View Links
+              🎮 Play Too Tired to Win
             </Link>
           </div>
         </div>
