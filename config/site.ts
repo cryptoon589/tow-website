@@ -42,7 +42,7 @@ export const officialLinks = [
   {
     label: "Telegram",
     url: "https://t.me/YOUR_TELEGRAM",
-    description: "Still active",
+    description: "Still here",
   },
   {
     label: "NFT Collection",
@@ -54,6 +54,11 @@ export const officialLinks = [
     url: "https://x.com/YOUR_HANDLE",
     description: "Still posting",
   },
+  {
+    label: "Coinmun",
+    url: "https://coinmun.com",
+    description: "View on Coinmun",
+}
 ];
 
 export const tiredResponses = [
