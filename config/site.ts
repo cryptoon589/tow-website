@@ -1,61 +1,70 @@
 export const siteConfig = {
   name: "TOW",
   fullName: "Tired Of Winning",
-  tagline: "Too tired to quit.",
-  description: "The home of tired memes. TOW is the main hub for memes, community, and official links.",
+
+  tagline: "Still tired. Still here.",
+
+  description:
+    "The home of tired memes. A place for people who are still here, still posting, and too tired to quit.",
+
   heroHeadlines: [
-    "Too tired to quit.",
-    "Tired now. Tired of winning later.",
     "Still tired. Still here.",
+    "Too tired to quit.",
+    "Everyone’s tired. Some still post.",
     "The home of tired memes.",
+    "Not leaving. Just tired.",
   ],
-  heroSubtext: "TOW is the main hub for tired memes, community, and official project links.",
+
+  heroSubtext:
+    "Make memes. Press tired. Stay connected. The trenches are still active.",
 };
 
 export const navItems = [
   { label: "Home", href: "/" },
-  { label: "Meme Generator", href: "/meme-generator" },
-  { label: "Tired Counter", href: "/tired-counter" },
+  { label: "Make Memes", href: "/meme-generator" },
+  { label: "Tired Together", href: "/tired-counter" },
   { label: "Everyone's Tired", href: "/raid-board" },
-  { label: "NFT Collection", href: "/nft-collection" },
-  { label: "Official Links", href: "/links" },
+  { label: "NFTs", href: "/nft-collection" },
+  { label: "Links", href: "/links" },
 ];
 
 export const officialLinks = [
   {
     label: "First Ledger",
     url: "https://xrpscan.com/tx/YOUR_FIRST_LEDGER_TX_HASH",
-    description: "The beginning of TOW",
+    description: "Where it started",
   },
   {
     label: "DEX / Chart",
     url: "https://dexscreener.com/xrpl/YOUR_PAIR",
-    description: "Track the token",
+    description: "Watch the chart",
   },
   {
     label: "Telegram",
     url: "https://t.me/YOUR_TELEGRAM",
-    description: "Join the tired community",
+    description: "Still active",
   },
   {
     label: "NFT Collection",
     url: "/nft-collection",
-    description: "View the collection",
+    description: "View NFTs",
   },
   {
     label: "X (Twitter)",
     url: "https://x.com/YOUR_HANDLE",
-    description: "Follow for updates",
+    description: "Still posting",
   },
 ];
 
 export const tiredResponses = [
   "understandable.",
-  "recorded another tired soul.",
-  "tired recognized.",
-  "noted. still tired.",
-  "acknowledged. remain tired.",
-  "logged. the tiredness continues.",
-  "another one joins the tired.",
-  "tiredness confirmed.",
+  "still here.",
+  "counted.",
+  "valid.",
+  "not ideal.",
+  "deeply tired.",
+  "another one logged.",
+  "the trenches heard you.",
+  "fatigue recognized.",
+  "same.",
 ];
