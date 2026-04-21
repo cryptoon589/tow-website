@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from 'framer-motion';
 import { GameState } from './engine';
 import { getCollapseCause, getEndTitle, formatShareResult } from './engine';
@@ -84,7 +86,6 @@ export function GameOverOverlay({ state, onReplay }: GameOverOverlayProps) {
           </div>
         </div>
 
-        {/* Share card preview */}
         <div className="rounded-2xl border border-[#DDD7CE] bg-[#F7F5F2] p-4 mb-6 shadow-sm">
           <div className="rounded-2xl bg-[#FFFCF8] border border-[#E7E1D8] p-5">
             <div className="text-xs font-semibold tracking-[0.18em] uppercase text-[#948B81] mb-4">
@@ -92,7 +93,7 @@ export function GameOverOverlay({ state, onReplay }: GameOverOverlayProps) {
             </div>
 
             <div className="rounded-2xl bg-[#F1EEE8] border border-[#DDD7CE] min-h-[220px] flex items-center justify-center mb-4">
-              <TowMoodPreview mood={mood} />
+              <TowMoodCardPreview mood={mood} />
             </div>
 
             <div className="text-[11px] font-semibold tracking-[0.14em] uppercase text-[#948B81] mb-2">
@@ -156,164 +157,93 @@ export function GameOverOverlay({ state, onReplay }: GameOverOverlayProps) {
   );
 }
 
-function TowMoodPreview({ mood }: { mood: string }) {
-  const face = getMoodFace(mood);
-
+function TowMoodCardPreview({ mood }: { mood: string }) {
   return (
-    <svg viewBox="0 0 260 220" className="w-[200px] h-[170px]">
-      <ellipse cx="130" cy="196" rx="38" ry="8" fill="rgba(30,27,24,0.08)" />
+    <svg viewBox="0 0 260 220" className="w-[190px] h-[170px]">
+      <ellipse cx="130" cy="196" rx="36" ry="8" fill="rgba(30,27,24,0.08)" />
 
-      {/* body */}
       <path
-        d="M 117 112 L 145 114 L 149 176 L 113 174 Z"
+        d="M 118 110 L 142 110 L 145 174 L 115 174 Z"
         fill="none"
-        stroke="#111111"
-        strokeWidth="8"
+        stroke="#111"
+        strokeWidth="7"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      <path d="M 125 176 L 124 198" fill="none" stroke="#111111" strokeWidth="8" strokeLinecap="round" />
-      <path d="M 145 176 L 147 196" fill="none" stroke="#111111" strokeWidth="8" strokeLinecap="round" />
-      <path d="M 116 124 Q 98 140 92 170" fill="none" stroke="#111111" strokeWidth="7" strokeLinecap="round" />
-      <path d="M 144 124 Q 162 139 176 154" fill="none" stroke="#111111" strokeWidth="7" strokeLinecap="round" />
+      <path d="M 122 174 L 122 198" stroke="#111" strokeWidth="7" strokeLinecap="round" />
+      <path d="M 142 174 L 144 198" stroke="#111" strokeWidth="7" strokeLinecap="round" />
+      <path d="M 118 124 Q 100 144 104 182" stroke="#111" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M 142 124 Q 165 145 178 156" stroke="#111" strokeWidth="7" fill="none" strokeLinecap="round" />
 
-      {/* phone */}
-      <rect x="170" y="143" width="20" height="32" rx="4" fill="#111111" />
-      <circle cx="175" cy="148" r="1.5" fill="#FFFCF8" />
+      <rect x="174" y="142" width="16" height="30" rx="3" fill="#111" />
+      <rect x="177" y="146" width="10" height="21" rx="2" fill={getCardPhoneColor(mood)} opacity="0.22" />
+      <circle cx="179" cy="147" r="1.3" fill="#fff" />
 
-      {/* head */}
+      <circle cx="130" cy="80" r="38" fill="#fff" stroke="#111" strokeWidth="7" />
       <path
-        d="M 127 38
-           Q 154 37 168 58
-           Q 180 77 173 101
-           Q 166 126 144 136
-           Q 117 147 95 132
-           Q 73 117 73 92
-           Q 73 67 88 52
-           Q 100 39 127 38 Z"
-        fill="#FFFCF8"
-        stroke="#111111"
-        strokeWidth="8"
-        strokeLinejoin="round"
+        d="M 105 58 L 118 50 L 130 57 L 142 53 L 154 61 L 142 67 L 130 64 L 118 71 Z"
+        fill="#111"
       />
 
-      {/* hair */}
-      <path
-        d="M 104 51 L 113 46 L 124 50 L 136 48 L 145 55 L 136 57 L 126 55 L 115 59 L 104 56 L 96 57 Z"
-        fill="#111111"
-        stroke="#111111"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-
-      {/* brows */}
-      {face.leftBrow && (
-        <path d={face.leftBrow} fill="none" stroke="#111111" strokeWidth="4" strokeLinecap="round" />
-      )}
-      {face.rightBrow && (
-        <path d={face.rightBrow} fill="none" stroke="#111111" strokeWidth="4" strokeLinecap="round" />
-      )}
-
-      {/* eyes */}
-      {face.eyeStyle === 'normal' && (
+      {mood === 'sleepy' ? (
         <>
-          <circle cx="109" cy="92" r="5" fill="#111111" />
-          <circle cx="139" cy="92" r="5" fill="#111111" />
+          <path d="M 109 84 Q 116 88 123 84" fill="none" stroke="#111" strokeWidth="4" strokeLinecap="round" />
+          <path d="M 137 84 Q 144 88 151 84" fill="none" stroke="#111" strokeWidth="4" strokeLinecap="round" />
         </>
-      )}
-      {face.eyeStyle === 'sleepy' && (
+      ) : mood === 'euphoric' ? (
         <>
-          <path d="M 101 92 Q 109 96 117 92" fill="none" stroke="#111111" strokeWidth="4" strokeLinecap="round" />
-          <path d="M 131 92 Q 139 96 147 92" fill="none" stroke="#111111" strokeWidth="4" strokeLinecap="round" />
+          <path d="M 108 79 L 111 85 L 118 85 L 113 89 L 116 96 L 108 91 L 101 96 L 104 89 L 99 85 L 106 85 Z" fill="#F2A93B" stroke="#111" strokeWidth="2" />
+          <path d="M 138 79 L 141 85 L 148 85 L 143 89 L 146 96 L 138 91 L 131 96 L 134 89 L 129 85 L 136 85 Z" fill="#F2A93B" stroke="#111" strokeWidth="2" />
         </>
-      )}
-      {face.eyeStyle === 'star' && (
+      ) : (
         <>
-          <path d="M 108 84 L 111 90 L 118 90 L 113 94 L 116 101 L 108 97 L 101 101 L 104 94 L 99 90 L 106 90 Z" fill="#F2A93B" stroke="#111111" strokeWidth="2" />
-          <path d="M 138 84 L 141 90 L 148 90 L 143 94 L 146 101 L 138 97 L 131 101 L 134 94 L 129 90 L 136 90 Z" fill="#F2A93B" stroke="#111111" strokeWidth="2" />
+          <circle cx="115" cy="85" r="4.6" fill="#111" />
+          <circle cx="145" cy="85" r="4.6" fill="#111" />
         </>
       )}
 
-      {/* mouth */}
-      <path d={face.mouth} fill="none" stroke="#111111" strokeWidth="4.5" strokeLinecap="round" />
+      <path d={getCardMouth(mood)} fill="none" stroke="#111" strokeWidth="4.5" strokeLinecap="round" />
 
-      {/* mood marks */}
       {mood === 'sleepy' && (
         <>
-          <text x="185" y="62" fontSize="20" fill="#7C6CF2">Z</text>
-          <text x="199" y="46" fontSize="15" fill="#7C6CF2">z</text>
+          <text x="170" y="52" fontSize="16" fill="#7C6CF2">Z</text>
+          <text x="183" y="40" fontSize="11" fill="#7C6CF2">z</text>
         </>
       )}
+
       {mood === 'confused' && (
-        <text x="184" y="68" fontSize="24" fill="#7C6CF2">?</text>
+        <text x="171" y="62" fontSize="20" fill="#7C6CF2">?</text>
       )}
+
       {mood === 'regret' && (
-        <path d="M 104 104 Q 102 112 106 118" fill="none" stroke="#7C6CF2" strokeWidth="3" strokeLinecap="round" />
+        <path d="M 114 101 Q 111 110 115 116" fill="none" stroke="#7C6CF2" strokeWidth="3" />
       )}
     </svg>
   );
 }
 
-function getMoodFace(mood: string) {
+function getCardMouth(mood: string) {
   switch (mood) {
-    case 'stressed':
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 116 116 L 132 116',
-        leftBrow: 'M 100 81 L 111 85',
-        rightBrow: 'M 147 81 L 136 85',
-      };
     case 'hopeful':
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 114 115 Q 123 121 133 115',
-        leftBrow: 'M 100 82 L 111 82',
-        rightBrow: 'M 136 82 L 147 82',
-      };
+      return 'M 116 108 Q 130 117 144 108';
     case 'broken':
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 114 118 Q 124 113 134 118',
-        leftBrow: 'M 100 83 L 111 87',
-        rightBrow: 'M 147 83 L 136 87',
-      };
-    case 'confused':
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 116 118 Q 123 114 131 117',
-        leftBrow: 'M 100 84 L 111 82',
-        rightBrow: 'M 136 80 L 148 84',
-      };
-    case 'euphoric':
-      return {
-        eyeStyle: 'star',
-        mouth: 'M 111 113 Q 124 126 137 113',
-        leftBrow: '',
-        rightBrow: '',
-      };
-    case 'sleepy':
-      return {
-        eyeStyle: 'sleepy',
-        mouth: 'M 118 117 Q 124 120 130 117',
-        leftBrow: '',
-        rightBrow: '',
-      };
+      return 'M 116 112 Q 130 102 144 112';
     case 'regret':
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 114 119 Q 124 112 135 119',
-        leftBrow: 'M 100 83 L 111 87',
-        rightBrow: 'M 147 83 L 136 87',
-      };
-    case 'neutral':
+      return 'M 116 112 Q 130 100 144 112';
+    case 'sleepy':
+      return 'M 120 110 Q 130 114 140 110';
+    case 'confused':
+      return 'M 121 112 Q 128 107 136 112';
     default:
-      return {
-        eyeStyle: 'normal',
-        mouth: 'M 116 116 L 132 116',
-        leftBrow: '',
-        rightBrow: '',
-      };
+      return 'M 120 110 L 140 110';
   }
+}
+
+function getCardPhoneColor(mood: string) {
+  if (mood === 'broken' || mood === 'regret') return '#E56B6F';
+  if (mood === 'hopeful') return '#58B889';
+  if (mood === 'euphoric') return '#F2A93B';
+  if (mood === 'sleepy') return '#7C6CF2';
+  return '#8EA3C0';
 }
 
 function slugify(input: string) {
@@ -333,7 +263,7 @@ function buildShareCardSvg({
 }) {
   const safeCause = escapeXml(cause);
   const safeTitle = escapeXml(title);
-  const moodFace = getShareSvgFace(mood);
+  const face = buildCardTowSvg(mood);
 
   return `
   <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
@@ -343,9 +273,8 @@ function buildShareCardSvg({
     <text x="120" y="160" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="5" fill="#948B81">TOO TIRED TO WIN</text>
 
     <rect x="120" y="220" width="960" height="520" rx="32" fill="#F1EEE8" stroke="#DDD7CE" stroke-width="3"/>
-
-    <g transform="translate(320 255)">
-      ${moodFace}
+    <g transform="translate(300 250)">
+      ${face}
     </g>
 
     <text x="120" y="840" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#948B81">TITLE EARNED</text>
@@ -364,83 +293,67 @@ function buildShareCardSvg({
   </svg>`;
 }
 
-function getShareSvgFace(mood: string) {
-  const face = getMoodFace(mood);
+function buildCardTowSvg(mood: string) {
+  const mouth = getSvgCardMouth(mood);
+  const phoneColor = getCardPhoneColor(mood);
 
   const eyes =
-    face.eyeStyle === 'sleepy'
+    mood === 'sleepy'
       ? `
-      <path d="M 150 150 Q 166 158 182 150" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
-      <path d="M 210 150 Q 226 158 242 150" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
-    `
-      : face.eyeStyle === 'star'
+        <path d="M 150 150 Q 162 156 174 150" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+        <path d="M 206 150 Q 218 156 230 150" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+      `
+      : mood === 'euphoric'
       ? `
-      <path d="M 166 133 L 172 145 L 186 145 L 176 153 L 181 166 L 166 158 L 152 166 L 157 153 L 147 145 L 161 145 Z" fill="#F2A93B" stroke="#111111" stroke-width="3"/>
-      <path d="M 226 133 L 232 145 L 246 145 L 236 153 L 241 166 L 226 158 L 212 166 L 217 153 L 207 145 L 221 145 Z" fill="#F2A93B" stroke="#111111" stroke-width="3"/>
-    `
+        <path d="M 150 144 L 154 152 L 162 152 L 156 158 L 159 166 L 150 160 L 142 166 L 145 158 L 139 152 L 147 152 Z" fill="#F2A93B" stroke="#111111" stroke-width="3"/>
+        <path d="M 206 144 L 210 152 L 218 152 L 212 158 L 215 166 L 206 160 L 198 166 L 201 158 L 195 152 L 203 152 Z" fill="#F2A93B" stroke="#111111" stroke-width="3"/>
+      `
       : `
-      <circle cx="166" cy="150" r="9" fill="#111111"/>
-      <circle cx="226" cy="150" r="9" fill="#111111"/>
-    `;
-
-  const brows = `
-    ${face.leftBrow ? `<path d="${face.leftBrow.replaceAll('100', '150').replaceAll('111', '171')}" fill="none" stroke="#111111" stroke-width="6" stroke-linecap="round"/>` : ''}
-    ${face.rightBrow ? `<path d="${face.rightBrow.replaceAll('136', '210').replaceAll('147', '240').replaceAll('148', '242')}" fill="none" stroke="#111111" stroke-width="6" stroke-linecap="round"/>` : ''}
-  `;
+        <circle cx="160" cy="150" r="8" fill="#111111"/>
+        <circle cx="216" cy="150" r="8" fill="#111111"/>
+      `;
 
   return `
-    <ellipse cx="200" cy="430" rx="80" ry="16" fill="rgba(30,27,24,0.08)" />
-    <path d="M 180 240 L 236 244 L 244 372 L 172 368 Z" fill="none" stroke="#111111" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M 196 368 L 194 418" fill="none" stroke="#111111" stroke-width="15" stroke-linecap="round"/>
-    <path d="M 236 368 L 240 412" fill="none" stroke="#111111" stroke-width="15" stroke-linecap="round"/>
-    <path d="M 176 264 Q 142 298 132 358" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
-    <path d="M 236 264 Q 272 294 300 324" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
-    <rect x="292" y="300" width="42" height="68" rx="8" fill="#111111"/>
-    <circle cx="302" cy="311" r="3" fill="#FFFCF8"/>
+    <ellipse cx="190" cy="430" rx="78" ry="16" fill="rgba(30,27,24,0.08)" />
 
-    <path
-      d="M 202 70
-         Q 256 68 284 110
-         Q 308 147 294 195
-         Q 280 245 236 264
-         Q 182 286 138 256
-         Q 94 226 94 176
-         Q 94 126 124 96
-         Q 148 72 202 70 Z"
-      fill="#FFFCF8"
-      stroke="#111111"
-      stroke-width="16"
-      stroke-linejoin="round"
-    />
+    <path d="M 178 240 L 226 240 L 232 370 L 172 370 Z" fill="none" stroke="#111111" stroke-width="15" stroke-linecap="round"/>
+    <path d="M 188 370 L 188 418" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 226 370 L 228 418" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 178 256 Q 150 318 162 382" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 226 256 Q 264 308 286 324" fill="none" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
 
-    <path
-      d="M 154 96 L 172 86 L 194 94 L 218 90 L 236 104 L 218 108 L 198 104 L 176 112 L 154 106 L 138 108 Z"
-      fill="#111111"
-      stroke="#111111"
-      stroke-width="6"
-      stroke-linejoin="round"
-    />
+    <rect x="282" y="296" width="34" height="66" rx="7" fill="#111111"/>
+    <rect x="287" y="302" width="24" height="48" rx="4" fill="${phoneColor}" opacity="0.22"/>
+    <circle cx="292" cy="304" r="2.4" fill="#ffffff"/>
 
-    ${brows}
+    <circle cx="190" cy="140" r="66" fill="#ffffff" stroke="#111111" stroke-width="14"/>
+    <path d="M 148 100 L 170 88 L 190 98 L 212 92 L 234 104 L 212 114 L 190 110 L 168 120 Z" fill="#111111"/>
+
     ${eyes}
-    <path d="${face.mouth
-      .replace('114', '176')
-      .replace('116', '180')
-      .replace('118', '184')
-      .replace('124', '200')
-      .replace('130', '212')
-      .replace('131', '214')
-      .replace('132', '216')
-      .replace('133', '218')
-      .replace('134', '220')
-      .replace('135', '222')
-      .replace('137', '226')}"
-      fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
 
-    ${mood === 'sleepy' ? `<text x="320" y="110" font-size="44" fill="#7C6CF2">Z</text><text x="350" y="78" font-size="30" fill="#7C6CF2">z</text>` : ''}
-    ${mood === 'confused' ? `<text x="320" y="130" font-size="52" fill="#7C6CF2">?</text>` : ''}
-    ${mood === 'regret' ? `<path d="M 156 173 Q 151 189 159 202" fill="none" stroke="#7C6CF2" stroke-width="6" stroke-linecap="round"/>` : ''}
+    <path d="${mouth}" fill="none" stroke="#111111" stroke-width="8" stroke-linecap="round"/>
+
+    ${mood === 'sleepy' ? `<text x="284" y="92" font-size="32" fill="#7C6CF2">Z</text><text x="310" y="70" font-size="20" fill="#7C6CF2">z</text>` : ''}
+    ${mood === 'confused' ? `<text x="286" y="108" font-size="38" fill="#7C6CF2">?</text>` : ''}
+    ${mood === 'regret' ? `<path d="M 160 184 Q 156 198 162 208" fill="none" stroke="#7C6CF2" stroke-width="6"/>` : ''}
   `;
+}
+
+function getSvgCardMouth(mood: string) {
+  switch (mood) {
+    case 'hopeful':
+      return 'M 164 188 Q 188 202 212 188';
+    case 'broken':
+      return 'M 164 196 Q 188 180 212 196';
+    case 'regret':
+      return 'M 164 196 Q 188 176 212 196';
+    case 'sleepy':
+      return 'M 172 192 Q 188 198 204 192';
+    case 'confused':
+      return 'M 174 194 Q 184 186 194 194';
+    default:
+      return 'M 174 192 L 202 192';
+  }
 }
 
 function escapeXml(unsafe: string) {
