@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TowCharacter } from "@/components/game/TowCharacter";
+import TowCharacter from "@/components/game/TowCharacter";
 
 export default function GamePromo() {
   return (
@@ -82,7 +82,7 @@ export default function GamePromo() {
 
                   <div className="relative flex flex-col items-center">
                     <div className="scale-[0.78] origin-center">
-                      <TowCharacter mood="regret" vfxType="none" />
+                      <TowCharacter state="idle" />
                     </div>
 
                     <div className="text-sm font-medium text-[#1E1B18] -mt-2">
