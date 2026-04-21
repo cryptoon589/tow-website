@@ -18,202 +18,221 @@ export function TowCharacter({
 }: TowCharacterProps) {
   const anticipation = getPreActionPose(preAction);
   const outcomePose = getPostOutcomePose(mood, vfxType);
-  const phoneGlow = getPhoneGlow(mood, vfxType, preAction);
 
-  const outerY = preAction
-    ? anticipation.bodyY
-    : [0, outcomePose.bodyY, 0, -1.5, 0];
-
-  const outerScale = preAction
-    ? 1
-    : [1, outcomePose.scale, 1, 1.003, 1];
-
-  const bodyRotate = preAction
-    ? anticipation.bodyRotate
-    : [0, outcomePose.bodyRotate, 0];
-
-  const headRotate = preAction
-    ? anticipation.headRotate
-    : [0, outcomePose.headRotate, 0, mood === 'confused' ? 1 : 0, 0];
-
-  const phoneRotate = preAction
-    ? anticipation.phoneRotate
-    : [getPhoneTilt(mood), outcomePose.phoneRotate, getPhoneTilt(mood)];
+  const bodyRotate = preAction ? anticipation.bodyRotate : outcomePose.bodyRotate;
+  const headRotate = preAction ? anticipation.headRotate : outcomePose.headRotate;
+  const phoneRotate = preAction ? anticipation.phoneRotate : outcomePose.phoneRotate;
+  const bodyY = preAction ? anticipation.bodyY : outcomePose.bodyY;
 
   return (
     <motion.div
       className="flex items-center justify-center"
-      style={{ width: 240, height: 300 }}
+      style={{ width: 220, height: 290 }}
       animate={{
-        y: outerY,
-        scale: outerScale,
-        opacity: vfxType === 'red-flicker' ? [1, 0.94, 1] : 1,
+        y: [0, bodyY, 0, -1, 0],
       }}
       transition={{
-        duration: preAction ? 0.2 : 1.15,
+        duration: preAction ? 0.22 : 1.1,
         repeat: 0,
         ease: EASE,
       }}
     >
-      <motion.svg
-        width="240"
-        height="300"
-        viewBox="0 0 240 300"
+      <svg
+        width="220"
+        height="290"
+        viewBox="0 0 220 290"
         className="block overflow-visible"
       >
-        <defs>
-          <radialGradient id="phoneGlowGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={phoneGlow.color} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={phoneGlow.color} stopOpacity="0" />
-          </radialGradient>
-        </defs>
+        <ellipse cx="110" cy="270" rx="28" ry="6" fill="rgba(0,0,0,0.08)" />
 
-        <ellipse cx="120" cy="282" rx="34" ry="8" fill="rgba(0,0,0,0.08)" />
-
-        {/* BODY */}
+        {/* MAIN BODY RIG */}
         <motion.g
-          animate={{ rotate: bodyRotate }}
+          animate={{ rotate: [0, bodyRotate, 0] }}
           transition={{
-            duration: preAction ? 0.2 : 1.05,
+            duration: preAction ? 0.22 : 1,
             repeat: 0,
             ease: EASE,
           }}
-          style={{ originX: '120px', originY: '170px' }}
+          style={{ originX: '110px', originY: '165px' }}
         >
+          {/* torso */}
           <path
-            d="M 100 140 L 140 140 L 145 240 L 95 240 Z"
+            d="M 97 136
+               L 123 136
+               L 126 218
+               L 96 218 Z"
             fill="none"
             stroke="#111"
-            strokeWidth="8"
+            strokeWidth="7"
             strokeLinecap="round"
+            strokeLinejoin="round"
           />
 
+          {/* hips */}
           <path
-            d="M 110 240 L 110 280"
-            stroke="#111"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 140 240 L 142 280"
-            stroke="#111"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-
-          <path
-            d="M 100 150 Q 80 200 90 250"
-            stroke="#111"
-            strokeWidth="8"
+            d="M 96 218 L 126 218"
             fill="none"
-            strokeLinecap="round"
-          />
-
-          <path
-            d="M 140 150 Q 170 190 185 200"
             stroke="#111"
-            strokeWidth="8"
-            fill="none"
+            strokeWidth="6"
             strokeLinecap="round"
           />
 
-          {/* PHONE + GLOW */}
+          {/* left arm */}
+          <path
+            d="M 98 146
+               Q 84 176 87 230"
+            fill="none"
+            stroke="#111"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+
+          {/* right arm + phone as one stable rig */}
           <motion.g
-            animate={{ rotate: phoneRotate }}
+            animate={{ rotate: [0, phoneRotate, 0] }}
             transition={{
-              duration: preAction ? 0.2 : 0.95,
+              duration: preAction ? 0.22 : 0.95,
               repeat: 0,
               ease: EASE,
             }}
-            style={{ originX: '190px', originY: '200px' }}
+            style={{ originX: '140px', originY: '175px' }}
           >
+            <path
+              d="M 122 148
+                 Q 136 172 150 186"
+              fill="none"
+              stroke="#111"
+              strokeWidth="7"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 150 186
+                 Q 157 191 165 188"
+              fill="none"
+              stroke="#111"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+
+            {/* phone */}
+            <rect x="160" y="172" width="16" height="32" rx="3" fill="#111" />
+            <rect
+              x="163"
+              y="176"
+              width="10"
+              height="22"
+              rx="2"
+              fill={getPhoneScreenColor(mood, vfxType, preAction)}
+              opacity={getPhoneScreenOpacity(mood, vfxType, preAction)}
+            />
+            <circle cx="165" cy="177" r="1.2" fill="#fff" />
+
+            {/* subtle glow */}
             <motion.circle
-              cx="190"
-              cy="200"
-              r="18"
-              fill="url(#phoneGlowGradient)"
+              cx="168"
+              cy="188"
+              r="16"
+              fill={getPhoneGlowColor(mood, vfxType, preAction)}
               animate={{
-                opacity: phoneGlow.opacity,
-                scale: phoneGlow.scale,
+                opacity: getPhoneGlowOpacity(mood, vfxType, preAction),
+                scale: getPhoneGlowScale(mood, vfxType, preAction),
               }}
               transition={{
-                duration: preAction ? 0.2 : 0.9,
+                duration: 0.9,
                 repeat: 0,
                 ease: EASE,
               }}
             />
-            <rect x="180" y="180" width="20" height="40" rx="4" fill="#111" />
-            <motion.rect
-              x="183"
-              y="184"
-              width="14"
-              height="28"
-              rx="2.5"
-              fill={phoneGlow.color}
-              animate={{
-                opacity: phoneGlow.screenOpacity,
-              }}
-              transition={{
-                duration: preAction ? 0.2 : 0.9,
-                repeat: 0,
-                ease: EASE,
-              }}
-            />
-            <circle cx="185" cy="186" r="2" fill="#fff" />
           </motion.g>
+
+          {/* legs */}
+          <path
+            d="M 103 218
+               Q 103 242 100 264"
+            fill="none"
+            stroke="#111"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 122 218
+               Q 124 242 124 264"
+            fill="none"
+            stroke="#111"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
         </motion.g>
 
-        {/* HEAD */}
+        {/* HEAD RIG */}
         <motion.g
-          animate={{ rotate: headRotate }}
+          animate={{ rotate: [0, headRotate, 0, mood === 'confused' ? 1 : 0, 0] }}
           transition={{
-            duration: preAction ? 0.2 : 1.05,
+            duration: preAction ? 0.22 : 1,
             repeat: 0,
             ease: EASE,
           }}
-          style={{ originX: '120px', originY: '95px' }}
+          style={{ originX: '110px', originY: '90px' }}
         >
-          <circle
-            cx="120"
-            cy="95"
-            r="40"
-            fill="#fff"
-            stroke="#111"
-            strokeWidth="8"
-          />
+          <circle cx="110" cy="88" r="35" fill="#fff" stroke="#111" strokeWidth="7" />
 
+          {/* hair */}
           <path
-            d="M 95 70 L 110 60 L 125 68 L 140 62 L 155 72 L 140 78 L 125 75 L 110 82 Z"
+            d="M 88 66
+               L 100 58
+               L 112 64
+               L 123 60
+               L 135 68
+               L 122 73
+               L 110 70
+               L 97 76 Z"
             fill="#111"
           />
 
-          <BlinkingEyes mood={mood} preAction={preAction} />
+          {/* eyes */}
+          <Eyes mood={mood} preAction={preAction} />
 
+          {/* mouth */}
           <path
             d={getMouth(mood)}
-            stroke="#111"
-            strokeWidth="5"
-            strokeLinecap="round"
             fill="none"
+            stroke="#111"
+            strokeWidth="4"
+            strokeLinecap="round"
           />
+
+          {/* regret tear */}
+          {mood === 'regret' && (
+            <motion.path
+              d="M 100 108 Q 97 117 101 123"
+              fill="none"
+              stroke="#7C6CF2"
+              strokeWidth="2.5"
+              animate={{ opacity: [0.45, 0.9, 0.45] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: EASE }}
+            />
+          )}
         </motion.g>
 
+        {/* sleepy marks */}
         {mood === 'sleepy' && (
           <>
             <motion.text
-              x="170"
-              y="70"
-              fontSize="20"
-              animate={{ y: [70, 62, 70], opacity: [0.55, 0.9, 0.55] }}
+              x="152"
+              y="68"
+              fontSize="18"
+              fill="#7C6CF2"
+              animate={{ y: [68, 60, 68], opacity: [0.45, 0.85, 0.45] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: EASE }}
             >
               Z
             </motion.text>
             <motion.text
-              x="190"
-              y="55"
-              fontSize="14"
-              animate={{ y: [55, 45, 55], opacity: [0.35, 0.7, 0.35] }}
+              x="168"
+              y="54"
+              fontSize="12"
+              fill="#7C6CF2"
+              animate={{ y: [54, 46, 54], opacity: [0.28, 0.6, 0.28] }}
               transition={{ duration: 2.2, repeat: Infinity, delay: 0.15, ease: EASE }}
             >
               z
@@ -221,35 +240,26 @@ export function TowCharacter({
           </>
         )}
 
+        {/* confused mark */}
         {mood === 'confused' && (
           <motion.text
-            x="175"
-            y="80"
-            fontSize="22"
-            animate={{ rotate: [0, 6, -6, 0], opacity: [0.55, 0.85, 0.55] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: EASE }}
-            style={{ originX: '180px', originY: '75px' }}
+            x="156"
+            y="74"
+            fontSize="20"
+            fill="#7C6CF2"
+            animate={{ rotate: [0, 6, -6, 0], opacity: [0.45, 0.8, 0.45] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: EASE }}
+            style={{ transformOrigin: '160px 70px' }}
           >
             ?
           </motion.text>
         )}
-
-        {mood === 'regret' && (
-          <motion.path
-            d="M 105 120 Q 102 130 106 138"
-            stroke="#7C6CF2"
-            strokeWidth="3"
-            fill="none"
-            animate={{ opacity: [0.5, 0.95, 0.5], y: [0, 1, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: EASE }}
-          />
-        )}
-      </motion.svg>
+      </svg>
     </motion.div>
   );
 }
 
-function BlinkingEyes({
+function Eyes({
   mood,
   preAction,
 }: {
@@ -260,17 +270,17 @@ function BlinkingEyes({
     return (
       <>
         <path
-          d="M 98 100 Q 105 104 112 100"
+          d="M 96 92 Q 103 96 110 92"
           fill="none"
           stroke="#111"
-          strokeWidth="4"
+          strokeWidth="3.5"
           strokeLinecap="round"
         />
         <path
-          d="M 128 100 Q 135 104 142 100"
+          d="M 112 92 Q 119 96 126 92"
           fill="none"
           stroke="#111"
-          strokeWidth="4"
+          strokeWidth="3.5"
           strokeLinecap="round"
         />
       </>
@@ -281,51 +291,42 @@ function BlinkingEyes({
     return (
       <>
         <path
-          d="M 98 95 L 102 102 L 110 102 L 104 107 L 107 114 L 98 109 L 90 114 L 93 107 L 87 102 L 95 102 Z"
+          d="M 95 88 L 98 94 L 104 94 L 100 98 L 102 104 L 95 100 L 89 104 L 91 98 L 87 94 L 93 94 Z"
           fill="#F2A93B"
           stroke="#111"
-          strokeWidth="2"
+          strokeWidth="1.8"
         />
         <path
-          d="M 128 95 L 132 102 L 140 102 L 134 107 L 137 114 L 128 109 L 120 114 L 123 107 L 117 102 L 125 102 Z"
+          d="M 116 88 L 119 94 L 125 94 L 121 98 L 123 104 L 116 100 L 110 104 L 112 98 L 108 94 L 114 94 Z"
           fill="#F2A93B"
           stroke="#111"
-          strokeWidth="2"
+          strokeWidth="1.8"
         />
       </>
     );
   }
 
-  const blinkDuration = preAction ? 100 : 3;
+  const blinkDuration = preAction ? 100 : 3.2;
 
   return (
     <>
       <motion.circle
-        cx="105"
-        cy="100"
-        r={mood === 'stressed' ? 5.6 : 5}
+        cx="100"
+        cy="92"
+        r={mood === 'stressed' ? 4.8 : 4.2}
         fill="#111"
-        animate={{ scaleY: [1, 0.1, 1] }}
-        transition={{
-          duration: blinkDuration,
-          repeat: Infinity,
-          ease: EASE,
-        }}
-        style={{ originX: '105px', originY: '100px' }}
+        animate={{ scaleY: [1, 0.12, 1] }}
+        transition={{ duration: blinkDuration, repeat: Infinity, ease: EASE }}
+        style={{ originX: '100px', originY: '92px' }}
       />
       <motion.circle
-        cx="135"
-        cy="100"
-        r={mood === 'stressed' ? 5.6 : 5}
+        cx="121"
+        cy="92"
+        r={mood === 'stressed' ? 4.8 : 4.2}
         fill="#111"
-        animate={{ scaleY: [1, 0.1, 1] }}
-        transition={{
-          duration: blinkDuration,
-          repeat: Infinity,
-          delay: 0.2,
-          ease: EASE,
-        }}
-        style={{ originX: '135px', originY: '100px' }}
+        animate={{ scaleY: [1, 0.12, 1] }}
+        transition={{ duration: blinkDuration, repeat: Infinity, delay: 0.2, ease: EASE }}
+        style={{ originX: '121px', originY: '92px' }}
       />
     </>
   );
@@ -334,96 +335,18 @@ function BlinkingEyes({
 function getMouth(mood: Mood) {
   switch (mood) {
     case 'hopeful':
-      return 'M 105 125 Q 120 135 135 125';
+      return 'M 101 114 Q 110 120 119 114';
     case 'broken':
-      return 'M 105 130 Q 120 120 135 130';
+      return 'M 101 118 Q 110 111 119 118';
     case 'regret':
-      return 'M 105 130 Q 120 118 135 130';
+      return 'M 101 118 Q 110 109 119 118';
     case 'sleepy':
-      return 'M 110 128 Q 120 132 130 128';
+      return 'M 103 116 Q 110 119 117 116';
     case 'confused':
-      return 'M 110 130 Q 118 125 126 130';
-    case 'stressed':
-      return 'M 110 128 L 130 128';
+      return 'M 103 118 Q 108 114 114 117';
     default:
-      return 'M 110 128 L 130 128';
+      return 'M 103 116 L 117 116';
   }
-}
-
-function getPhoneTilt(mood: Mood) {
-  if (mood === 'stressed') return 8;
-  if (mood === 'hopeful') return -5;
-  if (mood === 'regret') return 2;
-  if (mood === 'broken') return 5;
-  if (mood === 'euphoric') return -8;
-  return -2;
-}
-
-function getPhoneGlow(
-  mood: Mood,
-  vfxType?: string,
-  preAction?: string | null
-) {
-  if (preAction === 'check-portfolio') {
-    return {
-      color: '#8EA3C0',
-      opacity: [0.1, 0.22, 0.1],
-      scale: [0.95, 1.08, 0.98],
-      screenOpacity: [0.16, 0.3, 0.16],
-    };
-  }
-
-  if (preAction === 'buy-dip') {
-    return {
-      color: '#58B889',
-      opacity: [0.08, 0.18, 0.08],
-      scale: [0.95, 1.05, 0.98],
-      screenOpacity: [0.14, 0.24, 0.14],
-    };
-  }
-
-  if (vfxType === 'red-flicker' || mood === 'broken' || mood === 'regret') {
-    return {
-      color: '#E56B6F',
-      opacity: [0.06, 0.18, 0.06],
-      scale: [0.96, 1.1, 0.98],
-      screenOpacity: [0.14, 0.3, 0.14],
-    };
-  }
-
-  if (vfxType === 'green-pop' || mood === 'hopeful') {
-    return {
-      color: '#58B889',
-      opacity: [0.05, 0.16, 0.05],
-      scale: [0.96, 1.08, 0.98],
-      screenOpacity: [0.12, 0.24, 0.12],
-    };
-  }
-
-  if (vfxType === 'gold-shine' || mood === 'euphoric') {
-    return {
-      color: '#F2A93B',
-      opacity: [0.05, 0.2, 0.05],
-      scale: [0.96, 1.12, 0.98],
-      screenOpacity: [0.16, 0.32, 0.16],
-    };
-  }
-
-  if (mood === 'sleepy') {
-    return {
-      color: '#7C6CF2',
-      opacity: [0.04, 0.1, 0.04],
-      scale: [0.96, 1.04, 0.98],
-      screenOpacity: [0.08, 0.18, 0.08],
-    };
-  }
-
-  return {
-    color: '#8EA3C0',
-    opacity: 0.04,
-    scale: 1,
-    screenOpacity: 0.08,
-  };
 }
 
 function getPreActionPose(preAction?: string | null) {
@@ -454,79 +377,88 @@ function getPreActionPose(preAction?: string | null) {
 function getPostOutcomePose(mood: Mood, vfxType?: string) {
   if (vfxType === 'fake-gain-collapse') {
     return {
-      bodyY: 4,
-      scale: 0.995,
-      bodyRotate: -2.5,
-      headRotate: -3.5,
-      phoneRotate: 8,
+      bodyY: 3,
+      bodyRotate: -2,
+      headRotate: -3,
+      phoneRotate: 6,
     };
   }
 
   switch (mood) {
     case 'regret':
-      return {
-        bodyY: 4,
-        scale: 0.995,
-        bodyRotate: -2,
-        headRotate: -3,
-        phoneRotate: 6,
-      };
+      return { bodyY: 3, bodyRotate: -1.8, headRotate: -2.6, phoneRotate: 5 };
     case 'broken':
-      return {
-        bodyY: 5,
-        scale: 0.992,
-        bodyRotate: -3,
-        headRotate: -4,
-        phoneRotate: 8,
-      };
+      return { bodyY: 4, bodyRotate: -2.4, headRotate: -3.2, phoneRotate: 7 };
     case 'hopeful':
-      return {
-        bodyY: -3,
-        scale: 1.01,
-        bodyRotate: 1,
-        headRotate: 1.8,
-        phoneRotate: -7,
-      };
+      return { bodyY: -2, bodyRotate: 0.8, headRotate: 1.4, phoneRotate: -5 };
     case 'stressed':
-      return {
-        bodyY: 1,
-        scale: 1,
-        bodyRotate: -1.5,
-        headRotate: -2.2,
-        phoneRotate: 8,
-      };
+      return { bodyY: 1, bodyRotate: -1, headRotate: -1.8, phoneRotate: 7 };
     case 'sleepy':
-      return {
-        bodyY: 3,
-        scale: 0.998,
-        bodyRotate: -1,
-        headRotate: -3,
-        phoneRotate: 0,
-      };
+      return { bodyY: 2, bodyRotate: -0.8, headRotate: -2.2, phoneRotate: 0 };
     case 'confused':
-      return {
-        bodyY: 0,
-        scale: 1,
-        bodyRotate: 0.8,
-        headRotate: 2.5,
-        phoneRotate: -1,
-      };
+      return { bodyY: 0, bodyRotate: 0.6, headRotate: 2, phoneRotate: -1 };
     case 'euphoric':
-      return {
-        bodyY: -5,
-        scale: 1.02,
-        bodyRotate: 1.5,
-        headRotate: 2,
-        phoneRotate: -10,
-      };
-    case 'neutral':
+      return { bodyY: -3, bodyRotate: 1.2, headRotate: 1.8, phoneRotate: -8 };
     default:
-      return {
-        bodyY: 0,
-        scale: 1,
-        bodyRotate: 0,
-        headRotate: 0,
-        phoneRotate: getPhoneTilt(mood),
-      };
+      return { bodyY: 0, bodyRotate: 0, headRotate: 0, phoneRotate: -2 };
   }
+}
+
+function getPhoneGlowColor(
+  mood: Mood,
+  vfxType?: string,
+  preAction?: string | null
+) {
+  if (preAction === 'check-portfolio') return '#8EA3C0';
+  if (preAction === 'buy-dip') return '#58B889';
+  if (vfxType === 'red-flicker' || mood === 'broken' || mood === 'regret') return '#E56B6F';
+  if (vfxType === 'green-pop' || mood === 'hopeful') return '#58B889';
+  if (vfxType === 'gold-shine' || mood === 'euphoric') return '#F2A93B';
+  if (mood === 'sleepy') return '#7C6CF2';
+  return '#8EA3C0';
+}
+
+function getPhoneGlowOpacity(
+  mood: Mood,
+  vfxType?: string,
+  preAction?: string | null
+) {
+  if (preAction) return [0.04, 0.14, 0.04];
+  if (vfxType === 'gold-shine') return [0.05, 0.18, 0.05];
+  if (vfxType === 'green-pop') return [0.04, 0.12, 0.04];
+  if (vfxType === 'red-flicker' || mood === 'regret' || mood === 'broken') {
+    return [0.03, 0.11, 0.03];
+  }
+  return 0.03;
+}
+
+function getPhoneGlowScale(
+  mood: Mood,
+  vfxType?: string,
+  preAction?: string | null
+) {
+  if (preAction) return [0.95, 1.06, 0.96];
+  if (vfxType === 'gold-shine' || mood === 'euphoric') return [0.96, 1.1, 0.97];
+  if (vfxType === 'green-pop' || mood === 'hopeful') return [0.96, 1.07, 0.97];
+  return 1;
+}
+
+function getPhoneScreenColor(
+  mood: Mood,
+  vfxType?: string,
+  preAction?: string | null
+) {
+  return getPhoneGlowColor(mood, vfxType, preAction);
+}
+
+function getPhoneScreenOpacity(
+  mood: Mood,
+  vfxType?: string,
+  preAction?: string | null
+) {
+  if (preAction) return 0.18;
+  if (vfxType === 'gold-shine') return 0.22;
+  if (vfxType === 'green-pop') return 0.18;
+  if (vfxType === 'red-flicker' || mood === 'broken' || mood === 'regret') return 0.2;
+  return 0.1;
 }
