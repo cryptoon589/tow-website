@@ -1,111 +1,67 @@
+"use client";
+
 import Link from "next/link";
 import TowCharacter from "@/components/game/TowCharacter";
 
 export default function GamePromo() {
   return (
-    <section className="py-16 bg-[#F7F5F2] border-y border-[#DDD7CE]">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-block px-3 py-1 bg-[#E8E2FF] text-[#7C6CF2] text-xs font-semibold rounded-full mb-4">
-              PLAYABLE NOW
-            </div>
-
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 leading-tight text-[#1E1B18]">
-              Too Tired to Win
-            </h2>
-
-            <p className="text-lg text-[#6F685F] mb-6 max-w-xl">
-              A crypto doom game built for bad decisions, near misses, and
-              people who keep checking the chart anyway.
-            </p>
-
-            <div className="space-y-3 mb-8">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">😵‍💫</span>
-                <div>
-                  <div className="font-semibold text-[#1E1B18]">Different every run</div>
-                  <div className="text-sm text-[#6F685F]">
-                    Random events, behavior reactions, and outcome variety so it
-                    doesn’t feel repetitive.
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">✍️</span>
-                <div>
-                  <div className="font-semibold text-[#1E1B18]">Built for screenshots</div>
-                  <div className="text-sm text-[#6F685F]">
-                    Finish a run, get your result card, and post your collapse on X.
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">🎮</span>
-                <div>
-                  <div className="font-semibold text-[#1E1B18]">Fast and addictive</div>
-                  <div className="text-sm text-[#6F685F]">
-                    Short runs, sharp outcomes, one more try energy.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/play"
-                className="inline-flex items-center px-8 py-4 bg-[#1E1B18] text-white font-bold rounded-2xl hover:bg-[#2B2723] transition-all shadow-sm"
-              >
-                Play Now →
-              </Link>
-
-              <Link
-                href="/play"
-                className="inline-flex items-center px-6 py-4 bg-[#FFFCF8] text-[#1E1B18] font-semibold rounded-2xl border border-[#DDD7CE] hover:bg-[#F6F1EA] transition-all"
-              >
-                View Game
-              </Link>
-            </div>
+    <section className="border-y border-[#DDD7CE] bg-[#FFFCF8]">
+      <div className="max-w-5xl mx-auto px-4 py-12 md:py-16">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <div className="flex justify-center md:justify-start">
+            <TowCharacter
+              state={{
+                lastOutcome: null,
+                phase: "idle",
+                isChoosing: false,
+                isResolving: false,
+                isIdle: true,
+              }}
+              preAction={false}
+              hesitationMs={0}
+              timeLeftMs={5500}
+              choiceWindowMs={5500}
+              tapped={false}
+              selected={false}
+              autoPicked={false}
+              width={260}
+              height={260}
+            />
           </div>
 
-          <div className="rounded-3xl border border-[#DDD7CE] bg-[#FFFCF8] p-5 shadow-[0_12px_32px_rgba(30,27,24,0.08)]">
-            <div className="aspect-[4/4.2] rounded-2xl bg-[#F7F5F2] border border-[#E7E1D8] p-6 flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-semibold tracking-[0.16em] uppercase text-[#948B81] mb-3">
-                  Game Preview
-                </div>
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center rounded-full border border-[#DDD7CE] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#6F685F]">
+              Play TOW
+            </div>
 
-                <div className="rounded-2xl bg-[#FFFCF8] border border-[#DDD7CE] min-h-[240px] flex items-center justify-center mb-5 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,108,242,0.08),transparent_65%)]" />
+            <h2 className="mt-4 text-3xl md:text-5xl font-black tracking-tight text-[#1E1B18]">
+              Choose before the market does.
+            </h2>
 
-                  <div className="relative flex flex-col items-center">
-                    <div className="scale-[0.78] origin-center">
-                      <TowCharacter state="idle" />
-                    </div>
+            <p className="mt-4 max-w-xl text-sm md:text-base leading-7 text-[#6F685F]">
+              A fast crypto-brained decision game built on pressure, bad instincts,
+              and surviving one more turn than you probably should.
+            </p>
 
-                    <div className="text-sm font-medium text-[#1E1B18] -mt-2">
-                      TOW is too tired again
-                    </div>
-                    <div className="text-xs text-[#6F685F] mt-1 italic">
-                      “You checked. That was a mistake.”
-                    </div>
-                  </div>
-                </div>
+            <div className="mt-6 grid gap-3 text-sm text-[#1E1B18] md:max-w-md">
+              <div className="rounded-xl border border-[#DDD7CE] bg-white px-4 py-3">
+                3 ambiguous choices
               </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-[#DADFE6] bg-[#F2F4F7] px-3 py-3 text-xs font-medium text-[#1E1B18] text-center">
-                  Check Portfolio
-                </div>
-                <div className="rounded-xl border border-[#D7EBDD] bg-[#F3FAF6] px-3 py-3 text-xs font-medium text-[#1E1B18] text-center">
-                  Buy the Dip
-                </div>
-                <div className="rounded-xl border border-[#DCEAD7] bg-[#F4FAF2] px-3 py-3 text-xs font-medium text-[#1E1B18] text-center">
-                  Touch Grass
-                </div>
+              <div className="rounded-xl border border-[#DDD7CE] bg-white px-4 py-3">
+                Timer pressure + auto-pick
               </div>
+              <div className="rounded-xl border border-[#DDD7CE] bg-white px-4 py-3">
+                Survive as long as you can
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Link
+                href="/play"
+                className="inline-flex items-center justify-center rounded-xl bg-[#1E1B18] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Play Game
+              </Link>
             </div>
           </div>
         </div>
