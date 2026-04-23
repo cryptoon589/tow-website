@@ -1,88 +1,94 @@
 "use client";
 
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import type { GameState } from "@/components/game/engine";
 import {
   getGameOverHeadline,
   getGameOverSubtext,
-  getRunTitle,
 } from "@/components/game/engine";
 
-type GameOverOverlayProps = {
-  state: GameState;
+type Props = {
+  state: any;
   bestRun: number;
   onReplay: () => void;
 };
 
-export function GameOverOverlay({
+export default function GameOverOverlay({
   state,
   bestRun,
   onReplay,
-}: GameOverOverlayProps) {
+}: Props) {
   if (!state.gameOver) return null;
 
   const headline = getGameOverHeadline(state);
   const subtext = getGameOverSubtext(state);
-  const runTitle = getRunTitle(state);
+
+  const streak = state.memory?.winStreak ?? 0;
+  const bestStreak = state.memory?.bestWinStreak ?? 0;
+
+  const hadHeater = bestStreak >= 3;
 
   return (
     <AnimatePresence>
       <motion.div
+        key="gameover"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       >
         <motion.div
-          initial={{ scale: 0.92, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.96, opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="bg-[#FFFCF8] border border-[#DDD7CE] rounded-2xl px-6 py-7 shadow-lg text-center max-w-md w-full mx-4"
+          className="bg-[#FFFCF8] border border-[#DDD7CE] rounded-2xl px-8 py-7 w-[90%] max-w-md text-center shadow-xl"
         >
-          <div className="text-[clamp(1.8rem,5vw,2.6rem)] font-black text-[#1E1B18] tracking-tight">
+          {/* TITLE */}
+          <div className="text-2xl font-bold text-[#1E1B18] mb-2">
             {headline}
           </div>
 
-          <div className="mt-2 text-sm md:text-base text-[#6F685F]">
+          {/* SUBTEXT */}
+          <div className="text-sm text-[#6F685F] mb-4">
             {subtext}
           </div>
 
-          <div className="mt-4 text-xs uppercase tracking-wider text-[#8A8278]">
-            {runTitle}
-          </div>
-
-          <div className="mt-5 flex justify-center gap-3 text-sm">
-            <div className="px-3 py-2 rounded-xl border border-[#DDD7CE] bg-white">
-              <div className="text-[#8A8278] text-xs">Turns</div>
-              <div className="font-bold text-[#1E1B18]">{state.turn}</div>
+          {/* STREAK MESSAGE */}
+          {hadHeater && (
+            <div className="text-xs text-[#8A8278] mb-4">
+              You had a heater going (x{bestStreak}).  
+              It always ends like that.
             </div>
+          )}
 
-            <div className="px-3 py-2 rounded-xl border border-[#DDD7CE] bg-white">
-              <div className="text-[#8A8278] text-xs">Best</div>
-              <div className="font-bold text-[#1E1B18]">{bestRun}</div>
+          {!hadHeater && (
+            <div className="text-xs text-[#8A8278] mb-4">
+              You never really got going.
+            </div>
+          )}
+
+          {/* STATS */}
+          <div className="flex justify-center gap-3 text-xs mb-6 flex-wrap">
+            <div className="px-3 py-1 border rounded-full bg-white">
+              Run: {state.turn}
+            </div>
+            <div className="px-3 py-1 border rounded-full bg-white">
+              Best Run: {bestRun}
+            </div>
+            <div className="px-3 py-1 border rounded-full bg-white">
+              Best Heat: {bestStreak}
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-3">
-            <button
-              onClick={onReplay}
-              className="rounded-xl bg-[#1E1B18] text-white py-3 font-semibold text-sm hover:opacity-90 transition"
-            >
-              Run it back
-            </button>
-
-            <Link
-              href="/"
-              className="rounded-xl border border-[#DDD7CE] py-3 text-sm font-semibold text-[#1E1B18] bg-white hover:bg-[#F7F5F2] transition text-center"
-            >
-              Exit
-            </Link>
-          </div>
+          {/* BUTTON */}
+          <button
+            onClick={onReplay}
+            className="w-full py-3 rounded-xl bg-black text-white font-semibold hover:opacity-90 transition"
+          >
+            run it back
+          </button>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
-
-export default GameOverOverlay;

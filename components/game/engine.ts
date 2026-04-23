@@ -43,6 +43,10 @@ export type Outcome = {
   appliedModifiers: Modifier[];
   removedModifiers: ModifierKind[];
   autoPicked?: boolean;
+  currentWinStreak?: number;
+  bestWinStreak?: number;
+  streakBroken?: number;
+  newBestWinStreak?: boolean;
 };
 
 export type RunMemory = {
@@ -51,6 +55,7 @@ export type RunMemory = {
   chaosPicks: number;
   timeouts: number;
   winStreak: number;
+  bestWinStreak: number;
   rektCount: number;
   glitchCount: number;
   bigWins: number;
@@ -342,10 +347,7 @@ function decrementModifiers(modifiers: Modifier[]): {
   return { nextModifiers, removed };
 }
 
-function mergeModifiers(
-  existing: Modifier[],
-  additions: Modifier[]
-): Modifier[] {
+function mergeModifiers(existing: Modifier[], additions: Modifier[]): Modifier[] {
   const map = new Map<ModifierKind, Modifier>();
 
   for (const item of existing) {
@@ -369,23 +371,14 @@ function recordRecentLabel(label: string) {
   }
 }
 
-function pickUniqueLabel(
-  pool: string[],
-  localUsed: Set<string>
-): string {
+function pickUniqueLabel(pool: string[], localUsed: Set<string>): string {
   const candidates = pool.filter(
-    (label) =>
-      !localUsed.has(label) &&
-      !RECENT_USED_LABELS.includes(label)
+    (label) => !localUsed.has(label) && !RECENT_USED_LABELS.includes(label)
   );
 
   const fallback = pool.filter((label) => !localUsed.has(label));
   const source =
-    candidates.length > 0
-      ? candidates
-      : fallback.length > 0
-      ? fallback
-      : pool;
+    candidates.length > 0 ? candidates : fallback.length > 0 ? fallback : pool;
 
   const chosen = sample(source);
   localUsed.add(chosen);
@@ -409,6 +402,7 @@ export function createInitialState(bestRun = 0): GameState {
       chaosPicks: 0,
       timeouts: 0,
       winStreak: 0,
+      bestWinStreak: 0,
       rektCount: 0,
       glitchCount: 0,
       bigWins: 0,
@@ -441,16 +435,7 @@ export function generateChoices(state: GameState): Choice[] {
     },
   ];
 
-  const shuffled = shuffle(choices);
-
-  return {
-    ...state,
-    phase: "choosing",
-    choices: shuffled,
-    selectedChoiceId: null,
-    autoPicked: false,
-    lastOutcome: state.lastOutcome,
-  }.choices;
+  return shuffle(choices);
 }
 
 function getMarketBand(tired: number) {
@@ -564,7 +549,11 @@ function getOutcomeWeights(
 
   if (hasModifier(state, "degen")) {
     weights = weights.map((entry) => {
-      if (entry.value === "win" || entry.value === "rekt" || entry.value === "glitch") {
+      if (
+        entry.value === "win" ||
+        entry.value === "rekt" ||
+        entry.value === "glitch"
+      ) {
         return { ...entry, weight: entry.weight + 4 };
       }
       if (entry.value === "winSmall" || entry.value === "loseSmall") {
@@ -588,7 +577,11 @@ function getOutcomeWeights(
 
   if (hasModifier(state, "narrativeShift") && category !== "chaos") {
     weights = weights.map((entry) => {
-      if (entry.value === "glitch" || entry.value === "win" || entry.value === "rekt") {
+      if (
+        entry.value === "glitch" ||
+        entry.value === "win" ||
+        entry.value === "rekt"
+      ) {
         return { ...entry, weight: entry.weight + 2 };
       }
       return entry;
@@ -712,10 +705,7 @@ function maybeApplySpecialEffect(
   return next;
 }
 
-function applyModifierEffects(
-  state: GameState,
-  outcome: Outcome
-): Outcome {
+function applyModifierEffects(state: GameState, outcome: Outcome): Outcome {
   let next = { ...outcome };
 
   if (hasModifier(state, "shield") && next.delta > 0) {
@@ -757,10 +747,16 @@ function updateMemory(
   if (choice.category === "chaos") next.chaosPicks += 1;
   if (wasAutoPicked) next.timeouts += 1;
 
-  if (outcome.kind === "win" || outcome.kind === "winSmall") {
+  const isWin = outcome.kind === "win" || outcome.kind === "winSmall";
+
+  if (isWin) {
     next.winStreak += 1;
   } else {
     next.winStreak = 0;
+  }
+
+  if (next.winStreak > next.bestWinStreak) {
+    next.bestWinStreak = next.winStreak;
   }
 
   if (outcome.kind === "rekt") {
@@ -822,8 +818,15 @@ export function resolveChoice(
   );
 
   let outcome = buildBaseOutcome(pickedKind);
-  outcome = maybeApplySpecialEffect({ ...state, modifiers: decayedModifiers }, choice, outcome);
-  outcome = applyModifierEffects({ ...state, modifiers: decayedModifiers }, outcome);
+  outcome = maybeApplySpecialEffect(
+    { ...state, modifiers: decayedModifiers },
+    choice,
+    outcome
+  );
+  outcome = applyModifierEffects(
+    { ...state, modifiers: decayedModifiers },
+    outcome
+  );
   outcome.autoPicked = wasAutoPicked;
   outcome.removedModifiers = [...outcome.removedModifiers, ...removed];
 
@@ -832,6 +835,22 @@ export function resolveChoice(
   const nextTired = clamp(state.tired + outcome.delta, 0, MAX_TIRED);
   const memory = updateMemory(state.memory, choice, outcome, wasAutoPicked);
   const gameOver = nextTired >= MAX_TIRED;
+
+  const streakBroken =
+    state.memory.winStreak > 0 && memory.winStreak === 0
+      ? state.memory.winStreak
+      : undefined;
+
+  outcome = {
+    ...outcome,
+    currentWinStreak: memory.winStreak,
+    bestWinStreak: memory.bestWinStreak,
+    streakBroken,
+    newBestWinStreak:
+      memory.winStreak > 0 &&
+      memory.winStreak === memory.bestWinStreak &&
+      memory.bestWinStreak > state.memory.bestWinStreak,
+  };
 
   const nextState: GameState = {
     ...state,
@@ -892,6 +911,7 @@ export function getRunTitle(state: GameState): string {
   if (memory.safePicks >= 6) return "The Survivor";
   if (memory.glitchCount >= 2) return "The Timeline Casualty";
   if (memory.rektCount >= 2) return "The Exit Liquidity";
+  if (memory.bestWinStreak >= 5) return "The Heater";
   if (turn >= 18) return "The Endurance Poster";
 
   return "The Participant";
@@ -906,4 +926,13 @@ export function getGameOverHeadline(state: GameState): string {
 export function getGameOverSubtext(state: GameState): string {
   const title = getRunTitle(state);
   return `You lasted ${state.turn} turns. ${title}.`;
+}
+
+export function getStreakLabel(streak: number): string {
+  if (streak <= 0) return "Cold";
+  if (streak === 1) return "Alive";
+  if (streak === 2) return "Back-to-back";
+  if (streak === 3) return "Heating up";
+  if (streak <= 5) return "Heater";
+  return "Unreal heater";
 }

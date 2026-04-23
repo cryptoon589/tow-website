@@ -2,47 +2,73 @@
 
 import { motion } from "framer-motion";
 
-type TiredMeterProps = {
+type Props = {
   tired: number;
-  max?: number;
+  max: number;
 };
 
-export function TiredMeter({ tired, max = 100 }: TiredMeterProps) {
-  const pct = Math.max(0, Math.min(100, (tired / max) * 100));
+export default function TiredMeter({ tired, max }: Props) {
+  const pct = Math.min(100, (tired / max) * 100);
 
-  const getColor = () => {
-    if (pct < 35) return "bg-[#1E1B18]"; // stable
-    if (pct < 70) return "bg-amber-500"; // unstable
-    return "bg-red-500"; // panic
-  };
+  // -----------------------------
+  // 🎨 COLOR STATES
+  // -----------------------------
+  const isLow = pct < 40;
+  const isMid = pct >= 40 && pct < 70;
+  const isHigh = pct >= 70;
 
-  const getLabel = () => {
-    if (pct < 35) return "stable";
-    if (pct < 70) return "unstable";
-    return "panic";
-  };
+  const barColor = isLow
+    ? "bg-black"
+    : isMid
+    ? "bg-amber-500"
+    : "bg-red-500";
 
+  const label = isLow
+    ? "focused"
+    : isMid
+    ? "getting tired"
+    : "exhausted";
+
+  // -----------------------------
+  // ⚡ DANGER PULSE
+  // -----------------------------
+  const pulse = isHigh ? 1.02 : 1;
+
+  // -----------------------------
+  // 🧱 RENDER
+  // -----------------------------
   return (
-    <div className="space-y-2">
+    <div className="w-full space-y-2">
+
+      {/* HEADER */}
+      <div className="flex justify-between text-xs text-[#6F685F]">
+        <span>Tired</span>
+        <span>{Math.round(pct)}%</span>
+      </div>
+
       {/* BAR */}
-      <div className="h-4 w-full rounded-full bg-[#E8E1D7] overflow-hidden border border-[#DDD7CE]">
+      <div className="h-3 w-full bg-[#E8E1D7] rounded-full overflow-hidden">
         <motion.div
-          animate={{ width: `${pct}%` }}
-          transition={{
-            duration: 0.4,
-            ease: "easeOut",
+          animate={{
+            width: `${pct}%`,
+            scale: pulse,
           }}
-          className={`h-full ${getColor()}`}
+          transition={{
+            width: { duration: 0.25 },
+            scale: {
+              duration: 0.5,
+              repeat: isHigh ? Infinity : 0,
+              repeatType: "mirror",
+            },
+          }}
+          className={`h-full ${barColor}`}
         />
       </div>
 
-      {/* LABEL ROW */}
-      <div className="flex justify-between text-xs text-[#6F685F]">
-        <span>{getLabel()}</span>
-        <span>{Math.round(pct)}%</span>
+      {/* LABEL */}
+      <div className="text-center text-[11px] text-[#8A8278]">
+        {label}
       </div>
     </div>
   );
 }
-
-export default TiredMeter;

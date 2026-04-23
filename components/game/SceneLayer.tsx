@@ -1,117 +1,160 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { useMemo } from "react";
 import type { GameState } from "@/components/game/engine";
 
-type SceneLayerProps = {
+type Props = {
   state: GameState;
   timeLeftMs: number;
   choiceWindowMs: number;
 };
 
-export function SceneLayer({
+export default function SceneLayer({
   state,
   timeLeftMs,
   choiceWindowMs,
-}: SceneLayerProps) {
-  const pct = timeLeftMs / choiceWindowMs;
+}: Props) {
+  // -----------------------------
+  // 🧠 NORMALIZED VALUES
+  // -----------------------------
+  const urgency = useMemo(() => {
+    if (!choiceWindowMs) return 0;
+    return 1 - timeLeftMs / choiceWindowMs;
+  }, [timeLeftMs, choiceWindowMs]);
 
+  const tiredPct = Math.min(1, state.tired / 100);
+
+  // -----------------------------
+  // 🎯 PRESSURE CURVE (NON-LINEAR)
+  // -----------------------------
+  const pressure = useMemo(() => {
+    if (urgency < 0.6) return 0;
+    if (urgency < 0.85) return (urgency - 0.6) * 2;
+    return 1;
+  }, [urgency]);
+
+  // -----------------------------
+  // 🎭 STATE FLAGS
+  // -----------------------------
   const isChoosing = state.phase === "choosing";
   const isResolving = state.phase === "resolving";
 
-  const tensionLevel =
-    pct > 0.4 ? 0 :
-    pct > 0.2 ? 1 :
-    2;
+  const kind = state.lastOutcome?.kind;
 
-  const tiredPct = state.tired;
+  const isBad =
+    isResolving && ["lose", "loseSmall", "rekt"].includes(kind || "");
 
-  const panic = tiredPct > 70;
-  const unstable = tiredPct > 35;
+  const isGood =
+    isResolving && ["win", "winSmall"].includes(kind || "");
 
+  const isGlitch = isResolving && kind === "glitch";
+
+  // -----------------------------
+  // 🎨 BASE COLOR
+  // -----------------------------
+  const baseBg = "#F7F5F2";
+
+  // -----------------------------
+  // 🌫 OVERLAYS
+  // -----------------------------
+  const tiredOverlay = tiredPct * 0.15;
+  const pressureOverlay = isChoosing ? pressure * 0.25 : 0;
+
+  // 🔥 pulse speed increases near end
+  const pulseScale =
+    pressure > 0.8 ? 1.02 :
+    pressure > 0.4 ? 1.01 :
+    1;
+
+  // -----------------------------
+  // 🧱 RENDER
+  // -----------------------------
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+    <div className="fixed inset-0 -z-10 pointer-events-none">
 
-      {/* BASE AMBIENT */}
+      {/* BASE BACKGROUND */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{ backgroundColor: baseBg }}
+        transition={{ duration: 0.4 }}
+      />
+
+      {/* TIRED VIGNETTE */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.25) 100%)",
+        }}
+        animate={{ opacity: tiredOverlay }}
+        transition={{ duration: 0.3 }}
+      />
+
+      {/* PRESSURE PULSE */}
       <motion.div
         className="absolute inset-0"
         animate={{
-          backgroundColor:
-            panic
-              ? "#2A0F0F"
-              : unstable
-              ? "#2A2415"
-              : "#F7F5F2",
+          opacity: pressureOverlay,
+          scale: pulseScale,
         }}
-        transition={{ duration: 0.6 }}
+        style={{
+          background: "rgba(0,0,0,0.35)",
+        }}
+        transition={{
+          duration: pressure > 0.8 ? 0.4 : 0.8,
+          repeat: pressure > 0.6 ? Infinity : 0,
+          repeatType: "mirror",
+          ease: "easeInOut",
+        }}
       />
 
-      {/* TIMER TENSION PULSE */}
-      {isChoosing && (
-        <motion.div
-          className="absolute inset-0"
-          animate={{
-            opacity:
-              tensionLevel === 0
-                ? 0
-                : tensionLevel === 1
-                ? 0.06
-                : 0.12,
-          }}
-          style={{
-            background:
-              tensionLevel === 2
-                ? "radial-gradient(circle at center, rgba(255,0,0,0.2), transparent 70%)"
-                : "radial-gradient(circle at center, rgba(0,0,0,0.1), transparent 70%)",
-          }}
-          transition={{ duration: 0.2 }}
-        />
-      )}
-
-      {/* OUTCOME FLASH */}
+      {/* BAD FLASH */}
       <AnimatePresence>
-        {isResolving && state.lastOutcome && (
+        {isBad && (
           <motion.div
-            key={state.lastOutcome.kind}
+            key="bad"
+            className="absolute inset-0 bg-red-500"
             initial={{ opacity: 0 }}
-            animate={{
-              opacity: 0.15,
-            }}
+            animate={{ opacity: 0.25 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0"
-            style={{
-              background:
-                state.lastOutcome.kind === "win" ||
-                state.lastOutcome.kind === "winSmall"
-                  ? "radial-gradient(circle, rgba(0,255,100,0.3), transparent 60%)"
-                  : state.lastOutcome.kind === "glitch"
-                  ? "repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 6px)"
-                  : "radial-gradient(circle, rgba(255,0,0,0.3), transparent 60%)",
-            }}
+            transition={{ duration: 0.18 }}
           />
         )}
       </AnimatePresence>
 
-      {/* GLITCH DISTORTION (RARE) */}
-      {state.lastOutcome?.kind === "glitch" && (
-        <motion.div
-          className="absolute inset-0"
-          animate={{
-            x: [0, -2, 2, 0],
-            opacity: [0.1, 0.2, 0.1],
-          }}
-          transition={{
-            duration: 0.25,
-            repeat: 2,
-          }}
-          style={{
-            backdropFilter: "blur(1px)",
-          }}
-        />
-      )}
+      {/* GOOD FLASH */}
+      <AnimatePresence>
+        {isGood && (
+          <motion.div
+            key="good"
+            className="absolute inset-0 bg-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.12 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* GLITCH EFFECT */}
+      <AnimatePresence>
+        {isGlitch && (
+          <motion.div
+            key="glitch"
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.35 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, rgba(0,0,0,0.1) 2px)",
+              mixBlendMode: "overlay",
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-export default SceneLayer;
