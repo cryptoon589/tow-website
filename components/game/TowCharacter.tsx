@@ -96,8 +96,8 @@ type RenderStep = Omit<RenderState, "meta"> & {
 };
 
 const BASE_SPRITES: Record<BaseKey, string> = {
-  "idle-neutral": "/tow/base/base-idle.png",
-  "idle-choose": "/tow/base/base-idle.png",
+  "idle-neutral": "/tow/base/base-idle-neutral.png",
+  "idle-choose": "/tow/base/base-idle-neutral.png",
   "idle-tap": "/tow/base/base-idle-phone-check.png",
   "idle-phone-check": "/tow/base/base-idle-phone-check.png",
   "lean-neutral": "/tow/base/base-lean-phone-choose.png",
