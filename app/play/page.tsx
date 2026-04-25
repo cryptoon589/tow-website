@@ -398,8 +398,8 @@ export default function PlayPage() {
         <Link href="/" className="font-black tracking-tight text-[#1E1B18]">TOW</Link>
       </header>
 
-      <section className="mx-auto flex h-full w-full max-w-[390px] flex-col items-center justify-between gap-0">
-        <div className="w-full rounded-[22px] border border-[#DDD7CE] bg-[#FFFCF8]/84 p-2.5 shadow-[0_14px_48px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[430px]">
+      <section className="mx-auto flex h-full w-full max-w-[430px] flex-col items-center justify-between gap-0">
+        <div className="w-full rounded-[22px] border border-[#DDD7CE] bg-[#FFFCF8]/84 p-2.5 shadow-[0_14px_48px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[520px]">
           <div className="mb-1.5 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#6F685F]">
             <span>{runArc.title}</span>
             <span className={market.color}>{market.label}</span>
