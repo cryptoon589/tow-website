@@ -19,16 +19,16 @@ export default function ActionButtons({
   disabled?: boolean;
 }) {
   const positions = [
-  "left-[6%] bottom-[18%]",       // left
-  "right-[6%] bottom-[18%]",      // right
-  "left-1/2 -translate-x-1/2 bottom-[4%]", // center
+  "left-[4%] top-[4%]",
+  "right-[4%] top-[4%]",
+  "left-1/2 -translate-x-1/2 top-[46%]",
 ];
 
   const rotations = ["-rotate-[0.7deg]", "rotate-[0.7deg]", "-rotate-[0.25deg]"];
   const delays = ["0ms", "180ms", "90ms"];
 
   return (
-    <div className="relative w-full max-w-[660px] mx-auto h-[170px] -mt-6">
+    <div className="relative w-full max-w-[780px] mx-auto h-[235px] -mt-16">
       {choices.map((choice, i) => {
         const isActive =
           hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
@@ -41,7 +41,7 @@ export default function ActionButtons({
             onMouseEnter={() => onHoverChange?.(choice.id)}
             onMouseLeave={() => onHoverChange?.(null)}
             className={clsx(
-              "group absolute overflow-visible px-7 py-5 min-w-[195px] max-w-[235px]",
+              "group absolute overflow-visible px-7 py-5 w-[230px]",
               "text-center select-none",
               "border border-white/60 shadow-lg backdrop-blur-md",
               "transition-transform transition-shadow duration-500 ease-out",
@@ -82,7 +82,7 @@ export default function ActionButtons({
             </div>
 
             {/* thought bubbles coming out of the box */}
-            <div className="absolute -top-[26px] left-1/2 -translate-x-1/2 z-20">
+            <div className="absolute -top-[34px] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
               <span className="thought-dot thought-dot-lg" />
               <span className="thought-dot thought-dot-md" />
               <span className="thought-dot thought-dot-sm" />
