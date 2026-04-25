@@ -62,6 +62,26 @@ export type RunMemory = {
   almostSaves: number;
 };
 
+export type PlayerPersona = "fresh" | "hesitant" | "degen" | "survivor" | "heater" | "tilted";
+
+export type PlayerProfile = {
+  runsPlayed: number;
+  bestRun: number;
+  totalTimeouts: number;
+  totalChaosPicks: number;
+  totalSafePicks: number;
+  totalAlmostSaves: number;
+  totalRekts: number;
+  persona: PlayerPersona;
+};
+
+export type RunArc = {
+  stage: "hope" | "doubt" | "chaos" | "desperation" | "lastStand";
+  title: string;
+  line: string;
+  pressure: number;
+};
+
 export type GameState = {
   phase: GamePhase;
   turn: number;
@@ -452,7 +472,9 @@ function getMarketBand(tired: number) {
 
 function getOutcomeWeights(
   category: HiddenCategory,
-  state: GameState
+  state: GameState,
+  hesitationPressure = 0,
+  persona: PlayerPersona = "fresh"
 ): Array<{ value: OutcomeKind; weight: number }> {
   const band = getMarketBand(state.tired);
 
@@ -619,6 +641,63 @@ function getOutcomeWeights(
       }
       return entry;
     });
+  }
+
+  // Reading vs decision pressure: the later the click, the less reliable
+  // the timeline becomes. This is subtle, but players feel the regret.
+  if (hesitationPressure > 0.58) {
+    const danger = Math.round((hesitationPressure - 0.58) * 18);
+    weights = weights.map((entry) => {
+      if (entry.value === "lose" || entry.value === "rekt" || entry.value === "glitch") {
+        return { ...entry, weight: entry.weight + danger };
+      }
+      if (entry.value === "win" || entry.value === "winSmall") {
+        return { ...entry, weight: Math.max(1, entry.weight - Math.floor(danger * 0.45)) };
+      }
+      return entry;
+    });
+  }
+
+  // Persistent memory pressure: the game does not expose this directly, but it
+  // adapts slightly to the player’s style so repeat runs feel personal.
+  if (persona === "hesitant") {
+    weights = weights.map((entry) =>
+      entry.value === "loseSmall" || entry.value === "lose"
+        ? { ...entry, weight: entry.weight + 3 }
+        : entry
+    );
+  }
+
+  if (persona === "degen") {
+    weights = weights.map((entry) =>
+      entry.value === "win" || entry.value === "rekt" || entry.value === "glitch"
+        ? { ...entry, weight: entry.weight + 3 }
+        : entry
+    );
+  }
+
+  if (persona === "survivor") {
+    weights = weights.map((entry) =>
+      entry.value === "loseSmall" || entry.value === "winSmall"
+        ? { ...entry, weight: entry.weight + 2 }
+        : entry
+    );
+  }
+
+  if (persona === "heater" && state.memory.winStreak >= 1) {
+    weights = weights.map((entry) =>
+      entry.value === "lose" || entry.value === "rekt"
+        ? { ...entry, weight: entry.weight + 4 }
+        : entry
+    );
+  }
+
+  if (persona === "tilted") {
+    weights = weights.map((entry) =>
+      entry.value === "glitch" || entry.value === "rekt"
+        ? { ...entry, weight: entry.weight + 2 }
+        : entry
+    );
   }
 
   return weights;
@@ -859,7 +938,9 @@ export function commitChoice(
 export function resolveChoice(
   state: GameState,
   choiceId: string,
-  wasAutoPicked = false
+  wasAutoPicked = false,
+  hesitationPressure = 0,
+  persona: PlayerPersona = "fresh"
 ): ResolveChoiceResult {
   const choice = state.choices.find((item) => item.id === choiceId);
   if (!choice) {
@@ -868,7 +949,7 @@ export function resolveChoice(
 
   recordRecentLabel(choice.label);
 
-  const weights = getOutcomeWeights(choice.category, state);
+  const weights = getOutcomeWeights(choice.category, state, hesitationPressure, persona);
   const pickedKind = weightedPick(weights);
 
   const { nextModifiers: decayedModifiers, removed } = decrementModifiers(
@@ -959,6 +1040,122 @@ export function advanceAfterResolve(state: GameState): GameState {
 
 export function restartRun(bestRun = 0): GameState {
   return createInitialState(bestRun);
+}
+
+
+export function getRunArc(state: GameState): RunArc {
+  const tired = state.tired;
+  const turn = state.turn;
+
+  if (tired >= 88) {
+    return {
+      stage: "lastStand",
+      title: "last stand",
+      line: "one wrong tap and the phone hits the floor",
+      pressure: 1,
+    };
+  }
+
+  if (tired >= 72 || turn >= 14) {
+    return {
+      stage: "desperation",
+      title: "desperation arc",
+      line: "you are not playing clean anymore",
+      pressure: 0.82,
+    };
+  }
+
+  if (tired >= 55 || state.memory.glitchCount > 0 || state.memory.chaosPicks >= 3) {
+    return {
+      stage: "chaos",
+      title: "chaos arc",
+      line: "nothing is reading the way it should",
+      pressure: 0.62,
+    };
+  }
+
+  if (tired >= 38 || turn >= 6) {
+    return {
+      stage: "doubt",
+      title: "doubt arc",
+      line: "the easy clicks stopped feeling easy",
+      pressure: 0.38,
+    };
+  }
+
+  return {
+    stage: "hope",
+    title: "early hope",
+    line: "everything still looks survivable",
+    pressure: 0.15,
+  };
+}
+
+export function inferPersonaFromRun(state: GameState): PlayerPersona {
+  const { memory } = state;
+  const totalPicks = Math.max(1, memory.safePicks + memory.swingPicks + memory.chaosPicks);
+
+  if (memory.timeouts >= 2 || memory.timeouts / totalPicks > 0.2) return "hesitant";
+  if (memory.chaosPicks >= 5 || memory.chaosPicks / totalPicks > 0.45) return "degen";
+  if (memory.bestWinStreak >= 4 || memory.bigWins >= 2) return "heater";
+  if (memory.rektCount >= 2 || state.tired >= MAX_TIRED) return "tilted";
+  if (memory.safePicks >= 5 || state.turn >= 14) return "survivor";
+  return "fresh";
+}
+
+export function mergeProfileWithRun(profile: PlayerProfile, state: GameState): PlayerProfile {
+  const persona = inferPersonaFromRun(state);
+  const next: PlayerProfile = {
+    runsPlayed: profile.runsPlayed + 1,
+    bestRun: Math.max(profile.bestRun, state.turn),
+    totalTimeouts: profile.totalTimeouts + state.memory.timeouts,
+    totalChaosPicks: profile.totalChaosPicks + state.memory.chaosPicks,
+    totalSafePicks: profile.totalSafePicks + state.memory.safePicks,
+    totalAlmostSaves: profile.totalAlmostSaves + state.memory.almostSaves,
+    totalRekts: profile.totalRekts + state.memory.rektCount + (state.gameOver ? 1 : 0),
+    persona,
+  };
+
+  const styleTotal = Math.max(1, next.totalChaosPicks + next.totalSafePicks);
+  const timeoutRate = next.totalTimeouts / Math.max(1, next.runsPlayed * 8);
+
+  if (timeoutRate > 0.18) next.persona = "hesitant";
+  else if (next.totalChaosPicks / styleTotal > 0.45) next.persona = "degen";
+  else if (next.bestRun >= 18 || next.totalSafePicks / styleTotal > 0.58) next.persona = "survivor";
+  else if (next.totalAlmostSaves >= 3) next.persona = "heater";
+  else if (next.totalRekts >= Math.max(3, next.runsPlayed)) next.persona = "tilted";
+
+  return next;
+}
+
+export function createFreshProfile(): PlayerProfile {
+  return {
+    runsPlayed: 0,
+    bestRun: 0,
+    totalTimeouts: 0,
+    totalChaosPicks: 0,
+    totalSafePicks: 0,
+    totalAlmostSaves: 0,
+    totalRekts: 0,
+    persona: "fresh",
+  };
+}
+
+export function getPersonaLine(persona: PlayerPersona): string {
+  switch (persona) {
+    case "hesitant":
+      return "you wait until the chart chooses for you";
+    case "degen":
+      return "you keep trusting the loudest button";
+    case "survivor":
+      return "you play to last, not to flex";
+    case "heater":
+      return "you chase the feeling after the save";
+    case "tilted":
+      return "you are one bad click from revenge mode";
+    default:
+      return "the game is still learning your habits";
+  }
 }
 
 export function getMarketState(state: GameState): {

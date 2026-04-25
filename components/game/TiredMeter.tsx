@@ -31,7 +31,7 @@ export default function TiredMeter({ tired, max, timeLeftMs = 0, choiceWindowMs 
       <motion.div
         animate={{ scale: danger ? [1, 1.012, 1] : 1 }}
         transition={{ duration: 0.65, repeat: danger ? Infinity : 0 }}
-        className="relative h-2 w-full overflow-hidden rounded-full bg-[#E8E1D7] shadow-inner"
+        className="relative h-2.5 w-full overflow-hidden rounded-full bg-[#E8E1D7] shadow-inner md:h-3"
       >
         <motion.div
           animate={{ width: `${pct}%`, opacity: danger ? [1, 0.72, 1] : 1 }}

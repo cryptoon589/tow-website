@@ -98,6 +98,15 @@ function resolveMode(state: string): ResolvedMode {
         type: "idle",
       };
 
+    case "idle-stress":
+      return {
+        pose: "idle",
+        face: "sigh",
+        base: "base-idle-phone-check",
+        vfx: "vfx-question",
+        type: "idle",
+      };
+
     default:
       return {
         pose: "idle",
@@ -154,7 +163,7 @@ export default function TowCharacter({
     const scheduleNextIdleBeat = () => {
       if (cancelled) return;
 
-      const nextDelay = 4200 + Math.random() * 3000;
+      const nextDelay = urgency > 0.7 ? 1400 + Math.random() * 1600 : 2200 + Math.random() * 2400;
 
       idleTimerRef.current = setTimeout(() => {
         if (cancelled) return;

@@ -1,17 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import type { GameState } from "@/components/game/engine";
-import { getGameOverHeadline, getGameOverSubtext, getRunTitle } from "@/components/game/engine";
+import type { GameState, PlayerProfile } from "@/components/game/engine";
+import { getGameOverHeadline, getGameOverSubtext, getPersonaLine, getRunTitle } from "@/components/game/engine";
 import TowCharacter from "@/components/game/TowCharacter";
 
 type Props = {
   state: GameState;
   bestRun: number;
+  profile?: PlayerProfile;
   onReplay: () => void;
 };
 
-function buildShareText(state: GameState, bestRun: number) {
+function buildShareText(state: GameState, bestRun: number, profile?: PlayerProfile) {
   const title = getRunTitle(state);
   const nearMiss = state.memory.almostSaves > 0 ? `Almost saves: ${state.memory.almostSaves}.` : "I almost made it.";
 
@@ -19,18 +20,18 @@ function buildShareText(state: GameState, bestRun: number) {
     `TOW run: ${title}`,
     `Lasted ${state.turn} turns. Best: ${bestRun}.`,
     `Final tired: ${state.tired}/100. Best heater: x${state.memory.bestWinStreak}.`,
-    nearMiss,
+    profile ? `Player memory: ${profile.persona}.` : nearMiss,
     "Run it back?",
   ].join("\n");
 }
 
-export default function GameOverOverlay({ state, bestRun, onReplay }: Props) {
+export default function GameOverOverlay({ state, bestRun, profile, onReplay }: Props) {
   const open = state.gameOver;
   const runTitle = getRunTitle(state);
   const headline = getGameOverHeadline(state);
   const subtext = getGameOverSubtext(state);
 
-  const shareText = buildShareText(state, bestRun);
+  const shareText = buildShareText(state, bestRun, profile);
 
   const copyResult = async () => {
     try {
@@ -79,6 +80,14 @@ export default function GameOverOverlay({ state, bestRun, onReplay }: Props) {
                   <div>Almost saves: <strong>{state.memory.almostSaves}</strong>.</div>
                   <div>Result: <strong>{runTitle}</strong>.</div>
                 </div>
+                {profile && profile.runsPlayed > 0 && (
+                  <div className="mt-3 rounded-2xl border border-black/5 bg-white/55 p-3 text-xs text-[#6F685F]">
+                    <div className="font-black uppercase tracking-[0.16em] text-[#8A8278]">player memory</div>
+                    <div className="mt-1 font-semibold text-[#2A2723]">{profile.persona}</div>
+                    <div className="mt-0.5">{getPersonaLine(profile.persona)}</div>
+                  </div>
+                )}
+
                 <div className="mt-3 text-sm italic text-[#6F685F]">
                   {state.memory.almostSaves > 0
                     ? "I was one tap away. That is why I ran it back."

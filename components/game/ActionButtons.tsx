@@ -96,10 +96,32 @@ export default function ActionButtons({
 }: Props) {
   const urgency = choiceWindowMs > 0 ? 1 - timeLeftMs / choiceWindowMs : 0;
   const panic = urgency > 0.8;
+  const secondsLeft = Math.max(0, timeLeftMs / 1000);
+  const showLateTimer = timeLeftMs > 0 && timeLeftMs < 3200;
+  const showHint = !showLateTimer && urgency > 0.62;
   const usedThoughts = new Set<string>();
 
   return (
-    <div className="flex w-full flex-col gap-2">
+    <div className="flex w-full flex-col gap-1.5">
+      <div className="h-5 text-center">
+        {showLateTimer ? (
+          <motion.div
+            animate={{ scale: panic ? [1, 1.08, 1] : 1, x: timeLeftMs < 950 ? [0, -1, 1, 0] : 0 }}
+            transition={{ duration: 0.28, repeat: panic ? Infinity : 0 }}
+            className="text-[11px] font-black uppercase tracking-[0.2em] text-red-500"
+          >
+            choose · {secondsLeft.toFixed(1)}
+          </motion.div>
+        ) : showHint ? (
+          <motion.div
+            animate={{ opacity: [0.35, 0.8, 0.35] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+            className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8A8278]"
+          >
+            don’t freeze
+          </motion.div>
+        ) : null}
+      </div>
       {choices.map((choice, index) => {
         const isHovered = hoveredChoiceId === choice.id;
         const isSelected = selectedChoiceId === choice.id;
@@ -131,7 +153,7 @@ export default function ActionButtons({
             }}
             whileTap={!disabled ? { scale: 0.94, rotate: style.rotate * 0.35 } : undefined}
             transition={{ type: "spring", stiffness: 390, damping: 24 }}
-            className={`${style.align} ${style.width} ${style.radius} group relative min-h-[62px] overflow-hidden border px-4 py-2.5 text-left ${style.shell} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+            className={`${style.align} ${style.width} ${style.radius} group relative min-h-[58px] overflow-hidden border px-4 py-2 text-left ${style.shell} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
             {/* Each button breathes between red and green so the user never trusts the visual. */}
             <motion.div
