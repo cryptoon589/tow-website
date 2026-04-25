@@ -101,7 +101,7 @@ export type ResolveChoiceResult = {
   outcome: Outcome;
 };
 
-export const STARTING_TIRED = 32;
+export const STARTING_TIRED = 10;
 export const MAX_TIRED = 100;
 
 const RECENT_LABEL_LIMIT = 15;

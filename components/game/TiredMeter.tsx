@@ -57,7 +57,9 @@ export default function TiredMeter({
         <div className="absolute inset-0 flex items-center px-1.5 gap-[2px]">
           {Array.from({ length: segments }).map((_, i) => {
             const active = i < activeSegments;
-            const delay = `${(i % 8) * 0.08}s`;
+            const speed = Math.max(0.65, 1.8 - percent / 90);
+            const delay = `${((i * 7) % 13) * 0.07}s`;
+            const pulseScale = active ? 0.85 + ((i * 5) % 7) * 0.04 : 1;
 
             return (
               <div
@@ -74,8 +76,12 @@ export default function TiredMeter({
                     : "h-[5px]"
                 )}
                 style={{
-                  animation: `meterBlockPulse ${2 - percent / 120}s ease-in-out infinite`,
-                  animationDelay: `${i * 0.05}s`,
+                  animation: active
+                    ? `meterBlockPulse ${speed}s ease-in-out infinite`
+                    : undefined,
+                    animationDelay: delay,
+                    transform: active ? `scaleY(${pulseScale})` : undefined,
+                    transformOrigin: "center",
                   }}
               />
             );

@@ -24,7 +24,7 @@ export default function ActionButtons({
         const positions = [
           "left-[2%] top-[8%]",
           "right-[2%] top-[10%]",
-          "left-[34%] bottom-[7%]",
+          "left-[34%] bottom-[12%]",
         ];
 
         const rotation = ["-rotate-[0.5deg]", "rotate-[0.5deg]", "-rotate-[0.25deg]"];
@@ -41,7 +41,7 @@ export default function ActionButtons({
             onMouseEnter={() => onHoverChange?.(choice.id)}
             onMouseLeave={() => onHoverChange?.(null)}
             className={clsx(
-              "absolute px-7 py-6 min-w-[190px] max-w-[230px]",
+              "absolute overflow-visible px-7 py-6 min-w-[190px] max-w-[230px]",
               "text-center",
               "transition-all duration-200",
               "hover:scale-[1.03] active:scale-[0.97]",
@@ -74,6 +74,11 @@ export default function ActionButtons({
               <div className="text-[16px] font-semibold leading-tight">
                 {choice.label}
               </div>
+
+            <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-[3px] pointer-events-none">
+              <div className="w-[7px] h-[7px] bg-white/60 rounded-full" />
+              <div className="w-[4px] h-[4px] bg-white/40 rounded-full" />
+            </div>
 
               {choice.whisper && (
                 <div className="text-[12px] opacity-60 mt-1">
