@@ -432,15 +432,29 @@ export default function PlayPage() {
         </div>
 
         <div className="-mt-8 w-full pb-0">
-          <ActionButtons
-           choices={state.choices}
-           selectedChoiceId={state.selectedChoiceId}
-           hoveredChoiceId={hoveredChoiceId}
-           onHoverChange={setHoveredChoiceId}
-           onSelect={(choice) => void playChoiceFlow(choice)}
-           disabled={state.phase !== "choosing" || state.gameOver}
-          />
-        </div>
+  {state.phase === "choosing" && !state.gameOver && (
+    <div className="relative z-30 mb-2 flex justify-center">
+      <div
+        className={`rounded-full px-4 py-1 text-[12px] font-black shadow-sm backdrop-blur-md transition-all duration-300 ${
+          timeLeftMs <= 3000
+            ? "bg-red-100/90 text-red-600 animate-pulse"
+            : "bg-white/70 text-[#6F685F]"
+        }`}
+      >
+        choose in {Math.ceil(timeLeftMs / 1000)}s
+      </div>
+    </div>
+  )}
+
+  <ActionButtons
+    choices={state.choices}
+    selectedChoiceId={state.selectedChoiceId}
+    hoveredChoiceId={hoveredChoiceId}
+    onHoverChange={setHoveredChoiceId}
+    onSelect={(choice) => void playChoiceFlow(choice)}
+    disabled={state.phase !== "choosing" || state.gameOver}
+  />
+</div>
       </section>
 
       <GameOverOverlay state={state} bestRun={Math.max(bestRun, profile.bestRun)} profile={profile} onReplay={handleReplay} />

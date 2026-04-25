@@ -115,7 +115,7 @@ export default function GameOverOverlay({
           {/* Main content */}
           <div className="relative z-10 mt-10 flex gap-5 md:gap-6">
             {/* Portrait */}
-            <div className="relative h-[158px] w-[158px] shrink-0 overflow-hidden rounded-[18px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner">
+            <div className="mt-6 relative h-[158px] w-[158px] shrink-0 overflow-hidden rounded-[18px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner">
               <div className="absolute left-3 top-3 z-10 text-[10px] font-bold tracking-[0.22em] text-[#9A9288]">
                 PORTRAIT
               </div>
@@ -186,7 +186,18 @@ export default function GameOverOverlay({
         <div className="mt-4 flex gap-3">
           <button
             onClick={onReplay}
-            className="flex-1 rounded-xl bg-black py-3 font-bold text-white transition active:scale-[0.98]"
+            className="
+              relative overflow-hidden rounded-xl bg-black px-8 py-4
+              text-white font-black
+              animate-[runBackPulse_2.4s_ease-in-out_infinite]
+              transition-all duration-300
+              hover:scale-[1.04] hover:shadow-[0_0_28px_rgba(0,0,0,0.28)]
+              active:scale-[0.96]
+              before:absolute before:inset-0
+              before:-translate-x-full
+              before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent
+              before:transition-transform before:duration-700
+              hover:before:translate-x-full"
           >
             run it back
           </button>

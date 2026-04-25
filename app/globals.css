@@ -251,3 +251,14 @@ body {
   bottom: 34px;
   animation-delay: 0.56s;
 }
+
+@keyframes runBackPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+  }
+}
