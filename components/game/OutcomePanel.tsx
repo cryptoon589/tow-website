@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import TowCharacter from "@/components/game/TowCharacter";
 
 type Outcome = {
   kind: string;
@@ -59,15 +58,6 @@ function getDynamicSubtext(outcome: Outcome, base: string) {
   return base;
 }
 
-function characterStateFor(kind: string) {
-  if (kind === "win") return "react-win";
-  if (kind === "winSmall") return "react-winSmall";
-  if (kind === "lose") return "react-lose";
-  if (kind === "loseSmall") return "react-loseSmall";
-  if (kind === "glitch") return "react-glitch";
-  return "react-rekt";
-}
-
 export default function OutcomePanel({ outcome, visible, gameOver = false }: Props) {
   if (!outcome) return null;
 
@@ -96,14 +86,7 @@ export default function OutcomePanel({ outcome, visible, gameOver = false }: Pro
               isBad ? "bg-[#FFF4F4]/92 border-[#F1C5C5]" : isGood ? "bg-[#F4FAF4]/92 border-[#CFE7CF]" : "bg-[#F7F5F2]/92 border-[#DDD7CE]",
             ].join(" ")}
           >
-            {/* upper-body emotional crop */}
-            <div className="absolute -left-2 -top-9 hidden h-[88px] w-[88px] overflow-hidden rounded-full border border-white/80 bg-white/75 shadow-sm backdrop-blur-md sm:block">
-              <div className="absolute left-1/2 top-[-22px] -translate-x-1/2 scale-[0.78]">
-                <TowCharacter state={characterStateFor(outcome.kind)} width={128} height={128} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 pl-0 sm:pl-14">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
               <div
                 className={[
                   "grid h-11 w-11 place-items-center rounded-2xl border bg-white/62 text-lg font-black",

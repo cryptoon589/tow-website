@@ -18,80 +18,78 @@ export default function SceneLayer({ state, timeLeftMs, choiceWindowMs }: Props)
   const isBad = ["lose", "loseSmall", "rekt"].includes(kind || "");
   const isGood = ["win", "winSmall"].includes(kind || "");
   const isGlitch = kind === "glitch";
-  const outcomeActive = state.phase === "resolving" || state.phase === "gameOver";
+  const outcomeActive = state.phase === "resolving" || state.gameOver;
+  const pressure = Math.max(tiredPct, urgency * 0.8);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#F7F2EA]">
+      {/* base mood wash */}
       <motion.div
         className="absolute inset-0"
         animate={{
-          background:
-            tiredPct > 0.82
-              ? "radial-gradient(circle at 50% 30%, #FFF7ED 0%, #FECACA 45%, #F3E0D7 100%)"
-              : tiredPct > 0.55
-              ? "radial-gradient(circle at 50% 30%, #FFFBEB 0%, #FED7AA 42%, #F7F2EA 100%)"
-              : tiredPct > 0.32
-              ? "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #FDF2E5 54%, #F1E8DD 100%)"
-              : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F7F2EA 64%, #EFE7DD 100%)",
+          background: `radial-gradient(circle at 50% 38%, rgba(255,255,255,0.78), rgba(247,242,234,0.90) 32%, rgba(239,68,68,${0.04 + tiredPct * 0.16}) 74%, rgba(30,27,24,${0.03 + tiredPct * 0.08}) 100%)`,
         }}
-        transition={{ duration: 0.45 }}
+        transition={{ duration: 0.5 }}
       />
 
-      {/* soft stage light behind TOW */}
+      {/* subtle pressure ripple / wave field */}
       <motion.div
-        className="absolute left-1/2 top-[41%] h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/62 blur-3xl"
-        animate={{ scale: 1 + tiredPct * 0.16 + urgency * 0.08, opacity: 0.62 - tiredPct * 0.16 }}
-        transition={{ duration: 0.35 }}
-      />
-
-      {/* ambient uncertainty */}
-      <motion.div
-        className="absolute inset-0 opacity-55 blur-3xl"
+        className="absolute inset-[-18%] opacity-40 mix-blend-multiply"
+        style={{
+          backgroundImage:
+            "repeating-radial-gradient(circle at 50% 45%, rgba(30,27,24,0.075) 0px, rgba(30,27,24,0.075) 1px, transparent 2px, transparent 9px)",
+        }}
         animate={{
-          background: [
-            "radial-gradient(circle at 18% 76%, rgba(239,68,68,0.13), transparent 34%), radial-gradient(circle at 82% 24%, rgba(16,185,129,0.11), transparent 34%)",
-            "radial-gradient(circle at 24% 20%, rgba(16,185,129,0.13), transparent 34%), radial-gradient(circle at 78% 78%, rgba(239,68,68,0.14), transparent 34%)",
-          ],
+          scale: [1, 1.035 + pressure * 0.055, 1],
+          rotate: [0, pressure > 0.7 ? 0.4 : 0.15, 0],
+          opacity: 0.16 + pressure * 0.36,
         }}
-        transition={{ duration: 4.2, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        transition={{ duration: 2.8 - pressure * 1.25, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* moving chart arrows / emotional direction */}
-      <AnimatePresence mode="wait">
-        {outcomeActive && isBad && (
-          <motion.div key={`down-${flashKey}`} className="absolute inset-0">
-            <motion.div
-              initial={{ opacity: 0, x: -40, y: -20, rotate: -18 }}
-              animate={{ opacity: [0, 0.28, 0], x: [60, 10, -120], y: [80, 160, 260] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
-              className="absolute left-[58%] top-[18%] text-[120px] font-black text-red-500/40"
-            >
-              ↓
-            </motion.div>
+      <motion.div
+        className="absolute left-1/2 top-[42%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/5"
+        animate={{
+          scale: [0.7, 1.25 + pressure * 0.3],
+          opacity: [0.16 + pressure * 0.12, 0],
+        }}
+        transition={{ duration: 2.4 - pressure * 0.9, repeat: Infinity, ease: "easeOut" }}
+      />
+
+      {/* ambient chart arrows */}
+      <AnimatePresence>
+        {outcomeActive && isGood && (
+          <motion.div
+            key={`arrow-good-${flashKey}`}
+            className="absolute right-[15%] top-[28%] text-[120px] font-black text-emerald-500/18"
+            initial={{ opacity: 0, y: 42, scale: 0.82 }}
+            animate={{ opacity: [0, 1, 0], y: [-10, -70], scale: [0.9, 1.1] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9 }}
+          >
+            ↑
           </motion.div>
         )}
-        {outcomeActive && isGood && (
-          <motion.div key={`up-${flashKey}`} className="absolute inset-0">
-            <motion.div
-              initial={{ opacity: 0, x: 40, y: 70, rotate: 18 }}
-              animate={{ opacity: [0, 0.24, 0], x: [-50, 10, 130], y: [250, 130, 20] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.85, ease: "easeOut" }}
-              className="absolute left-[32%] top-[22%] text-[120px] font-black text-emerald-500/40"
-            >
-              ↑
-            </motion.div>
+        {outcomeActive && isBad && (
+          <motion.div
+            key={`arrow-bad-${flashKey}`}
+            className="absolute left-[14%] top-[24%] text-[140px] font-black text-red-500/20"
+            initial={{ opacity: 0, y: -40, scale: 0.85 }}
+            animate={{ opacity: [0, 1, 0], y: [0, 86], scale: [0.9, 1.12] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.95 }}
+          >
+            ↓
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* pressure + vignette */}
-      <motion.div className="absolute inset-0 bg-black" animate={{ opacity: tiredPct * 0.075 + (urgency > 0.78 ? 0.055 : 0) }} transition={{ duration: 0.25 }} />
+      <motion.div className="absolute inset-0 bg-black" animate={{ opacity: tiredPct * 0.06 + (urgency > 0.78 ? 0.045 : 0) }} transition={{ duration: 0.25 }} />
       <motion.div
         className="absolute inset-0"
-        style={{ background: "radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.26) 100%)" }}
-        animate={{ opacity: tiredPct * 0.48 + (urgency > 0.85 ? 0.1 : 0) }}
+        style={{ background: "radial-gradient(circle at center, transparent 42%, rgba(0,0,0,0.25) 100%)" }}
+        animate={{ opacity: tiredPct * 0.42 + (urgency > 0.85 ? 0.1 : 0) }}
         transition={{ duration: 0.3 }}
       />
 
@@ -122,7 +120,7 @@ export default function SceneLayer({ state, timeLeftMs, choiceWindowMs }: Props)
             key={`good-${flashKey}`}
             className="absolute inset-0"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.62, 0.18] }}
+            animate={{ opacity: [0, 0.62, 0.16] }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.62 }}
             style={{ background: "radial-gradient(circle at 50% 38%, rgba(16,185,129,0.72), rgba(16,185,129,0.22) 38%, transparent 78%)" }}
@@ -133,7 +131,7 @@ export default function SceneLayer({ state, timeLeftMs, choiceWindowMs }: Props)
             key={`bad-${flashKey}`}
             className="absolute inset-0"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, kind === "rekt" ? 0.72 : 0.56, 0.22] }}
+            animate={{ opacity: [0, kind === "rekt" ? 0.72 : 0.58, 0.22] }}
             exit={{ opacity: 0 }}
             transition={{ duration: kind === "rekt" ? 0.72 : 0.56 }}
             style={{ background: "radial-gradient(circle at 50% 42%, rgba(239,68,68,0.82), rgba(239,68,68,0.28) 40%, transparent 78%)" }}
