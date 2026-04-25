@@ -57,16 +57,16 @@ export default function ActionButtons({
               background: `
                 linear-gradient(
                   120deg,
-                  rgba(34,197,94,0.28),
-                  rgba(255,255,255,0.85),
-                  rgba(239,68,68,0.28)
+                  rgba(34,197,94,0.20),
+                  rgba(255,255,255,0.88),
+                  rgba(239,68,68,0.20)
                 )
               `,
             }}
           >
             {/* inner pulse (subtle but visible) */}
             <div className="absolute inset-0 rounded-[inherit] overflow-hidden">
-              <div className="absolute inset-0 animate-[bubblePulse_3s_ease-in-out_infinite]" />
+              <div className="absolute inset-0 animate-[bubblePulse_5.5s_ease-in-out_infinite]" />
             </div>
 
             {/* content */}

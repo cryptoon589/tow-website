@@ -411,7 +411,7 @@ export default function PlayPage() {
           <div className="pointer-events-none absolute right-2 top-[60px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
             <span className={market.color}>{market.label}</span>
           </div>
-          <div className="pointer-events-none absolute left-1/2 top-[-45px] z-30 max-w-[300px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[15px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[-45px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
             {runBeat}
           </div>
 

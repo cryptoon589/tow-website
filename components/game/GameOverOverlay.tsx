@@ -59,12 +59,12 @@ export default function GameOverOverlay({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
 
-  if (!state.gameOver) return null;
-
-  const result = state.resultTitle || "The Participant";
+  const result = state?.resultTitle || "The Participant";
   const img = getImage(result);
-  const stamp = useMemo(() => pickStamp(state.turn, result), [state.turn, result]);
+  const stamp = useMemo(() => pickStamp(state?.turn || 0, result), [state?.turn, result]);
   const resultColor = getResultColor(result);
+
+  if (!state?.gameOver) return null;
 
   const downloadCard = async () => {
     if (!cardRef.current) return;
