@@ -18,73 +18,74 @@ export default function ActionButtons({
   onSelect: (choice: Choice) => void;
   disabled?: boolean;
 }) {
+  const positions = [
+    "left-[2%] top-[4%]",
+    "right-[2%] top-[6%]",
+    "left-1/2 -translate-x-1/2 bottom-[2%]",
+  ];
+
+  const rotations = ["-rotate-[0.7deg]", "rotate-[0.7deg]", "-rotate-[0.25deg]"];
+  const delays = ["0ms", "180ms", "90ms"];
+
   return (
-    <div className="relative w-full max-w-[640px] mx-auto h-[160px] -mt-4">
+    <div className="relative w-full max-w-[660px] mx-auto h-[170px] -mt-6">
       {choices.map((choice, i) => {
-        const positions = [
-          "left-[2%] top-[8%]",
-          "right-[2%] top-[10%]",
-          "left-[34%] bottom-[12%]",
-        ];
-
-        const rotation = ["-rotate-[0.5deg]", "rotate-[0.5deg]", "-rotate-[0.25deg]"];
-
         const isActive =
-          hoveredChoiceId === choice.id ||
-          selectedChoiceId === choice.id;
+          hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
 
         return (
           <button
-            key={choice.id}
+            key={`choice-slot-${i}`}
             disabled={disabled}
             onClick={() => onSelect(choice)}
             onMouseEnter={() => onHoverChange?.(choice.id)}
             onMouseLeave={() => onHoverChange?.(null)}
             className={clsx(
-              "absolute overflow-visible px-7 py-6 min-w-[190px] max-w-[230px]",
-              "text-center",
-              "transition-all duration-200",
-              "hover:scale-[1.03] active:scale-[0.97]",
-              "shadow-md",
-              "border border-white/40",
-              "backdrop-blur-md",
+              "group absolute overflow-visible px-7 py-5 min-w-[195px] max-w-[235px]",
+              "text-center select-none",
+              "border border-white/60 shadow-lg backdrop-blur-md",
+              "transition-transform transition-shadow duration-500 ease-out",
+              "hover:scale-[1.055] active:scale-[0.965]",
+              disabled && "pointer-events-none opacity-70",
               positions[i % 3],
-              rotation[i % 3],
-              isActive ? "scale-[1.04]" : ""
+              rotations[i % 3],
+              isActive && "scale-[1.045] shadow-xl"
             )}
             style={{
-              borderRadius: "32px 28px 36px 26px", // 🔥 organic bubble shape
-              background: `
-                linear-gradient(
-                  120deg,
-                  rgba(34,197,94,0.20),
-                  rgba(255,255,255,0.88),
-                  rgba(239,68,68,0.20)
-                )
-              `,
+              borderRadius: "34px 28px 38px 26px",
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(255,255,255,0.78))",
+              animation: `thoughtFloat 3.8s ease-in-out infinite`,
+              animationDelay: delays[i % 3],
+              willChange: "transform",
             }}
           >
-            {/* inner pulse (subtle but visible) */}
-            <div className="absolute inset-0 rounded-[inherit] overflow-hidden">
-              <div className="absolute inset-0 animate-[bubblePulse_5.5s_ease-in-out_infinite]" />
+            <div className="absolute inset-0 rounded-[inherit] overflow-hidden pointer-events-none">
+              <div className="thought-bubble-glow" />
             </div>
 
-            {/* content */}
-            <div className="relative z-10">
-              <div className="text-[16px] font-semibold leading-tight">
+            <div className="absolute inset-0 rounded-[inherit] pointer-events-none border border-white/50" />
+
+            <div
+              key={choice.id}
+              className="relative z-10 animate-[choiceTextSwap_260ms_ease-out]"
+            >
+              <div className="text-[17px] font-extrabold leading-tight text-zinc-900 drop-shadow-sm">
                 {choice.label}
               </div>
 
-            <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-[3px] pointer-events-none">
-              <div className="w-[7px] h-[7px] bg-white/60 rounded-full" />
-              <div className="w-[4px] h-[4px] bg-white/40 rounded-full" />
-            </div>
-
               {choice.whisper && (
-                <div className="text-[12px] opacity-60 mt-1">
+                <div className="text-[12px] font-semibold text-zinc-500 mt-1">
                   {choice.whisper}
                 </div>
               )}
+            </div>
+
+            {/* thought bubbles coming out of the box */}
+            <div className="absolute -bottom-[23px] left-1/2 -translate-x-1/2 pointer-events-none">
+              <span className="thought-dot thought-dot-lg" />
+              <span className="thought-dot thought-dot-md" />
+              <span className="thought-dot thought-dot-sm" />
             </div>
           </button>
         );

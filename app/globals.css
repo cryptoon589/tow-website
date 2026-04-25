@@ -150,3 +150,89 @@ body {
     opacity: 0;
   }
 }
+
+@keyframes thoughtFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(var(--tw-rotate, 0deg));
+  }
+  50% {
+    transform: translateY(-6px) rotate(var(--tw-rotate, 0deg));
+  }
+}
+
+@keyframes choiceTextSwap {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.thought-bubble-glow {
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(34, 197, 94, 0.18), transparent 38%),
+    radial-gradient(circle at 70% 60%, rgba(239, 68, 68, 0.16), transparent 42%);
+  opacity: 0.9;
+  animation: thoughtGlowDrift 5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes thoughtGlowDrift {
+  0%, 100% {
+    transform: translate3d(-3%, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.06);
+    opacity: 0.95;
+  }
+}
+
+.thought-dot {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  animation: thoughtDotPulse 2.4s ease-in-out infinite;
+}
+
+.thought-dot-lg {
+  width: 10px;
+  height: 10px;
+  left: -5px;
+  top: 0;
+}
+
+.thought-dot-md {
+  width: 7px;
+  height: 7px;
+  left: 9px;
+  top: 12px;
+  animation-delay: 0.18s;
+}
+
+.thought-dot-sm {
+  width: 5px;
+  height: 5px;
+  left: -13px;
+  top: 18px;
+  animation-delay: 0.32s;
+}
+
+@keyframes thoughtDotPulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
