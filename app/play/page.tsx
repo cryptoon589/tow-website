@@ -400,7 +400,7 @@ export default function PlayPage() {
 
       <section className="mx-auto flex h-full w-full max-w-[620px] flex-col items-center justify-between gap-0">
         <div className="w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[620px]">
-          <TiredMeter tired={state.tired} max={MAX_TIRED} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} />
+          <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
         <div className="relative -my-4 h-[318px] w-full shrink-0 overflow-visible">
