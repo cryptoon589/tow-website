@@ -19,10 +19,10 @@ export default function ActionButtons({
   disabled?: boolean;
 }) {
   const positions = [
-    "left-[2%] top-[4%]",
-    "right-[2%] top-[6%]",
-    "left-1/2 -translate-x-1/2 bottom-[2%]",
-  ];
+  "left-[6%] bottom-[18%]",       // left
+  "right-[6%] bottom-[18%]",      // right
+  "left-1/2 -translate-x-1/2 bottom-[4%]", // center
+];
 
   const rotations = ["-rotate-[0.7deg]", "rotate-[0.7deg]", "-rotate-[0.25deg]"];
   const delays = ["0ms", "180ms", "90ms"];
@@ -82,7 +82,7 @@ export default function ActionButtons({
             </div>
 
             {/* thought bubbles coming out of the box */}
-            <div className="absolute -bottom-[23px] left-1/2 -translate-x-1/2 pointer-events-none">
+            <div className="absolute -top-[26px] left-1/2 -translate-x-1/2 z-20">
               <span className="thought-dot thought-dot-lg" />
               <span className="thought-dot thought-dot-md" />
               <span className="thought-dot thought-dot-sm" />
