@@ -259,50 +259,58 @@ export default function TowCharacter({
 
   return (
     <motion.div
-      style={{
-        width,
-        height,
-        position: "relative",
-      }}
+      style={{ width, height, position: "relative" }}
       animate={{
-        scale: idleScale,
-        ...motionProps,
+        y: mode.type === "idle" ? [0, -4, 0] : 0,
+        rotate: mode.type === "idle" ? [0, urgency > 0.65 ? -0.45 : -0.18, 0.18, 0] : 0,
       }}
       transition={{
-        duration: 0.25,
-        ease: "easeOut",
+        y: { duration: urgency > 0.7 ? 2.2 : 3.4, repeat: Infinity, ease: "easeInOut" },
+        rotate: { duration: urgency > 0.7 ? 2.4 : 4.2, repeat: Infinity, ease: "easeInOut" },
       }}
     >
-      <Image
-        src={`${BASE_PATH}/${baseFile}`}
-        alt="base"
-        fill
-        priority
-        style={{ objectFit: "contain" }}
-      />
-
-      <Image
-        src={`${FACE_PATH}/${faceFile}`}
-        alt="face"
-        fill
-        style={{
-          objectFit: "contain",
-          pointerEvents: "none",
+      <motion.div
+        style={{ width, height, position: "relative" }}
+        animate={{
+          scale: idleScale,
+          ...motionProps,
         }}
-      />
-
-      {vfxFile && (
+        transition={{
+          duration: 0.25,
+          ease: "easeOut",
+        }}
+      >
         <Image
-          src={`${VFX_PATH}/${vfxFile}`}
-          alt="vfx"
+          src={`${BASE_PATH}/${baseFile}`}
+          alt="base"
+          fill
+          priority
+          style={{ objectFit: "contain" }}
+        />
+
+        <Image
+          src={`${FACE_PATH}/${faceFile}`}
+          alt="face"
           fill
           style={{
             objectFit: "contain",
             pointerEvents: "none",
-            mixBlendMode: "screen",
           }}
         />
-      )}
+
+        {vfxFile && (
+          <Image
+            src={`${VFX_PATH}/${vfxFile}`}
+            alt="vfx"
+            fill
+            style={{
+              objectFit: "contain",
+              pointerEvents: "none",
+              mixBlendMode: "screen",
+            }}
+          />
+        )}
+      </motion.div>
     </motion.div>
   );
 }

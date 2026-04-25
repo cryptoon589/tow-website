@@ -59,6 +59,7 @@ export type RunMemory = {
   rektCount: number;
   glitchCount: number;
   bigWins: number;
+  almostSaves: number;
 };
 
 export type GameState = {
@@ -149,6 +150,10 @@ const CHAOS_CHOICES = [
 ];
 
 const WHISPERS = [
+  "could be bait",
+  "looks too clean",
+  "chart is lying",
+  "one tap changes it",
   "really?",
   "you sure?",
   "hm",
@@ -406,6 +411,7 @@ export function createInitialState(bestRun = 0): GameState {
       rektCount: 0,
       glitchCount: 0,
       bigWins: 0,
+      almostSaves: 0,
     },
     gameOver: false,
   };
@@ -658,6 +664,27 @@ function maybeApplySpecialEffect(
   const appliedModifiers: Modifier[] = [];
   let next = { ...outcome };
 
+  const wouldEndRun = state.tired + next.delta >= MAX_TIRED;
+  const lateRun = state.turn >= 9 || state.tired >= 72;
+
+  // Almost-win / clutch-save mechanic. Rare enough to feel earned, strong enough
+  // to make players believe the next run could be the one.
+  if (wouldEndRun && lateRun && Math.random() < 0.18) {
+    next = {
+      ...next,
+      kind: Math.random() < 0.55 ? "glitch" : "win",
+      headline: sample(["BARELY ALIVE", "ONE HP", "ALMOST REKT", "CLUTCH SAVE"]),
+      subtext: sample([
+        "You were one tap from cooked. The timeline blinked.",
+        "That should have ended it. Somehow it did not.",
+        "The phone almost hit the floor.",
+        "You survived by the worst possible logic.",
+      ]),
+      delta: -randInt(4, 12),
+    };
+    appliedModifiers.push(modifier("copium", 1));
+  }
+
   const rareRoll = Math.random();
 
   if (rareRoll < 0.03) {
@@ -772,6 +799,10 @@ function updateMemory(
     next.bigWins += 1;
   }
 
+  if (outcome.headline === "BARELY ALIVE" || outcome.headline === "ONE HP" || outcome.headline === "ALMOST REKT" || outcome.headline === "CLUTCH SAVE") {
+    next.almostSaves += 1;
+  }
+
   return next;
 }
 
@@ -831,6 +862,23 @@ export function resolveChoice(
   outcome.removedModifiers = [...outcome.removedModifiers, ...removed];
 
   const mergedModifiers = mergeModifiers(decayedModifiers, outcome.appliedModifiers);
+
+  // Near-miss pressure: sometimes a bad hit leaves the player barely alive instead
+  // of ending the run. This creates the “one more run” moment without making
+  // early turns feel fake.
+  if (state.turn >= 10 && state.tired + outcome.delta >= MAX_TIRED && Math.random() < 0.1) {
+    outcome = {
+      ...outcome,
+      kind: "lose",
+      headline: sample(["ONE TAP LEFT", "NOT DEAD YET", "HANGING ON"]),
+      subtext: sample([
+        "You should be gone. Somehow you are still scrolling.",
+        "The run is alive by a thread.",
+        "The market missed the final punch.",
+      ]),
+      delta: Math.max(1, 96 - state.tired),
+    };
+  }
 
   const nextTired = clamp(state.tired + outcome.delta, 0, MAX_TIRED);
   const memory = updateMemory(state.memory, choice, outcome, wasAutoPicked);
@@ -892,19 +940,24 @@ export function getMarketState(state: GameState): {
   color: string;
 } {
   if (state.tired < 35) {
-    return { icon: "📈", label: "Bull", color: "text-emerald-500" };
+    return { icon: "📱", label: "phone calm", color: "text-emerald-500" };
   }
 
-  if (state.tired < 70) {
-    return { icon: "🦀", label: "Crab", color: "text-amber-500" };
+  if (state.tired < 55) {
+    return { icon: "👀", label: "trap watch", color: "text-amber-500" };
   }
 
-  return { icon: "📉", label: "Bear", color: "text-red-500" };
+  if (state.tired < 78) {
+    return { icon: "🫠", label: "fake pump", color: "text-orange-500" };
+  }
+
+  return { icon: "⚠️", label: "one tap zone", color: "text-red-500" };
 }
 
 export function getRunTitle(state: GameState): string {
   const { memory, turn } = state;
 
+  if (memory.almostSaves >= 2) return "The One HP Survivor";
   if (memory.timeouts >= 3) return "The Hesitant";
   if (memory.chaosPicks >= 6) return "The Degen";
   if (memory.bigWins >= 3) return "The Lucky";
@@ -918,6 +971,7 @@ export function getRunTitle(state: GameState): string {
 }
 
 export function getGameOverHeadline(state: GameState): string {
+  if (state.memory.almostSaves >= 2) return "SO CLOSE";
   if (state.memory.rektCount >= 2) return "EVENTUALLY REKT";
   if (state.memory.timeouts >= 3) return "TOO SLOW";
   return "EVENTUALLY NGMI";

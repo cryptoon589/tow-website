@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ActionButtons from "@/components/game/ActionButtons";
 import GameOverOverlay from "@/components/game/GameOverOverlay";
@@ -24,7 +25,7 @@ import {
   type OutcomeKind,
 } from "@/components/game/engine";
 
-const CHOICE_WINDOW_MS = 9000;
+const CHOICE_WINDOW_MS = 8200;
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -37,11 +38,12 @@ function getCharacterState(state: GameState): string {
   const kind = state.lastOutcome?.kind;
   if (state.phase === "resolving" && kind) return `react-${kind}`;
 
+  if (state.tired >= 82) return "idle-lookaway";
   if (state.memory.winStreak >= 3) return "idle-lookaway";
   return "idle";
 }
 
-function getRunBeat(state: GameState) {
+function getRunBeat(state: GameState, timeLeftMs: number) {
   const kind = state.lastOutcome?.kind;
 
   if (state.gameOver) return "timeline cooked";
@@ -50,9 +52,102 @@ function getRunBeat(state: GameState) {
   if (state.phase === "resolving" && kind === "rekt") return "oh no";
   if (state.phase === "resolving" && (kind === "win" || kind === "winSmall")) return "somehow alive";
   if (state.phase === "resolving") return "market reacted";
+  if (timeLeftMs < 1400) return "pick before it picks for you";
+  if (state.memory.almostSaves >= 1) return "you should be gone";
   if (state.memory.winStreak >= 3) return "heater forming";
   if (state.tired >= 82) return "survive this";
   return "don’t overthink it";
+}
+
+function createSoundEngine() {
+  let ctx: AudioContext | null = null;
+
+  const getCtx = () => {
+    if (typeof window === "undefined") return null;
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!ctx) ctx = new AudioContextClass();
+    if (ctx.state === "suspended") void ctx.resume();
+    return ctx;
+  };
+
+  const tone = (freq: number, duration = 0.08, gain = 0.025, type: OscillatorType = "sine", delayTime = 0) => {
+    const audio = getCtx();
+    if (!audio) return;
+
+    const osc = audio.createOscillator();
+    const amp = audio.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    amp.gain.value = 0;
+
+    osc.connect(amp);
+    amp.connect(audio.destination);
+
+    const now = audio.currentTime + delayTime;
+    amp.gain.setValueAtTime(0, now);
+    amp.gain.linearRampToValueAtTime(gain, now + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  };
+
+  const noise = (duration = 0.08, gain = 0.02) => {
+    const audio = getCtx();
+    if (!audio) return;
+
+    const buffer = audio.createBuffer(1, audio.sampleRate * duration, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * 0.7;
+
+    const source = audio.createBufferSource();
+    const amp = audio.createGain();
+    source.buffer = buffer;
+    amp.gain.value = gain;
+    source.connect(amp);
+    amp.connect(audio.destination);
+    source.start();
+  };
+
+  return {
+    tap() {
+      tone(220, 0.045, 0.018, "square");
+      tone(440, 0.04, 0.01, "sine", 0.035);
+    },
+    tension() {
+      tone(164, 0.11, 0.012, "triangle");
+    },
+    win(big = false) {
+      tone(392, 0.07, 0.022, "sine");
+      tone(big ? 659 : 523, 0.09, 0.024, "sine", 0.055);
+      tone(big ? 784 : 659, 0.11, 0.02, "sine", 0.12);
+    },
+    lose() {
+      tone(196, 0.09, 0.022, "sawtooth");
+      tone(123, 0.13, 0.018, "triangle", 0.075);
+    },
+    rekt() {
+      noise(0.13, 0.025);
+      tone(92, 0.22, 0.03, "sawtooth");
+    },
+    glitch() {
+      noise(0.08, 0.018);
+      tone(311, 0.045, 0.02, "square");
+      tone(147, 0.06, 0.018, "square", 0.05);
+    },
+    gameOver() {
+      tone(196, 0.12, 0.025, "triangle");
+      tone(147, 0.18, 0.022, "triangle", 0.13);
+      tone(98, 0.22, 0.02, "triangle", 0.28);
+    },
+  };
+}
+
+function playOutcomeSound(sound: ReturnType<typeof createSoundEngine>, kind: OutcomeKind) {
+  if (kind === "win" || kind === "winSmall") sound.win(kind === "win");
+  else if (kind === "rekt") sound.rekt();
+  else if (kind === "glitch") sound.glitch();
+  else sound.lose();
 }
 
 export default function PlayPage() {
@@ -64,6 +159,11 @@ export default function PlayPage() {
 
   const flowRef = useRef(false);
   const stateRef = useRef(state);
+  const soundRef = useRef<ReturnType<typeof createSoundEngine> | null>(null);
+
+  if (!soundRef.current && typeof window !== "undefined") {
+    soundRef.current = createSoundEngine();
+  }
 
   useEffect(() => {
     stateRef.current = state;
@@ -71,7 +171,7 @@ export default function PlayPage() {
 
   const market = useMemo(() => getMarketState(state), [state]);
   const characterState = useMemo(() => getCharacterState(state), [state]);
-  const runBeat = useMemo(() => getRunBeat(state), [state]);
+  const runBeat = useMemo(() => getRunBeat(state, timeLeftMs), [state, timeLeftMs]);
 
   useEffect(() => {
     setBestRun((current) => Math.max(current, state.turn));
@@ -93,55 +193,68 @@ export default function PlayPage() {
     return () => window.clearInterval(interval);
   }, [state.turn, state.phase, state.gameOver]);
 
-  const playChoiceFlow = async (choice: Choice, wasAutoPicked = false) => {
+  const playChoiceFlow = useCallback(async (choice: Choice, wasAutoPicked = false) => {
     const current = stateRef.current;
+    const sound = soundRef.current;
     if (flowRef.current || current.gameOver || current.phase !== "choosing") return;
 
     flowRef.current = true;
     setHoveredChoiceId(null);
     setShowOutcome(false);
+    sound?.tap();
 
     const committed = commitChoice(current, choice.id, wasAutoPicked);
     stateRef.current = committed;
     setState(committed);
 
-    await delay(140 + Math.random() * 180);
+    await delay(130 + Math.random() * 160);
+    sound?.tension();
 
-    // tension beat / fake-out
-    if (Math.random() < 0.28) await delay(180 + Math.random() * 240);
+    // Addiction beat: tiny hesitation/fake-out before the reveal.
+    if (Math.random() < 0.34 || current.tired >= 80) {
+      await delay(170 + Math.random() * 260);
+    }
 
     const resolved = resolveChoice(committed, choice.id, wasAutoPicked);
     stateRef.current = resolved.state;
     setState(resolved.state);
+
+    // Micro blink before payoff. Makes outcome feel like it hit, not like text changed.
+    setShowOutcome(false);
+    await delay(60);
     setShowOutcome(true);
+    playOutcomeSound(sound ?? createSoundEngine(), resolved.outcome.kind);
 
     const kind = resolved.outcome.kind as OutcomeKind;
-    const hold = kind === "rekt" || kind === "glitch" ? 1350 : 920 + Math.random() * 430;
+    const almost = ["BARELY ALIVE", "ONE HP", "ALMOST REKT", "CLUTCH SAVE", "ONE TAP LEFT", "NOT DEAD YET", "HANGING ON"].includes(resolved.outcome.headline);
+    const hold = kind === "rekt" || kind === "glitch" || almost ? 1380 : 850 + Math.random() * 360;
     await delay(hold);
 
     if (resolved.state.gameOver) {
+      sound?.gameOver();
       flowRef.current = false;
       return;
     }
 
     setShowOutcome(false);
-    await delay(120 + Math.random() * 160);
+    await delay(110 + Math.random() * 150);
 
     const next = beginChoosing(advanceAfterResolve(resolved.state));
     stateRef.current = next;
     setState(next);
     setTimeLeftMs(CHOICE_WINDOW_MS);
     flowRef.current = false;
-  };
+  }, []);
 
   useEffect(() => {
     if (state.phase !== "choosing" || state.gameOver || timeLeftMs > 0 || flowRef.current) return;
 
+    // Auto-pick now intentionally avoids always picking safe. Panic causes bad clicks.
     const fallbackChoice =
-      state.choices.find((choice) => choice.category === "safe") || state.choices[0];
+      state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
 
     if (fallbackChoice) void playChoiceFlow(fallbackChoice, true);
-  }, [timeLeftMs, state]);
+  }, [timeLeftMs, state, playChoiceFlow]);
 
   const handleReplay = () => {
     flowRef.current = false;
@@ -154,12 +267,20 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-5 text-[#1E1B18]">
+    <main className="relative h-screen overflow-hidden px-4 pb-3 pt-12 text-[#1E1B18]">
       <SceneLayer state={state} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} />
 
-      <section className="mx-auto flex min-h-[calc(100vh-40px)] w-full max-w-md flex-col items-center justify-center gap-3">
-        <div className="w-full rounded-[28px] border border-[#DDD7CE] bg-[#FFFCF8]/90 p-4 shadow-[0_18px_60px_rgba(30,27,24,0.08)] backdrop-blur-xl">
-          <div className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-[#6F685F]">
+      <header className="absolute left-0 top-0 z-20 flex w-full items-center justify-between px-4 py-3 text-sm">
+        <Link href="/" className="font-black tracking-tight text-[#1E1B18]">TOW</Link>
+        <nav className="flex items-center gap-4 text-xs font-bold lowercase text-[#6F685F]">
+          <Link href="/">home</Link>
+          <Link href="/links">links</Link>
+        </nav>
+      </header>
+
+      <section className="mx-auto flex h-full w-full max-w-[410px] flex-col items-center justify-between gap-1.5">
+        <div className="w-full rounded-[26px] border border-[#DDD7CE] bg-[#FFFCF8]/92 p-3 shadow-[0_18px_60px_rgba(30,27,24,0.08)] backdrop-blur-xl">
+          <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[#6F685F]">
             <span>turn <strong className="text-[#1E1B18]">{state.turn}</strong></span>
             <span className={market.color}>{market.icon} {market.label}</span>
             <span>{getStreakLabel(state.memory.winStreak)}</span>
@@ -167,19 +288,19 @@ export default function PlayPage() {
 
           <TiredMeter tired={state.tired} max={MAX_TIRED} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} />
 
-          <div className="mt-3 rounded-2xl bg-black/[0.035] px-3 py-2 text-center text-xs font-medium text-[#6F685F]">
+          <div className="mt-2 rounded-2xl bg-black/[0.035] px-3 py-1.5 text-center text-[11px] font-bold text-[#6F685F]">
             {runBeat}
           </div>
         </div>
 
-        <div className="relative -my-3 flex w-full justify-center">
-          <div className="absolute bottom-8 h-16 w-44 rounded-full bg-black/10 blur-2xl" />
-          <TowCharacter state={characterState} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} width={330} height={330} />
+        <div className="relative -my-2 flex w-full shrink-0 justify-center">
+          <div className="absolute bottom-8 h-14 w-40 rounded-full bg-black/10 blur-2xl" />
+          <TowCharacter state={characterState} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} width={285} height={285} />
         </div>
 
         <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
 
-        <div className="w-full">
+        <div className="w-full pb-1">
           <ActionButtons
             choices={state.choices}
             selectedChoiceId={state.selectedChoiceId}
