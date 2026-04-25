@@ -10,7 +10,9 @@ export default function TiredMeter({
   max: number;
 }) {
   const percent = Math.min(100, (tired / max) * 100);
-  const segments = 16;
+
+  // 🔥 more segments = thinner look
+  const segments = 32;
   const activeSegments = Math.round((percent / 100) * segments);
 
   const state =
@@ -23,17 +25,18 @@ export default function TiredMeter({
       : "rekt";
 
   return (
-    <div className="w-full max-w-[560px] mx-auto">
-      {/* TEXT ROW (pulled inward) */}
-      <div className="flex justify-between items-center text-xs px-2 mb-1 opacity-70">
+    <div className="w-full max-w-[620px] mx-auto">
+      {/* TEXT (pulled inward) */}
+      <div className="flex justify-between items-center text-xs px-3 mb-1 opacity-70">
         <span>{state}</span>
         <span>{Math.round(percent)}%</span>
       </div>
 
-      {/* METER */}
-      <div className="relative w-full h-4 bg-[#EDE7DF] rounded-full overflow-hidden">
+      {/* BAR */}
+      <div className="relative w-full h-5 bg-[#EDE7DF] rounded-full overflow-hidden">
+
         {/* SEGMENTS */}
-        <div className="absolute inset-0 flex items-center px-1 gap-[3px]">
+        <div className="absolute inset-0 flex items-center px-1 gap-[2px]">
           {Array.from({ length: segments }).map((_, i) => {
             const active = i < activeSegments;
 
@@ -41,7 +44,7 @@ export default function TiredMeter({
               <div
                 key={i}
                 className={clsx(
-                  "h-[8px] flex-1 rounded-full transition-all duration-300",
+                  "h-[6px] flex-1 rounded-full transition-all duration-300",
                   active
                     ? percent < 60
                       ? "bg-[#F59E0B]"
@@ -55,10 +58,15 @@ export default function TiredMeter({
           })}
         </div>
 
-        {/* SHIMMER */}
-        {percent > 60 && (
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-0 left-[-100%] h-full w-[60%] bg-white/20 blur-sm animate-[shimmer_2.5s_linear_infinite]" />
+        {/* 🔥 ALWAYS-ON subtle pulse */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 animate-[meterPulse_3s_ease-in-out_infinite]" />
+        </div>
+
+        {/* 🔥 shimmer when pressure builds */}
+        {percent > 50 && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 left-[-100%] h-full w-[50%] bg-white/20 blur-sm animate-[shimmer_3s_linear_infinite]" />
           </div>
         )}
       </div>

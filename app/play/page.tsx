@@ -433,14 +433,12 @@ export default function PlayPage() {
 
         <div className="-mt-3 w-full pb-0">
           <ActionButtons
-            choices={state.choices}
-            selectedChoiceId={state.selectedChoiceId}
-            hoveredChoiceId={hoveredChoiceId}
-            onHoverChange={setHoveredChoiceId}
-            onSelect={(choice) => void playChoiceFlow(choice)}
-            disabled={state.phase !== "choosing" || state.gameOver}
-            timeLeftMs={timeLeftMs}
-            choiceWindowMs={choiceWindowMs}
+           choices={state.choices}
+           selectedChoiceId={state.selectedChoiceId}
+           hoveredChoiceId={hoveredChoiceId}
+           onHoverChange={setHoveredChoiceId}
+           onSelect={(choice) => void playChoiceFlow(choice)}
+           disabled={state.phase !== "choosing" || state.gameOver}
           />
         </div>
       </section>
