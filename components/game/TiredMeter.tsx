@@ -5,69 +5,36 @@ import { motion } from "framer-motion";
 type Props = {
   tired: number;
   max: number;
+  timeLeftMs?: number;
+  choiceWindowMs?: number;
 };
 
-export default function TiredMeter({ tired, max }: Props) {
-  const pct = Math.min(100, (tired / max) * 100);
+export default function TiredMeter({ tired, max, timeLeftMs = 0, choiceWindowMs = 1 }: Props) {
+  const pct = Math.min(100, Math.max(0, (tired / max) * 100));
+  const urgency = choiceWindowMs > 0 ? 1 - timeLeftMs / choiceWindowMs : 0;
 
-  // -----------------------------
-  // 🎨 COLOR STATES
-  // -----------------------------
-  const isLow = pct < 40;
-  const isMid = pct >= 40 && pct < 70;
-  const isHigh = pct >= 70;
+  const label = pct < 35 ? "chill" : pct < 62 ? "getting tired" : pct < 84 ? "stressed" : pct < 96 ? "exhausted" : "cooked";
+  const barColor = pct < 45 ? "bg-[#1E1B18]" : pct < 74 ? "bg-amber-500" : "bg-red-500";
+  const danger = pct >= 75 || urgency > 0.82;
 
-  const barColor = isLow
-    ? "bg-black"
-    : isMid
-    ? "bg-amber-500"
-    : "bg-red-500";
-
-  const label = isLow
-    ? "focused"
-    : isMid
-    ? "getting tired"
-    : "exhausted";
-
-  // -----------------------------
-  // ⚡ DANGER PULSE
-  // -----------------------------
-  const pulse = isHigh ? 1.02 : 1;
-
-  // -----------------------------
-  // 🧱 RENDER
-  // -----------------------------
   return (
     <div className="w-full space-y-2">
-
-      {/* HEADER */}
-      <div className="flex justify-between text-xs text-[#6F685F]">
-        <span>Tired</span>
+      <div className="flex items-center justify-between text-xs text-[#6F685F]">
+        <span className="font-semibold lowercase">{label}</span>
         <span>{Math.round(pct)}%</span>
       </div>
 
-      {/* BAR */}
-      <div className="h-3 w-full bg-[#E8E1D7] rounded-full overflow-hidden">
+      <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#E8E1D7]">
         <motion.div
-          animate={{
-            width: `${pct}%`,
-            scale: pulse,
-          }}
-          transition={{
-            width: { duration: 0.25 },
-            scale: {
-              duration: 0.5,
-              repeat: isHigh ? Infinity : 0,
-              repeatType: "mirror",
-            },
-          }}
-          className={`h-full ${barColor}`}
+          animate={{ width: `${pct}%`, opacity: danger ? [1, 0.75, 1] : 1 }}
+          transition={{ width: { duration: 0.28 }, opacity: { duration: 0.55, repeat: danger ? Infinity : 0 } }}
+          className={`h-full rounded-full ${barColor}`}
         />
-      </div>
-
-      {/* LABEL */}
-      <div className="text-center text-[11px] text-[#8A8278]">
-        {label}
+        <motion.div
+          animate={{ x: `${Math.min(96, pct)}%` }}
+          transition={{ duration: 0.28 }}
+          className="absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-white/70 shadow"
+        />
       </div>
     </div>
   );

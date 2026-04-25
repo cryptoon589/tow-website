@@ -1,7 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import type { Choice } from "@/components/game/engine";
 
 type Props = {
@@ -15,6 +14,51 @@ type Props = {
   choiceWindowMs: number;
 };
 
+const THOUGHTS: Record<Choice["category"], string[]> = {
+  safe: ["this should be fine", "play it boring", "just survive", "don’t force it"],
+  swing: ["eh… run it", "maybe this works", "idk but try", "this feels early"],
+  chaos: ["this might be stupid", "send it", "we ball", "last chance alpha"],
+};
+
+const RISK_LABEL: Record<Choice["category"], string> = {
+  safe: "steady",
+  swing: "hmm",
+  chaos: "???",
+};
+
+function deterministicPick(items: string[], seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return items[hash % items.length];
+}
+
+function getCardStyle(category: Choice["category"], index: number) {
+  if (category === "chaos") {
+    return {
+      rotate: index % 2 === 0 ? -0.9 : 0.9,
+      shell: "border-red-300/70 bg-[#FFF7F4] shadow-[0_12px_30px_rgba(239,68,68,0.10)]",
+      label: "text-red-500",
+      glow: "from-red-500/10",
+    };
+  }
+
+  if (category === "swing") {
+    return {
+      rotate: index % 2 === 0 ? 0.45 : -0.45,
+      shell: "border-amber-300/70 bg-[#FFF9EC] shadow-[0_12px_30px_rgba(245,158,11,0.09)]",
+      label: "text-amber-600",
+      glow: "from-amber-400/10",
+    };
+  }
+
+  return {
+    rotate: 0,
+    shell: "border-[#DDD7CE] bg-[#FFFCF8] shadow-[0_12px_30px_rgba(30,27,24,0.06)]",
+    label: "text-[#6F685F]",
+    glow: "from-black/[0.035]",
+  };
+}
+
 export default function ActionButtons({
   choices,
   selectedChoiceId,
@@ -25,178 +69,68 @@ export default function ActionButtons({
   timeLeftMs,
   choiceWindowMs,
 }: Props) {
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const urgency = choiceWindowMs > 0 ? 1 - timeLeftMs / choiceWindowMs : 0;
+  const panic = urgency > 0.84;
 
-  // -----------------------------
-  // 🧠 PRESSURE
-  // -----------------------------
-  const urgency = useMemo(() => {
-    if (!choiceWindowMs) return 0;
-    return 1 - timeLeftMs / choiceWindowMs;
-  }, [timeLeftMs, choiceWindowMs]);
-
-  const pressureLevel = useMemo(() => {
-    if (urgency < 0.6) return "calm";
-    if (urgency < 0.85) return "tense";
-    return "panic";
-  }, [urgency]);
-
-  // -----------------------------
-  // 🧹 CLEANUP
-  // -----------------------------
-  useEffect(() => {
-    if (disabled) setConfirmingId(null);
-  }, [disabled]);
-
-  useEffect(() => {
-    if (!confirmingId) return;
-    if (!choices.some((c) => c.id === confirmingId)) {
-      setConfirmingId(null);
-    }
-  }, [choices, confirmingId]);
-
-  // -----------------------------
-  // 🎯 MOTION
-  // -----------------------------
-  const shake = pressureLevel === "panic" ? (Math.random() - 0.5) * 2 : 0;
-
-  const scale =
-    pressureLevel === "panic"
-      ? 1.02
-      : pressureLevel === "tense"
-      ? 1.01
-      : 1;
-
-  const border =
-    pressureLevel === "panic"
-      ? "border-red-400"
-      : pressureLevel === "tense"
-      ? "border-amber-400"
-      : "border-[#DDD7CE]";
-
-  // -----------------------------
-  // 🧱 RENDER
-  // -----------------------------
   return (
-    <div className="space-y-4">
-      {choices.map((choice) => {
+    <div className="space-y-3">
+      {choices.map((choice, index) => {
         const isHovered = hoveredChoiceId === choice.id;
-        const isConfirming = confirmingId === choice.id;
         const isSelected = selectedChoiceId === choice.id;
+        const style = getCardStyle(choice.category, index);
+        const thought = deterministicPick(THOUGHTS[choice.category], choice.id);
 
         return (
-          <div key={choice.id} className="relative">
+          <motion.button
+            key={choice.id}
+            type="button"
+            disabled={disabled}
+            onMouseEnter={() => !disabled && onHoverChange(choice.id)}
+            onMouseLeave={() => !disabled && onHoverChange(null)}
+            onClick={() => !disabled && onSelect(choice)}
+            initial={{ opacity: 0, y: 8, rotate: style.rotate }}
+            animate={{
+              opacity: disabled && !isSelected ? 0.55 : 1,
+              y: isHovered && !disabled ? -4 : 0,
+              rotate: style.rotate,
+              scale: isSelected ? 1.025 : panic && !disabled ? 1.01 : 1,
+              x: panic && choice.category === "chaos" && !disabled ? [0, -1, 1, 0] : 0,
+            }}
+            whileTap={!disabled ? { scale: 0.965 } : undefined}
+            transition={{ type: "spring", stiffness: 340, damping: 24 }}
+            className={`group relative w-full overflow-hidden rounded-3xl border px-5 py-4 text-left transition ${style.shell} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.glow} to-transparent opacity-100`} />
 
-            <motion.button
-              type="button"
-              layout
-              initial={false}
-              animate={{
-                y: isHovered && !isConfirming && !disabled ? -4 : 0,
-                scale,
-                x: shake,
-              }}
-              whileTap={!disabled && !isConfirming ? { scale: 0.96 } : undefined}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 22,
-              }}
-              onMouseEnter={() => {
-                if (disabled) return;
-                onHoverChange(choice.id);
-              }}
-              onMouseLeave={() => {
-                if (disabled) return;
-                onHoverChange(null);
-              }}
-              onClick={() => {
-                if (disabled) return;
-                setConfirmingId((c) =>
-                  c === choice.id ? null : choice.id
-                );
-              }}
-              className={[
-                "w-full text-left px-5 py-4 rounded-2xl border transition-all duration-200",
-                border,
-                disabled
-                  ? "bg-[#ECE8E2] opacity-60"
-                  : isHovered
-                  ? "bg-white shadow-lg"
-                  : "bg-[#F2EEE9]",
-                isSelected ? "ring-1 ring-black/10" : "",
-              ].join(" ")}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="text-[15px] font-medium text-[#2A2723]">
-                    {choice.label}
-                  </div>
-
-                  {choice.whisper && (
-                    <div className="text-xs text-[#8A8278] mt-1">
-                      {choice.whisper}
-                    </div>
-                  )}
+            <div className="relative flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[15px] font-black lowercase leading-tight text-[#1E1B18]">
+                  {thought}
                 </div>
+                <div className="mt-1 text-xs leading-snug text-[#7A7168]">
+                  {choice.label}
+                </div>
+              </div>
 
+              <div className="flex flex-col items-end gap-1">
+                <span className={`text-[10px] font-black uppercase tracking-[0.18em] ${style.label}`}>
+                  {RISK_LABEL[choice.category]}
+                </span>
                 <motion.span
-                  animate={{
-                    opacity: isHovered ? 1 : 0.4,
-                    x: isHovered ? 0 : -4,
-                  }}
-                  className="text-xs text-[#6F685F]"
+                  animate={{ x: isHovered ? 0 : -5, opacity: isHovered ? 1 : 0.45 }}
+                  className="text-lg leading-none text-[#6F685F]"
                 >
                   →
                 </motion.span>
               </div>
-            </motion.button>
+            </div>
 
-            {/* CONFIRM */}
-            <AnimatePresence>
-              {isConfirming && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  className="absolute inset-0 rounded-2xl bg-white/95 border border-black shadow-lg flex justify-between items-center px-4"
-                >
-                  <div>
-                    <div className="text-sm font-medium">
-                      you sure?
-                    </div>
-                    {choice.whisper && (
-                      <div className="text-[11px] text-[#8A8278]">
-                        {choice.whisper}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingId(null)}
-                      className="px-3 py-1.5 text-xs border rounded-md"
-                    >
-                      no
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setConfirmingId(null);
-                        onSelect(choice);
-                      }}
-                      className="px-3 py-1.5 text-xs bg-black text-white rounded-md"
-                    >
-                      yes
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-          </div>
+            {choice.whisper && (
+              <div className="relative mt-2 text-[11px] italic text-[#9A9288]">
+                {choice.whisper}
+              </div>
+            )}
+          </motion.button>
         );
       })}
     </div>
