@@ -123,3 +123,30 @@ body {
 .float-jitter {
   will-change: transform;
 }
+
+/* 🔥 INDIVIDUAL BLOCK PULSE (size-based, not opacity only) */
+@keyframes meterBlockPulse {
+  0%, 100% {
+    transform: scaleY(0.7) scaleX(0.95);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scaleY(1.3) scaleX(1.05);
+    opacity: 1;
+  }
+}
+
+/* 🔥 MOVING LIGHT SWEEP (makes meter feel alive) */
+@keyframes meterGlowSweep {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(260%);
+    opacity: 0;
+  }
+}
