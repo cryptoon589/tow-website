@@ -81,7 +81,7 @@ export type ResolveChoiceResult = {
   outcome: Outcome;
 };
 
-export const STARTING_TIRED = 18;
+export const STARTING_TIRED = 26;
 export const MAX_TIRED = 100;
 
 const RECENT_LABEL_LIMIT = 15;
@@ -594,6 +594,33 @@ function getOutcomeWeights(
     });
   }
 
+  // Anti-solved-game pressure: heaters attract traps. A few green hits in a row
+  // should feel scary, not comfortable.
+  if (state.memory.winStreak >= 2) {
+    weights = weights.map((entry) => {
+      if (entry.value === "win" || entry.value === "winSmall") {
+        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * 0.48)) };
+      }
+      if (entry.value === "lose" || entry.value === "rekt" || entry.value === "glitch") {
+        return { ...entry, weight: entry.weight + 8 + state.memory.winStreak * 2 };
+      }
+      return entry;
+    });
+  }
+
+  // When tired is too low, the timeline stops handing out free safety.
+  if (state.tired <= 20) {
+    weights = weights.map((entry) => {
+      if (entry.value === "win" || entry.value === "winSmall") {
+        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * 0.55)) };
+      }
+      if (entry.value === "loseSmall" || entry.value === "lose" || entry.value === "rekt") {
+        return { ...entry, weight: entry.weight + 7 };
+      }
+      return entry;
+    });
+  }
+
   return weights;
 }
 
@@ -604,7 +631,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(WIN_HEADLINES),
         subtext: sample(WIN_SUBTEXT),
-        delta: -randInt(5, 9),
+        delta: -randInt(3, 7),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -613,7 +640,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(WIN_BIG_HEADLINES),
         subtext: sample(WIN_BIG_SUBTEXT),
-        delta: -randInt(10, 18),
+        delta: -randInt(7, 13),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -622,7 +649,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(LOSE_HEADLINES),
         subtext: sample(LOSE_SUBTEXT),
-        delta: randInt(5, 9),
+        delta: randInt(7, 12),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -631,7 +658,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(LOSE_BIG_HEADLINES),
         subtext: sample(LOSE_BIG_SUBTEXT),
-        delta: randInt(10, 16),
+        delta: randInt(13, 21),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -640,7 +667,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(REKT_HEADLINES),
         subtext: sample(REKT_SUBTEXT),
-        delta: randInt(18, 25),
+        delta: randInt(24, 34),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -669,7 +696,7 @@ function maybeApplySpecialEffect(
 
   // Almost-win / clutch-save mechanic. Rare enough to feel earned, strong enough
   // to make players believe the next run could be the one.
-  if (wouldEndRun && lateRun && Math.random() < 0.18) {
+  if (wouldEndRun && lateRun && Math.random() < 0.12) {
     next = {
       ...next,
       kind: Math.random() < 0.55 ? "glitch" : "win",
@@ -693,7 +720,7 @@ function maybeApplySpecialEffect(
       kind: "glitch",
       headline: "TIMELINE FORK",
       subtext: "The market changed its mind mid-collapse.",
-      delta: -randInt(10, 18),
+      delta: -randInt(7, 13),
     };
   } else if (rareRoll < 0.06) {
     next = {
@@ -866,7 +893,7 @@ export function resolveChoice(
   // Near-miss pressure: sometimes a bad hit leaves the player barely alive instead
   // of ending the run. This creates the “one more run” moment without making
   // early turns feel fake.
-  if (state.turn >= 10 && state.tired + outcome.delta >= MAX_TIRED && Math.random() < 0.1) {
+  if (state.turn >= 10 && state.tired + outcome.delta >= MAX_TIRED && Math.random() < 0.07) {
     outcome = {
       ...outcome,
       kind: "lose",

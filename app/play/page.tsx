@@ -25,7 +25,7 @@ import {
   type OutcomeKind,
 } from "@/components/game/engine";
 
-const CHOICE_WINDOW_MS = 8200;
+const CHOICE_WINDOW_MS = 7200;
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
@@ -267,40 +267,36 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="relative h-screen overflow-hidden px-4 pb-3 pt-12 text-[#1E1B18]">
+    <main className="relative h-screen overflow-hidden px-4 pb-2 pt-9 text-[#1E1B18]">
       <SceneLayer state={state} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} />
 
-      <header className="absolute left-0 top-0 z-20 flex w-full items-center justify-between px-4 py-3 text-sm">
+      <header className="absolute left-0 top-0 z-20 flex w-full items-center px-4 py-3 text-sm">
         <Link href="/" className="font-black tracking-tight text-[#1E1B18]">TOW</Link>
-        <nav className="flex items-center gap-4 text-xs font-bold lowercase text-[#6F685F]">
-          <Link href="/">home</Link>
-          <Link href="/links">links</Link>
-        </nav>
       </header>
 
-      <section className="mx-auto flex h-full w-full max-w-[410px] flex-col items-center justify-between gap-1.5">
-        <div className="w-full rounded-[26px] border border-[#DDD7CE] bg-[#FFFCF8]/92 p-3 shadow-[0_18px_60px_rgba(30,27,24,0.08)] backdrop-blur-xl">
-          <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[#6F685F]">
+      <section className="mx-auto flex h-full w-full max-w-[380px] flex-col items-center justify-between gap-0.5">
+        <div className="w-full rounded-[22px] border border-[#DDD7CE] bg-[#FFFCF8]/88 p-2.5 shadow-[0_14px_48px_rgba(30,27,24,0.07)] backdrop-blur-xl">
+          <div className="mb-1.5 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#6F685F]">
             <span>turn <strong className="text-[#1E1B18]">{state.turn}</strong></span>
-            <span className={market.color}>{market.icon} {market.label}</span>
+            <span className={market.color}>{market.label}</span>
             <span>{getStreakLabel(state.memory.winStreak)}</span>
           </div>
 
           <TiredMeter tired={state.tired} max={MAX_TIRED} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} />
 
-          <div className="mt-2 rounded-2xl bg-black/[0.035] px-3 py-1.5 text-center text-[11px] font-bold text-[#6F685F]">
+          <div className="mt-1.5 rounded-full bg-black/[0.035] px-3 py-1 text-center text-[10px] font-black lowercase text-[#6F685F]">
             {runBeat}
           </div>
         </div>
 
-        <div className="relative -my-2 flex w-full shrink-0 justify-center">
-          <div className="absolute bottom-8 h-14 w-40 rounded-full bg-black/10 blur-2xl" />
-          <TowCharacter state={characterState} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} width={285} height={285} />
+        <div className="relative -my-4 flex w-full shrink-0 justify-center">
+          <div className="absolute bottom-7 h-12 w-36 rounded-full bg-black/10 blur-2xl" />
+          <TowCharacter state={characterState} timeLeftMs={timeLeftMs} choiceWindowMs={CHOICE_WINDOW_MS} width={245} height={245} />
         </div>
 
         <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
 
-        <div className="w-full pb-1">
+        <div className="w-full pb-0">
           <ActionButtons
             choices={state.choices}
             selectedChoiceId={state.selectedChoiceId}

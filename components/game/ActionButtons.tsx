@@ -15,36 +15,36 @@ type Props = {
 };
 
 const THOUGHTS = [
-  "this should be fine",
-  "eh… run it",
+  "maybe this works",
   "this might be stupid",
   "don’t overthink it",
-  "maybe this works",
   "send it",
   "just survive",
   "idk but try",
-  "last chance alpha",
+  "one more tap",
+  "wait… maybe",
+  "run the risk",
 ];
 
 const MICRO_COPY = [
-  "tap and pray",
+  "could flip either way",
+  "green or red. no hints",
   "timeline decides",
-  "no guarantees",
-  "could age badly",
-  "one more candle",
-  "probably fine",
+  "feels rigged",
+  "one tap changes it",
   "hold breath",
-  "do it tired",
-  "not financial anything",
+  "probably bait",
+  "coin toss energy",
+  "no safe clicks",
 ];
 
 type VisualStyle = {
   rotate: number;
   align: string;
   width: string;
+  radius: string;
   shell: string;
-  glow: string;
-  notch: string;
+  dot: string;
 };
 
 function hashSeed(seed: string) {
@@ -61,64 +61,26 @@ function pick<T>(items: T[], seed: string) {
 }
 
 function visualFor(choice: Choice, index: number): VisualStyle {
-  // Deliberately NOT tied to hidden category. The button lies visually sometimes.
-  const n = hashSeed(`${choice.id}-${choice.label}-${index}`);
-  const vibe = n % 5;
+  // Pure visual deception. This is intentionally NOT tied to hidden category/outcome.
+  const n = hashSeed(`${choice.id}-${choice.label}-${index}-visual-lie`);
   const align = ["self-start", "self-end", "self-center", "self-start", "self-end"][n % 5];
-  const width = ["w-[88%]", "w-[92%]", "w-[84%]", "w-[96%]", "w-[90%]"][(n >> 3) % 5];
-  const rotate = [-1.35, 0.8, -0.45, 1.15, 0.15][(n >> 6) % 5];
-
-  if (vibe === 0) {
-    return {
-      rotate,
-      align,
-      width,
-      shell: "border-[#E7DED2] bg-[#FFFCF8] shadow-[0_14px_35px_rgba(30,27,24,0.08)]",
-      glow: "from-white/70 via-transparent to-black/[0.03]",
-      notch: "bg-[#1E1B18]",
-    };
-  }
-
-  if (vibe === 1) {
-    return {
-      rotate,
-      align,
-      width,
-      shell: "border-amber-200/80 bg-[#FFF7DF] shadow-[0_14px_35px_rgba(245,158,11,0.10)]",
-      glow: "from-amber-200/35 via-transparent to-white/10",
-      notch: "bg-amber-500",
-    };
-  }
-
-  if (vibe === 2) {
-    return {
-      rotate,
-      align,
-      width,
-      shell: "border-red-200/75 bg-[#FFF1EE] shadow-[0_14px_35px_rgba(239,68,68,0.09)]",
-      glow: "from-red-200/35 via-transparent to-white/10",
-      notch: "bg-red-500",
-    };
-  }
-
-  if (vibe === 3) {
-    return {
-      rotate,
-      align,
-      width,
-      shell: "border-emerald-200/80 bg-[#F0FFF7] shadow-[0_14px_35px_rgba(16,185,129,0.08)]",
-      glow: "from-emerald-200/35 via-transparent to-white/10",
-      notch: "bg-emerald-500",
-    };
-  }
+  const width = ["w-[78%]", "w-[84%]", "w-[80%]", "w-[88%]", "w-[82%]"][(n >> 3) % 5];
+  const rotate = [-2.1, 1.35, -0.9, 1.9, 0.35][(n >> 6) % 5];
+  const radius = [
+    "rounded-[30px_22px_30px_18px]",
+    "rounded-[20px_34px_22px_32px]",
+    "rounded-[34px_24px_18px_30px]",
+    "rounded-[24px_18px_34px_26px]",
+    "rounded-[28px_28px_18px_32px]",
+  ][(n >> 9) % 5];
 
   return {
     rotate,
     align,
     width,
-    shell: "border-violet-200/75 bg-[#F8F3FF] shadow-[0_14px_35px_rgba(139,92,246,0.08)]",
-    glow: "from-violet-200/35 via-transparent to-white/10",
-    notch: "bg-violet-500",
+    radius,
+    shell: "border-white/65 bg-[#FFFCF8]/88 shadow-[0_15px_45px_rgba(30,27,24,0.10)] backdrop-blur-xl",
+    dot: ["bg-red-400", "bg-emerald-400", "bg-amber-400", "bg-violet-400"][(n >> 12) % 4],
   };
 }
 
@@ -133,16 +95,23 @@ export default function ActionButtons({
   choiceWindowMs,
 }: Props) {
   const urgency = choiceWindowMs > 0 ? 1 - timeLeftMs / choiceWindowMs : 0;
-  const panic = urgency > 0.82;
+  const panic = urgency > 0.8;
+  const usedThoughts = new Set<string>();
 
   return (
-    <div className="flex w-full flex-col gap-2.5">
+    <div className="flex w-full flex-col gap-2">
       {choices.map((choice, index) => {
         const isHovered = hoveredChoiceId === choice.id;
         const isSelected = selectedChoiceId === choice.id;
         const style = visualFor(choice, index);
-        const thought = pick(THOUGHTS, `${choice.id}-thought`);
-        const micro = pick(MICRO_COPY, `${choice.id}-micro`);
+
+        let thought = pick(THOUGHTS, `${choice.id}-thought-${index}`);
+        if (usedThoughts.has(thought)) {
+          thought = THOUGHTS.find((item) => !usedThoughts.has(item)) || thought;
+        }
+        usedThoughts.add(thought);
+
+        const micro = pick(MICRO_COPY, `${choice.id}-micro-${index}`);
 
         return (
           <motion.button
@@ -152,40 +121,54 @@ export default function ActionButtons({
             onMouseEnter={() => !disabled && onHoverChange(choice.id)}
             onMouseLeave={() => !disabled && onHoverChange(null)}
             onClick={() => !disabled && onSelect(choice)}
-            initial={{ opacity: 0, y: 10, rotate: style.rotate, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, rotate: style.rotate, scale: 0.96 }}
             animate={{
-              opacity: disabled && !isSelected ? 0.5 : 1,
-              y: isHovered && !disabled ? -5 : 0,
+              opacity: disabled && !isSelected ? 0.46 : 1,
+              y: isHovered && !disabled ? -4 : 0,
               rotate: style.rotate,
-              scale: isSelected ? 1.035 : panic && !disabled ? [1, 1.012, 1] : 1,
+              scale: isSelected ? 1.04 : panic && !disabled ? [1, 1.012, 1] : 1,
               x: panic && !disabled ? [0, index % 2 ? 1 : -1, 0] : 0,
             }}
-            whileTap={!disabled ? { scale: 0.955, rotate: style.rotate * 0.5 } : undefined}
-            transition={{ type: "spring", stiffness: 360, damping: 24 }}
-            className={`${style.align} ${style.width} group relative overflow-hidden rounded-[28px] border px-4 py-3 text-left transition ${style.shell} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+            whileTap={!disabled ? { scale: 0.94, rotate: style.rotate * 0.35 } : undefined}
+            transition={{ type: "spring", stiffness: 390, damping: 24 }}
+            className={`${style.align} ${style.width} ${style.radius} group relative min-h-[62px] overflow-hidden border px-4 py-2.5 text-left ${style.shell} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
           >
-            <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.glow}`} />
+            {/* Each button breathes between red and green so the user never trusts the visual. */}
             <motion.div
-              className={`absolute left-3 top-3 h-2 w-2 rounded-full ${style.notch}`}
-              animate={{ opacity: panic ? [0.35, 1, 0.35] : 0.55, scale: isSelected ? 1.4 : 1 }}
-              transition={{ duration: 0.7, repeat: panic ? Infinity : 0 }}
+              className="pointer-events-none absolute -inset-10 opacity-70 blur-2xl"
+              animate={{
+                background: [
+                  "radial-gradient(circle at 20% 30%, rgba(239,68,68,0.34), transparent 48%), radial-gradient(circle at 80% 70%, rgba(16,185,129,0.12), transparent 45%)",
+                  "radial-gradient(circle at 20% 30%, rgba(16,185,129,0.34), transparent 48%), radial-gradient(circle at 80% 70%, rgba(239,68,68,0.14), transparent 45%)",
+                  "radial-gradient(circle at 20% 30%, rgba(239,68,68,0.26), transparent 48%), radial-gradient(circle at 80% 70%, rgba(16,185,129,0.22), transparent 45%)",
+                ],
+              }}
+              transition={{ duration: 1.45 + index * 0.22, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             />
 
-            <div className="relative pl-4 pr-7">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.78),transparent_45%)]" />
+
+            <motion.div
+              className={`absolute left-3 top-3 h-2 w-2 rounded-full ${style.dot}`}
+              animate={{ opacity: [0.35, 1, 0.35], scale: isSelected ? 1.5 : [1, 1.25, 1] }}
+              transition={{ duration: 1.15 + index * 0.18, repeat: Infinity, ease: "easeInOut" }}
+            />
+
+            <div className="relative pl-4 pr-6">
               <div className="text-[15px] font-black lowercase leading-tight text-[#1E1B18]">
                 {thought}
               </div>
-              <div className="mt-1 text-[12px] font-medium leading-snug text-[#6F685F]">
+              <div className="mt-1 line-clamp-1 text-[11px] font-semibold lowercase leading-snug text-[#6F685F]">
                 {choice.label}
               </div>
-              <div className="mt-1 text-[10px] italic tracking-wide text-[#9A9288]">
-                {choice.whisper || micro} · {micro}
+              <div className="mt-0.5 line-clamp-1 text-[9px] italic tracking-wide text-[#9A9288]">
+                {micro}
               </div>
             </div>
 
             <motion.span
-              animate={{ x: isHovered ? 0 : -5, opacity: isHovered || isSelected ? 1 : 0.42 }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-xl leading-none text-[#6F685F]"
+              animate={{ x: isHovered ? 1 : -4, opacity: isHovered || isSelected ? 1 : 0.38 }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-lg leading-none text-[#6F685F]"
             >
               →
             </motion.span>
