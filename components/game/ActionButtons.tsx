@@ -30,23 +30,20 @@ const THOUGHTS = [
 ];
 
 const MICRO_COPY = [
-  "could flip either way",
-  "green lies. red lies.",
+  "red lies. green lies.",
   "timeline decides",
-  "feels rigged",
-  "one tap changes it",
-  "hold breath",
   "probably bait",
-  "coin toss energy",
   "no safe clicks",
-  "chart is acting weird",
-  "too calm to trust",
   "famous last words",
+  "one tap changes it",
+  "chart is acting weird",
+  "coin toss energy",
+  "too calm to trust",
 ];
 
-type VisualStyle = {
+type BubbleStyle = {
   rotate: number;
-  position: string;
+  y: number;
   width: string;
   radius: string;
   dot: string;
@@ -66,41 +63,24 @@ function pick<T>(items: T[], seed: string) {
   return items[hashSeed(seed) % items.length];
 }
 
-function visualFor(choice: Choice, index: number, total: number): VisualStyle {
-  // Pure visual deception. This is intentionally NOT tied to hidden category/outcome.
-  const n = hashSeed(`${choice.id}-${choice.label}-${index}-radial-visual-lie`);
-
-  const layouts = total <= 2
-    ? [
-        "left-[3%] top-[12px]",
-        "right-[3%] top-[78px]",
-      ]
-    : [
-        "left-[2%] top-[8px]",
-        "right-[1%] top-[58px]",
-        "left-1/2 top-[116px] -translate-x-1/2",
-      ];
-
-  const widths = total <= 2
-    ? ["w-[64%]", "w-[62%]"]
-    : ["w-[63%]", "w-[58%]", "w-[68%]"];
-
-  const rotates = [-5.5, 4.25, -2.4, 3.5, -3.2, 2.15];
+function bubbleFor(choice: Choice, index: number): BubbleStyle {
+  const n = hashSeed(`${choice.id}-${choice.label}-${index}-thought-bubble-lie`);
+  const rotations = [-4.6, 3.4, -2.2, 2.8, -3.7, 4.1];
+  const yOffsets = [-6, 14, 2, 20, -2, 10];
+  const widths = ["w-[33%]", "w-[31%]", "w-[35%]", "w-[30%]"];
   const radii = [
-    "rounded-[34px_22px_36px_18px]",
-    "rounded-[20px_38px_24px_34px]",
-    "rounded-[38px_24px_20px_34px]",
-    "rounded-[26px_18px_38px_28px]",
-    "rounded-[42px_28px_22px_32px]",
+    "rounded-[44px_34px_48px_30px]",
+    "rounded-[32px_52px_34px_46px]",
+    "rounded-[54px_34px_42px_30px]",
+    "rounded-[38px_30px_56px_42px]",
   ];
-
   return {
-    rotate: rotates[(n >> 3) % rotates.length],
-    position: layouts[index % layouts.length],
+    rotate: rotations[(n >> 2) % rotations.length],
+    y: yOffsets[(n >> 5) % yOffsets.length],
     width: widths[index % widths.length],
-    radius: radii[(n >> 7) % radii.length],
-    dot: ["bg-red-400", "bg-emerald-400", "bg-amber-400", "bg-violet-400", "bg-sky-400"][(n >> 11) % 5],
-    delay: ((n >> 15) % 7) * 0.09,
+    radius: radii[(n >> 8) % radii.length],
+    dot: ["bg-red-400", "bg-emerald-400", "bg-amber-400", "bg-violet-400", "bg-sky-400"][(n >> 12) % 5],
+    delay: ((n >> 15) % 9) * 0.08,
   };
 }
 
@@ -143,18 +123,15 @@ export default function ActionButtons({
         ) : null}
       </div>
 
-      <div className="relative mx-auto h-[190px] w-full max-w-[430px] md:h-[184px]">
+      <div className="relative mx-auto flex h-[142px] w-full max-w-[560px] items-center justify-center gap-2 md:h-[132px] md:gap-3">
         {choices.map((choice, index) => {
           const isHovered = hoveredChoiceId === choice.id;
           const isSelected = selectedChoiceId === choice.id;
-          const style = visualFor(choice, index, choices.length);
+          const style = bubbleFor(choice, index);
 
           let thought = pick(THOUGHTS, `${choice.id}-thought-${index}`);
-          if (usedThoughts.has(thought)) {
-            thought = THOUGHTS.find((item) => !usedThoughts.has(item)) || thought;
-          }
+          if (usedThoughts.has(thought)) thought = THOUGHTS.find((item) => !usedThoughts.has(item)) || thought;
           usedThoughts.add(thought);
-
           const micro = pick(MICRO_COPY, `${choice.id}-micro-${index}`);
 
           return (
@@ -165,58 +142,52 @@ export default function ActionButtons({
               onMouseEnter={() => !disabled && onHoverChange(choice.id)}
               onMouseLeave={() => !disabled && onHoverChange(null)}
               onClick={() => !disabled && onSelect(choice)}
-              initial={{ opacity: 0, y: 12, rotate: style.rotate, scale: 0.92 }}
+              initial={{ opacity: 0, y: style.y + 10, rotate: style.rotate, scale: 0.88 }}
               animate={{
-                opacity: disabled && !isSelected ? 0.42 : 1,
-                y: isHovered && !disabled ? -5 : panic && !disabled ? [0, -1, 0] : 0,
+                opacity: disabled && !isSelected ? 0.36 : 1,
+                y: isHovered && !disabled ? style.y - 6 : panic && !disabled ? [style.y, style.y - 2, style.y] : style.y,
                 rotate: isHovered && !disabled ? style.rotate * 0.55 : style.rotate,
-                scale: isSelected ? 1.06 : panic && !disabled ? [1, 1.014, 1] : 1,
+                scale: isSelected ? 1.08 : panic && !disabled ? [1, 1.018, 1] : 1,
                 x: panic && !disabled ? [0, index % 2 ? 1 : -1, 0] : 0,
               }}
-              whileTap={!disabled ? { scale: 0.93, rotate: style.rotate * 0.25 } : undefined}
+              whileTap={!disabled ? { scale: 0.91, rotate: style.rotate * 0.25 } : undefined}
               transition={{ type: "spring", stiffness: 420, damping: 25 }}
-              className={`${style.position} ${style.width} ${style.radius} group absolute min-h-[60px] overflow-hidden border border-white/70 bg-[#FFFCF8]/88 px-4 py-2.5 text-left shadow-[0_16px_50px_rgba(30,27,24,0.12)] outline-none backdrop-blur-xl ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+              className={`${style.width} ${style.radius} group relative min-h-[88px] overflow-visible border border-white/70 bg-[#FFFCF8]/88 px-3 py-3 text-center shadow-[0_18px_52px_rgba(30,27,24,0.13)] outline-none backdrop-blur-xl ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
             >
-              {/* Every button breathes between red and green, but none of it tells the truth. */}
+              {/* anime thought-bubble tail / dots */}
+              <span className="pointer-events-none absolute -bottom-2 left-1/2 h-4 w-5 -translate-x-1/2 rotate-12 rounded-full border border-white/70 bg-[#FFFCF8]/80 shadow-sm" />
+              <span className="pointer-events-none absolute -bottom-4 left-[58%] h-2.5 w-2.5 rounded-full border border-white/70 bg-[#FFFCF8]/75 shadow-sm" />
+
               <motion.div
-                className="pointer-events-none absolute -inset-12 opacity-75 blur-2xl"
+                className="pointer-events-none absolute -inset-12 rounded-full opacity-75 blur-2xl"
                 animate={{
                   background: [
-                    "radial-gradient(circle at 22% 30%, rgba(239,68,68,0.38), transparent 47%), radial-gradient(circle at 76% 70%, rgba(16,185,129,0.14), transparent 42%)",
-                    "radial-gradient(circle at 18% 34%, rgba(16,185,129,0.36), transparent 46%), radial-gradient(circle at 82% 66%, rgba(239,68,68,0.17), transparent 42%)",
-                    "radial-gradient(circle at 50% 10%, rgba(251,191,36,0.24), transparent 40%), radial-gradient(circle at 30% 80%, rgba(239,68,68,0.25), transparent 44%), radial-gradient(circle at 84% 72%, rgba(16,185,129,0.22), transparent 40%)",
+                    "radial-gradient(circle at 30% 30%, rgba(239,68,68,0.40), transparent 48%), radial-gradient(circle at 78% 74%, rgba(16,185,129,0.14), transparent 42%)",
+                    "radial-gradient(circle at 26% 32%, rgba(16,185,129,0.38), transparent 48%), radial-gradient(circle at 80% 70%, rgba(239,68,68,0.18), transparent 42%)",
+                    "radial-gradient(circle at 50% 8%, rgba(251,191,36,0.22), transparent 42%), radial-gradient(circle at 28% 82%, rgba(239,68,68,0.24), transparent 44%), radial-gradient(circle at 86% 78%, rgba(16,185,129,0.23), transparent 42%)",
                   ],
                 }}
-                transition={{ duration: 1.35 + index * 0.27, delay: style.delay, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                transition={{ duration: 1.15 + index * 0.22, delay: style.delay, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
               />
 
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.84),transparent_48%)]" />
-              <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-white/80" />
-
+              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.88),transparent_50%)]" />
               <motion.div
-                className={`absolute left-3 top-3 h-2.5 w-2.5 rounded-full ${style.dot}`}
-                animate={{ opacity: [0.35, 1, 0.35], scale: isSelected ? 1.55 : [1, 1.28, 1] }}
-                transition={{ duration: 1.05 + index * 0.2, repeat: Infinity, ease: "easeInOut" }}
+                className={`absolute left-1/2 top-2 h-2.5 w-2.5 -translate-x-1/2 rounded-full ${style.dot}`}
+                animate={{ opacity: [0.35, 1, 0.35], scale: isSelected ? 1.55 : [1, 1.25, 1] }}
+                transition={{ duration: 1.05 + index * 0.18, repeat: Infinity, ease: "easeInOut" }}
               />
 
-              <div className="relative pl-5 pr-6">
-                <div className="line-clamp-1 text-[15px] font-black lowercase leading-tight text-[#1E1B18] md:text-[16px]">
+              <div className="relative z-10 flex h-full flex-col items-center justify-center px-1 pt-2">
+                <div className="line-clamp-2 text-balance text-[13px] font-black lowercase leading-[1.05] text-[#1E1B18] md:text-[14px]">
                   {thought}
                 </div>
-                <div className="mt-1 line-clamp-1 text-[11px] font-semibold lowercase leading-snug text-[#6F685F]">
+                <div className="mt-1 line-clamp-1 text-[10px] font-semibold lowercase leading-snug text-[#6F685F]">
                   {choice.label}
                 </div>
-                <div className="mt-0.5 line-clamp-1 text-[9px] italic tracking-wide text-[#9A9288]">
+                <div className="mt-0.5 line-clamp-1 text-[8px] italic tracking-wide text-[#9A9288]">
                   {micro}
                 </div>
               </div>
-
-              <motion.span
-                animate={{ x: isHovered ? 1 : -4, opacity: isHovered || isSelected ? 1 : 0.36 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-xl leading-none text-[#6F685F]"
-              >
-                →
-              </motion.span>
             </motion.button>
           );
         })}

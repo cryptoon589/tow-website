@@ -398,30 +398,34 @@ export default function PlayPage() {
         <Link href="/" className="font-black tracking-tight text-[#1E1B18]">TOW</Link>
       </header>
 
-      <section className="mx-auto flex h-full w-full max-w-[430px] flex-col items-center justify-between gap-0">
-        <div className="w-full rounded-[22px] border border-[#DDD7CE] bg-[#FFFCF8]/84 p-2.5 shadow-[0_14px_48px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[520px]">
-          <div className="mb-1.5 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-[#6F685F]">
-            <span>{runArc.title}</span>
-            <span className={market.color}>{market.label}</span>
-            <span>{getStreakLabel(state.memory.winStreak)}</span>
-          </div>
-
+      <section className="mx-auto flex h-full w-full max-w-[560px] flex-col items-center justify-between gap-0">
+        <div className="w-full rounded-[22px] border border-[#DDD7CE]/80 bg-[#FFFCF8]/74 p-2 shadow-[0_14px_48px_rgba(30,27,24,0.06)] backdrop-blur-xl md:max-w-[560px]">
           <TiredMeter tired={state.tired} max={MAX_TIRED} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} />
-
-          <div className="mt-1.5 rounded-full bg-black/[0.035] px-3 py-1 text-center text-[10px] font-black lowercase text-[#6F685F]">
-            {runBeat}
-          </div>
         </div>
 
-        <div className="relative -my-4 h-[318px] w-full shrink-0 overflow-visible">
-          <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2">
+        <div className="relative -my-5 h-[330px] w-full shrink-0 overflow-visible">
+          {/* floating run-state labels live around TOW instead of inside the meter */}
+          <div className="pointer-events-none absolute left-2 top-4 z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
+            {runArc.title}
+          </div>
+          <div className="pointer-events-none absolute right-2 top-8 z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
+            <span className={market.color}>{market.label}</span>
+          </div>
+          <div className="pointer-events-none absolute left-1/2 top-[236px] z-30 max-w-[260px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[10px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+            {runBeat}
+          </div>
+          <div className="pointer-events-none absolute bottom-[58px] right-5 z-20 rounded-full bg-white/45 px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-[#8A8278] shadow-sm backdrop-blur-md md:right-16">
+            {getStreakLabel(state.memory.winStreak)}
+          </div>
+
+          <div className="absolute left-1/2 top-2 z-10 -translate-x-1/2">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
               timeLeftMs={timeLeftMs}
               choiceWindowMs={choiceWindowMs}
-              width={238}
-              height={238}
+              width={242}
+              height={242}
             />
           </div>
 
