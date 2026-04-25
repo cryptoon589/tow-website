@@ -403,19 +403,19 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative -my-4 h-[318px] w-full shrink-0 overflow-visible">
+        <div className="relative -mt-8 h-[280px] w-full shrink-0 overflow-visible">
           {/* floating run-state labels live around TOW instead of inside the meter */}
-          <div className="pointer-events-none absolute left-2 top-[72px] z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
+          <div className="pointer-events-none absolute left-2 top-[52px] z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
             {runArc.title}
           </div>
-          <div className="pointer-events-none absolute right-2 top-[88px] z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
+          <div className="pointer-events-none absolute right-2 top-[60px] z-20 rounded-full bg-white/55 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
             <span className={market.color}>{market.label}</span>
           </div>
-          <div className="pointer-events-none absolute left-1/2 top-[24px] z-30 max-w-[300px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[10px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[6px] z-30 max-w-[300px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[10px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[42px] z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-[22px] z-10 -translate-x-1/2">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -431,7 +431,7 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="-mt-3 w-full pb-0">
+        <div className="-mt-8 w-full pb-0">
           <ActionButtons
            choices={state.choices}
            selectedChoiceId={state.selectedChoiceId}

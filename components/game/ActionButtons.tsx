@@ -22,9 +22,9 @@ export default function ActionButtons({
     <div className="relative w-full max-w-[640px] mx-auto h-[160px] -mt-4">
       {choices.map((choice, i) => {
         const positions = [
-          "left-[6%] top-[20%]",
-          "right-[6%] top-[25%]",
-          "left-[28%] bottom-[2%]",
+          "left-[2%] top-[8%]",
+          "right-[2%] top-[10%]",
+          "left-[34%] bottom-[0%]",
         ];
 
         const rotation = ["-rotate-[0.5deg]", "rotate-[0.5deg]", "-rotate-[0.25deg]"];
@@ -41,7 +41,7 @@ export default function ActionButtons({
             onMouseEnter={() => onHoverChange?.(choice.id)}
             onMouseLeave={() => onHoverChange?.(null)}
             className={clsx(
-              "absolute px-6 py-5 min-w-[170px] max-w-[210px]",
+              "absolute px-7 py-6 min-w-[190px] max-w-[230px]",
               "text-center",
               "transition-all duration-200",
               "hover:scale-[1.03] active:scale-[0.97]",

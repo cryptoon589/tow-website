@@ -57,9 +57,9 @@ export default function GameOverOverlay({
 
           {/* 🔥 BIG STAMP */}
           <div
-            className="text-[13px] font-bold text-red-600 px-4 py-2 border-2 border-red-400 rounded-full rotate-6"
+            className="text-[15px] font-black text-red-600 px-6 py-3 border-2 border-red-400 rounded-full rotate-6 tracking-wide"
             style={{
-              boxShadow: "0 0 0 2px rgba(239,68,68,0.15)",
+              boxShadow: "0 0 0 3px rgba(239,68,68,0.18)",
             }}
           >
             {stamp}
