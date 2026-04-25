@@ -19,16 +19,16 @@ export default function ActionButtons({
   disabled?: boolean;
 }) {
   const positions = [
-  "left-[4%] top-[4%]",
-  "right-[4%] top-[4%]",
-  "left-1/2 -translate-x-1/2 top-[46%]",
+  "left-[8%] top-[42%]",   // left
+  "right-[8%] top-[42%]",  // right
+  "left-1/2 -translate-x-1/2 top-[60%]", // center
 ];
 
   const rotations = ["-rotate-[0.7deg]", "rotate-[0.7deg]", "-rotate-[0.25deg]"];
   const delays = ["0ms", "180ms", "90ms"];
 
   return (
-    <div className="relative w-full max-w-[780px] mx-auto h-[235px] -mt-16">
+    <div className="relative w-full max-w-[780px] mx-auto h-[200px] -mt-16">
       {choices.map((choice, i) => {
         const isActive =
           hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
