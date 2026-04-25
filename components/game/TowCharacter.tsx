@@ -122,7 +122,13 @@ function getIdleFaceVariant(
   baseFace: string,
   idleVariant: "neutral" | "blink" | "lookaway" | "sigh"
 ) {
-  if (baseFace !== "neutral") return baseFace;
+  // Idle variants should keep happening even when the base state is stressed
+  // or looking away. That makes TOW feel alive instead of locked into a pose.
+  if (baseFace === "win" || baseFace === "winSmall" || baseFace === "lose" || baseFace === "loseSmall" || baseFace === "rekt" || baseFace === "shock" || baseFace === "confused") {
+    return baseFace;
+  }
+
+  if (idleVariant === "neutral") return baseFace;
   return idleVariant;
 }
 
@@ -140,7 +146,7 @@ export default function TowCharacter({
     return 1 - timeLeftMs / choiceWindowMs;
   }, [timeLeftMs, choiceWindowMs]);
 
-  const isIdleState = mode.type === "idle" && state !== "idle-lookaway";
+  const isIdleState = mode.type === "idle";
 
   const [idleVariant, setIdleVariant] = useState<
     "neutral" | "blink" | "lookaway" | "sigh"
@@ -163,7 +169,7 @@ export default function TowCharacter({
     const scheduleNextIdleBeat = () => {
       if (cancelled) return;
 
-      const nextDelay = urgency > 0.7 ? 1400 + Math.random() * 1600 : 2200 + Math.random() * 2400;
+      const nextDelay = urgency > 0.7 ? 650 + Math.random() * 900 : 850 + Math.random() * 1500;
 
       idleTimerRef.current = setTimeout(() => {
         if (cancelled) return;
@@ -180,8 +186,8 @@ export default function TowCharacter({
           else if (roll < 0.9) nextVariant = "lookaway";
           else nextVariant = "sigh";
         } else {
-          if (roll < 0.72) nextVariant = "blink";
-          else if (roll < 0.95) nextVariant = "lookaway";
+          if (roll < 0.58) nextVariant = "blink";
+          else if (roll < 0.9) nextVariant = "lookaway";
           else nextVariant = "sigh";
         }
 
@@ -189,10 +195,10 @@ export default function TowCharacter({
 
         const holdMs =
           nextVariant === "blink"
-            ? 180
+            ? 140
             : nextVariant === "sigh"
-            ? 900
-            : 700;
+            ? 780
+            : 620;
 
         resetTimerRef.current = setTimeout(() => {
           if (cancelled) return;
@@ -213,9 +219,8 @@ export default function TowCharacter({
   }, [isIdleState, urgency]);
 
   const finalFace = useMemo(() => {
-    if (state === "idle-lookaway") return "lookaway";
     return getIdleFaceVariant(mode.face, idleVariant);
-  }, [state, mode.face, idleVariant]);
+  }, [mode.face, idleVariant]);
 
   const baseFile = `${mode.base}.png`;
   const faceFile = `face-${mode.pose}-${finalFace}.png`;

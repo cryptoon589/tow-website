@@ -101,7 +101,7 @@ export type ResolveChoiceResult = {
   outcome: Outcome;
 };
 
-export const STARTING_TIRED = 26;
+export const STARTING_TIRED = 32;
 export const MAX_TIRED = 100;
 
 const RECENT_LABEL_LIMIT = 15;
@@ -501,11 +501,11 @@ function getOutcomeWeights(
             { value: "glitch", weight: 2 },
           ]
         : [
-            { value: "winSmall", weight: 28 },
-            { value: "win", weight: 8 },
-            { value: "loseSmall", weight: 27 },
-            { value: "lose", weight: 9 },
-            { value: "rekt", weight: 2 },
+            { value: "winSmall", weight: 22 },
+            { value: "win", weight: 5 },
+            { value: "loseSmall", weight: 33 },
+            { value: "lose", weight: 13 },
+            { value: "rekt", weight: 3 },
             { value: "glitch", weight: 2 },
           ];
   } else if (category === "swing") {
@@ -520,12 +520,12 @@ function getOutcomeWeights(
             { value: "glitch", weight: 5 },
           ]
         : [
-            { value: "winSmall", weight: 22 },
-            { value: "win", weight: 16 },
-            { value: "loseSmall", weight: 24 },
-            { value: "lose", weight: 18 },
-            { value: "rekt", weight: 8 },
-            { value: "glitch", weight: 4 },
+            { value: "winSmall", weight: 17 },
+            { value: "win", weight: 13 },
+            { value: "loseSmall", weight: 27 },
+            { value: "lose", weight: 22 },
+            { value: "rekt", weight: 10 },
+            { value: "glitch", weight: 5 },
           ];
   } else {
     weights =
@@ -539,12 +539,12 @@ function getOutcomeWeights(
             { value: "glitch", weight: 9 },
           ]
         : [
-            { value: "winSmall", weight: 14 },
-            { value: "win", weight: 20 },
-            { value: "loseSmall", weight: 18 },
-            { value: "lose", weight: 18 },
-            { value: "rekt", weight: 14 },
-            { value: "glitch", weight: 8 },
+            { value: "winSmall", weight: 10 },
+            { value: "win", weight: 17 },
+            { value: "loseSmall", weight: 17 },
+            { value: "lose", weight: 23 },
+            { value: "rekt", weight: 19 },
+            { value: "glitch", weight: 9 },
           ];
   }
 
@@ -621,23 +621,28 @@ function getOutcomeWeights(
   if (state.memory.winStreak >= 2) {
     weights = weights.map((entry) => {
       if (entry.value === "win" || entry.value === "winSmall") {
-        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * 0.48)) };
+        const multiplier = state.memory.winStreak >= 3 ? 0.22 : 0.38;
+        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * multiplier)) };
+      }
+      if (entry.value === "loseSmall") {
+        return { ...entry, weight: entry.weight + 5 + state.memory.winStreak };
       }
       if (entry.value === "lose" || entry.value === "rekt" || entry.value === "glitch") {
-        return { ...entry, weight: entry.weight + 8 + state.memory.winStreak * 2 };
+        return { ...entry, weight: entry.weight + 12 + state.memory.winStreak * 4 };
       }
       return entry;
     });
   }
 
-  // When tired is too low, the timeline stops handing out free safety.
-  if (state.tired <= 20) {
+  // When tired is low, the timeline stops handing out free safety.
+  // The meter should climb often enough that players actually reach panic.
+  if (state.tired <= 36) {
     weights = weights.map((entry) => {
       if (entry.value === "win" || entry.value === "winSmall") {
-        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * 0.55)) };
+        return { ...entry, weight: Math.max(1, Math.floor(entry.weight * 0.45)) };
       }
       if (entry.value === "loseSmall" || entry.value === "lose" || entry.value === "rekt") {
-        return { ...entry, weight: entry.weight + 7 };
+        return { ...entry, weight: entry.weight + 10 };
       }
       return entry;
     });
@@ -710,7 +715,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(WIN_HEADLINES),
         subtext: sample(WIN_SUBTEXT),
-        delta: -randInt(3, 7),
+        delta: -randInt(2, 5),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -719,7 +724,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(WIN_BIG_HEADLINES),
         subtext: sample(WIN_BIG_SUBTEXT),
-        delta: -randInt(7, 13),
+        delta: -randInt(5, 10),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -728,7 +733,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(LOSE_HEADLINES),
         subtext: sample(LOSE_SUBTEXT),
-        delta: randInt(7, 12),
+        delta: randInt(9, 15),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -737,7 +742,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(LOSE_BIG_HEADLINES),
         subtext: sample(LOSE_BIG_SUBTEXT),
-        delta: randInt(13, 21),
+        delta: randInt(17, 26),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -746,7 +751,7 @@ function buildBaseOutcome(kind: OutcomeKind): Outcome {
         kind,
         headline: sample(REKT_HEADLINES),
         subtext: sample(REKT_SUBTEXT),
-        delta: randInt(24, 34),
+        delta: randInt(30, 42),
         appliedModifiers: [],
         removedModifiers: [],
       };
@@ -799,7 +804,7 @@ function maybeApplySpecialEffect(
       kind: "glitch",
       headline: "TIMELINE FORK",
       subtext: "The market changed its mind mid-collapse.",
-      delta: -randInt(7, 13),
+      delta: -randInt(5, 10),
     };
   } else if (rareRoll < 0.06) {
     next = {

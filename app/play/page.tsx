@@ -413,12 +413,22 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="relative -my-5 flex h-[235px] w-full shrink-0 items-center justify-center">
-          <div className="absolute bottom-7 h-12 w-36 rounded-full bg-black/10 blur-2xl" />
-          <TowCharacter state={characterState} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} width={245} height={245} />
-        </div>
+        <div className="relative -my-4 h-[318px] w-full shrink-0 overflow-visible">
+          <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2">
+            <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
+            <TowCharacter
+              state={characterState}
+              timeLeftMs={timeLeftMs}
+              choiceWindowMs={choiceWindowMs}
+              width={238}
+              height={238}
+            />
+          </div>
 
-        <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
+          <div className="pointer-events-none absolute bottom-0 left-1/2 z-20 w-full -translate-x-1/2">
+            <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
+          </div>
+        </div>
 
         <div className="w-full pb-0">
           <ActionButtons
