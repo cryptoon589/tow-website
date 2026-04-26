@@ -431,12 +431,11 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="-mt-8 w-full pb-0">
+        <div className="relative -mt-8 w-full pb-0">
   {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
-    <div className="relative z-30 mb-2 flex justify-center">
-      <div
-        className="rounded-full bg-red-100/90 px-4 py-1 text-[12px] font-black text-red-600 shadow-sm backdrop-blur-md animate-pulse">
-        choose in {Math.ceil(timeLeftMs / 1000)}s
+    <div className="pointer-events-none absolute left-1/2 top-[-18px] z-40 -translate-x-1/2">
+      <div className="animate-[timerUrgent_0.55s_ease-in-out_infinite] rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
+        pick now · {Math.ceil(timeLeftMs / 1000)}
       </div>
     </div>
   )}

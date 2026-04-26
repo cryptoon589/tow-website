@@ -187,17 +187,21 @@ export default function GameOverOverlay({
           <button
             onClick={onReplay}
             className="
-              relative min-h-[64px] overflow-hidden rounded-2xl bg-black px-10 py-5
-              text-[18px] font-black text-white
-              animate-[runBackPulse_2.4s_ease-in-out_infinite]
-              transition-all duration-300
-              hover:scale-[1.045] hover:shadow-[0_0_34px_rgba(0,0,0,0.34)]
-              active:scale-[0.96]
-              before:absolute before:inset-0
-              before:-translate-x-full
-              before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent
-              before:transition-transform before:duration-700
-              hover:before:translate-x-full"
+              relative min-h-[68px] overflow-hidden rounded-[26px]
+              px-10 py-5 text-[19px] font-black text-zinc-900
+              border border-white/70
+              shadow-[0_12px_30px_rgba(0,0,0,0.16)]
+              backdrop-blur-md
+              transition-all duration-300 ease-out
+              hover:scale-[1.04] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)]
+              active:scale-[0.97]
+              animate-[thoughtFloat_3.8s_ease-in-out_infinite]
+              hover:shadow-[0_0_28px_rgba(255,255,255,0.35)]"
+
+style={{
+  background:
+    "linear-gradient(135deg, rgba(182,230,204,0.85), rgba(255,192,192,0.85))",
+}}
           >
             run it back
           </button>
