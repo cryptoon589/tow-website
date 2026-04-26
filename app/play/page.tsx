@@ -493,7 +493,7 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-2 h-[430px] w-full shrink-0 overflow-visible">
+        <div className="relative mt-2 h-[270px] w-full shrink-0 overflow-visible">
           <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-[110px]">
             {runArc.title}
           </div>
@@ -522,7 +522,7 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="relative mt-16 w-full pb-10">
+        <div className="relative mt-0 w-full pb-8">
           {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
             <div className="pointer-events-none absolute left-1/2 top-[-62px] z-40 -translate-x-1/2">
               <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
