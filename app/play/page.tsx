@@ -20,7 +20,6 @@ import {
   getMarketState,
   getPersonaLine,
   getRunArc,
-  getStreakLabel,
   mergeProfileWithRun,
   resolveChoice,
   restartRun,
@@ -62,7 +61,12 @@ function getCharacterState(state: GameState): string {
   return "idle";
 }
 
-function getRunBeat(state: GameState, timeLeftMs: number, choiceWindowMs: number, persona: PlayerProfile["persona"]) {
+function getRunBeat(
+  state: GameState,
+  timeLeftMs: number,
+  choiceWindowMs: number,
+  persona: PlayerProfile["persona"]
+) {
   const arc = getRunArc(state);
   const kind = state.lastOutcome?.kind;
 
@@ -88,19 +92,29 @@ function createSoundEngine() {
 
   const getCtx = () => {
     if (typeof window === "undefined") return null;
-    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
     if (!AudioContextClass) return null;
     if (!ctx) ctx = new AudioContextClass();
     if (ctx.state === "suspended") void ctx.resume();
     return ctx;
   };
 
-  const tone = (freq: number, duration = 0.08, gain = 0.025, type: OscillatorType = "sine", delayTime = 0) => {
+  const tone = (
+    freq: number,
+    duration = 0.08,
+    gain = 0.025,
+    type: OscillatorType = "sine",
+    delayTime = 0
+  ) => {
     const audio = getCtx();
     if (!audio) return;
 
     const osc = audio.createOscillator();
     const amp = audio.createGain();
+
     osc.type = type;
     osc.frequency.value = freq;
     amp.gain.value = 0;
@@ -112,6 +126,7 @@ function createSoundEngine() {
     amp.gain.setValueAtTime(0, now);
     amp.gain.linearRampToValueAtTime(gain, now + 0.01);
     amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
     osc.start(now);
     osc.stop(now + duration + 0.02);
   };
@@ -120,14 +135,23 @@ function createSoundEngine() {
     const audio = getCtx();
     if (!audio) return;
 
-    const buffer = audio.createBuffer(1, Math.max(1, Math.floor(audio.sampleRate * duration)), audio.sampleRate);
+    const buffer = audio.createBuffer(
+      1,
+      Math.max(1, Math.floor(audio.sampleRate * duration)),
+      audio.sampleRate
+    );
+
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * 0.7;
+    for (let i = 0; i < data.length; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * 0.7;
+    }
 
     const source = audio.createBufferSource();
     const amp = audio.createGain();
+
     source.buffer = buffer;
     amp.gain.value = gain;
+
     source.connect(amp);
     amp.connect(audio.destination);
     source.start();
@@ -137,66 +161,78 @@ function createSoundEngine() {
     setPressure(tired: number, urgency: number) {
       const audio = getCtx();
       if (!audio) return;
+
       const pressure = Math.max(tired / 100, urgency);
 
       if (pressure < 0.62) {
-        if (ambient) {
-          ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
-        }
+        if (ambient) ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
         return;
       }
 
       if (!ambient) {
         const osc = audio.createOscillator();
         const amp = audio.createGain();
+
         osc.type = "triangle";
         osc.frequency.value = 44;
         amp.gain.value = 0.0001;
+
         osc.connect(amp);
         amp.connect(audio.destination);
         osc.start();
+
         ambient = { osc, amp };
       }
 
       ambient.osc.frequency.setTargetAtTime(42 + pressure * 18, audio.currentTime, 0.12);
       ambient.amp.gain.setTargetAtTime(0.002 + pressure * 0.006, audio.currentTime, 0.1);
     },
+
     tap() {
       tone(220, 0.045, 0.018, "square");
       tone(440, 0.04, 0.01, "sine", 0.035);
     },
+
     tick(msLeft: number) {
       const now = Date.now();
       if (now - lastTick < 450) return;
+
       lastTick = now;
       tone(msLeft < 1000 ? 740 : 520, 0.035, msLeft < 1000 ? 0.024 : 0.014, "square");
     },
+
     tension() {
       tone(164, 0.11, 0.012, "triangle");
     },
+
     win(big = false) {
       tone(392, 0.07, 0.022, "sine");
       tone(big ? 659 : 523, 0.09, 0.024, "sine", 0.055);
       tone(big ? 784 : 659, 0.11, 0.02, "sine", 0.12);
     },
+
     closeCall() {
       tone(92, 0.08, 0.02, "sawtooth");
       tone(523, 0.12, 0.018, "sine", 0.09);
       tone(784, 0.14, 0.016, "sine", 0.18);
     },
+
     lose() {
       tone(196, 0.09, 0.022, "sawtooth");
       tone(123, 0.13, 0.018, "triangle", 0.075);
     },
+
     rekt() {
       noise(0.13, 0.025);
       tone(92, 0.22, 0.03, "sawtooth");
     },
+
     glitch() {
       noise(0.08, 0.018);
       tone(311, 0.045, 0.02, "square");
       tone(147, 0.06, 0.018, "square", 0.05);
     },
+
     gameOver() {
       tone(196, 0.12, 0.025, "triangle");
       tone(147, 0.18, 0.022, "triangle", 0.13);
@@ -205,8 +241,21 @@ function createSoundEngine() {
   };
 }
 
-function playOutcomeSound(sound: ReturnType<typeof createSoundEngine>, kind: OutcomeKind, headline = "") {
-  const closeCall = ["BARELY ALIVE", "ONE HP", "ALMOST REKT", "CLUTCH SAVE", "ONE TAP LEFT", "NOT DEAD YET", "HANGING ON"].includes(headline);
+function playOutcomeSound(
+  sound: ReturnType<typeof createSoundEngine>,
+  kind: OutcomeKind,
+  headline = ""
+) {
+  const closeCall = [
+    "BARELY ALIVE",
+    "ONE HP",
+    "ALMOST REKT",
+    "CLUTCH SAVE",
+    "ONE TAP LEFT",
+    "NOT DEAD YET",
+    "HANGING ON",
+  ].includes(headline);
+
   if (closeCall) sound.closeCall();
   else if (kind === "win" || kind === "winSmall") sound.win(kind === "win");
   else if (kind === "rekt") sound.rekt();
@@ -216,6 +265,7 @@ function playOutcomeSound(sound: ReturnType<typeof createSoundEngine>, kind: Out
 
 function loadProfile(): PlayerProfile {
   if (typeof window === "undefined") return createFreshProfile();
+
   try {
     const raw = window.localStorage.getItem(PROFILE_KEY);
     if (!raw) return createFreshProfile();
@@ -270,7 +320,11 @@ export default function PlayPage() {
   const market = useMemo(() => getMarketState(state), [state]);
   const characterState = useMemo(() => getCharacterState(state), [state]);
   const runArc = useMemo(() => getRunArc(state), [state]);
-  const runBeat = useMemo(() => getRunBeat(state, timeLeftMs, choiceWindowMs, profile.persona), [state, timeLeftMs, choiceWindowMs, profile.persona]);
+
+  const runBeat = useMemo(
+    () => getRunBeat(state, timeLeftMs, choiceWindowMs, profile.persona),
+    [state, timeLeftMs, choiceWindowMs, profile.persona]
+  );
 
   useEffect(() => {
     setBestRun((current) => Math.max(current, state.turn));
@@ -282,16 +336,19 @@ export default function PlayPage() {
     const nextWindow = getChoiceWindowMs(state.choices);
     setChoiceWindowMs(nextWindow);
     setTimeLeftMs(nextWindow);
+
     const startedAt = Date.now();
     const graceMs = 400;
 
     const interval = window.setInterval(() => {
       const elapsed = Math.max(0, Date.now() - startedAt - graceMs);
       const next = Math.max(0, nextWindow - elapsed);
+
       setTimeLeftMs(next);
 
       const urgency = 1 - next / nextWindow;
       soundRef.current?.setPressure(stateRef.current.tired, urgency);
+
       if (next < 3100 && next > 0) soundRef.current?.tick(next);
       if (next <= 0) window.clearInterval(interval);
     }, 100);
@@ -301,77 +358,101 @@ export default function PlayPage() {
 
   useEffect(() => {
     if (!state.gameOver || gameOverSavedRef.current) return;
+
     gameOverSavedRef.current = true;
+
     const currentProfile = profileRef.current;
     const next = mergeProfileWithRun(currentProfile, state);
+
     setProfile(next);
     profileRef.current = next;
     saveProfile(next);
     setBestRun((current) => Math.max(current, next.bestRun, state.turn));
   }, [state]);
 
-  const playChoiceFlow = useCallback(async (choice: Choice, wasAutoPicked = false) => {
-    const current = stateRef.current;
-    const sound = soundRef.current;
-    if (flowRef.current || current.gameOver || current.phase !== "choosing") return;
+  const playChoiceFlow = useCallback(
+    async (choice: Choice, wasAutoPicked = false) => {
+      const current = stateRef.current;
+      const sound = soundRef.current;
 
-    flowRef.current = true;
-    setHoveredChoiceId(null);
-    setShowOutcome(false);
-    sound?.tap();
+      if (flowRef.current || current.gameOver || current.phase !== "choosing") return;
 
-    const elapsedRatio = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
-    const hesitationPressure = wasAutoPicked ? 1 : Math.max(0, Math.min(1, elapsedRatio));
+      flowRef.current = true;
+      setHoveredChoiceId(null);
+      setShowOutcome(false);
+      sound?.tap();
 
-    const committed = commitChoice(current, choice.id, wasAutoPicked);
-    stateRef.current = committed;
-    setState(committed);
+      const elapsedRatio = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
+      const hesitationPressure = wasAutoPicked ? 1 : Math.max(0, Math.min(1, elapsedRatio));
 
-    await delay(180 + Math.random() * 180);
-    sound?.tension();
+      const committed = commitChoice(current, choice.id, wasAutoPicked);
+      stateRef.current = committed;
+      setState(committed);
 
-    // Story-arc fakeout: late-run choices always breathe before they hit.
-    if (Math.random() < 0.38 || current.tired >= 72 || hesitationPressure > 0.65) {
-      await delay(220 + Math.random() * 320);
-    }
+      await delay(180 + Math.random() * 180);
+      sound?.tension();
 
-    const resolved = resolveChoice(committed, choice.id, wasAutoPicked, hesitationPressure, profileRef.current.persona);
-    stateRef.current = resolved.state;
-    setState(resolved.state);
+      if (Math.random() < 0.38 || current.tired >= 72 || hesitationPressure > 0.65) {
+        await delay(220 + Math.random() * 320);
+      }
 
-    setShowOutcome(false);
-    await delay(90);
-    setShowOutcome(true);
-    playOutcomeSound(sound ?? createSoundEngine(), resolved.outcome.kind, resolved.outcome.headline);
+      const resolved = resolveChoice(
+        committed,
+        choice.id,
+        wasAutoPicked,
+        hesitationPressure,
+        profileRef.current.persona
+      );
 
-    const kind = resolved.outcome.kind as OutcomeKind;
-    const almost = ["BARELY ALIVE", "ONE HP", "ALMOST REKT", "CLUTCH SAVE", "ONE TAP LEFT", "NOT DEAD YET", "HANGING ON"].includes(resolved.outcome.headline);
-    const hold = kind === "rekt" || kind === "glitch" || almost ? 2100 : 1650 + Math.random() * 520;
-    await delay(hold);
+      stateRef.current = resolved.state;
+      setState(resolved.state);
 
-    if (resolved.state.gameOver) {
-      sound?.gameOver();
+      setShowOutcome(false);
+      await delay(90);
+      setShowOutcome(true);
+
+      playOutcomeSound(sound ?? createSoundEngine(), resolved.outcome.kind, resolved.outcome.headline);
+
+      const kind = resolved.outcome.kind as OutcomeKind;
+      const almost = [
+        "BARELY ALIVE",
+        "ONE HP",
+        "ALMOST REKT",
+        "CLUTCH SAVE",
+        "ONE TAP LEFT",
+        "NOT DEAD YET",
+        "HANGING ON",
+      ].includes(resolved.outcome.headline);
+
+      const hold = kind === "rekt" || kind === "glitch" || almost ? 2100 : 1650 + Math.random() * 520;
+      await delay(hold);
+
+      if (resolved.state.gameOver) {
+        sound?.gameOver();
+        flowRef.current = false;
+        return;
+      }
+
+      setShowOutcome(false);
+      await delay(160 + Math.random() * 180);
+
+      const next = beginChoosing(advanceAfterResolve(resolved.state));
+      stateRef.current = next;
+      gameOverSavedRef.current = false;
+      setState(next);
+
+      const nextWindow = getChoiceWindowMs(next.choices);
+      setChoiceWindowMs(nextWindow);
+      setTimeLeftMs(nextWindow);
+
       flowRef.current = false;
-      return;
-    }
-
-    setShowOutcome(false);
-    await delay(160 + Math.random() * 180);
-
-    const next = beginChoosing(advanceAfterResolve(resolved.state));
-    stateRef.current = next;
-    gameOverSavedRef.current = false;
-    setState(next);
-    const nextWindow = getChoiceWindowMs(next.choices);
-    setChoiceWindowMs(nextWindow);
-    setTimeLeftMs(nextWindow);
-    flowRef.current = false;
-  }, [choiceWindowMs, timeLeftMs]);
+    },
+    [choiceWindowMs, timeLeftMs]
+  );
 
   useEffect(() => {
     if (state.phase !== "choosing" || state.gameOver || timeLeftMs > 0 || flowRef.current) return;
 
-    // Panic auto-pick: not always safe. The game chose because you waited.
     const fallbackChoice = state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
 
     if (fallbackChoice) void playChoiceFlow(fallbackChoice, true);
@@ -382,9 +463,12 @@ export default function PlayPage() {
     gameOverSavedRef.current = false;
     setShowOutcome(false);
     setHoveredChoiceId(null);
+
     const fresh = beginChoosing(restartRun(Math.max(bestRun, profile.bestRun)));
+
     stateRef.current = fresh;
     setState(fresh);
+
     const nextWindow = getChoiceWindowMs(fresh.choices);
     setChoiceWindowMs(nextWindow);
     setTimeLeftMs(nextWindow);
@@ -395,7 +479,9 @@ export default function PlayPage() {
       <SceneLayer state={state} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} />
 
       <header className="absolute left-0 top-0 z-20 flex w-full items-center px-4 py-3 text-sm">
-        <Link href="/" className="font-black tracking-tight text-[#1E1B18]">TOW</Link>
+        <Link href="/" className="font-black tracking-tight text-[#1E1B18]">
+          TOW
+        </Link>
       </header>
 
       <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center gap-0">
@@ -403,19 +489,20 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative -mt-12 h-[310px] w-full shrink-0 overflow-visible">
-          {/* floating run-state labels live around TOW instead of inside the meter */}
-          <div className="pointer-events-none absolute left-2 top-[52px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
+        <div className="relative mt-3 h-[315px] w-full shrink-0 overflow-visible">
+          <div className="pointer-events-none absolute left-2 top-[82px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
             {runArc.title}
           </div>
-          <div className="pointer-events-none absolute right-2 top-[60px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
+
+          <div className="pointer-events-none absolute right-2 top-[90px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
             <span className={market.color}>{market.label}</span>
           </div>
-          <div className="pointer-events-none absolute left-1/2 top-[-28px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+
+          <div className="pointer-events-none absolute left-1/2 top-[36px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[-40px] z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-[64px] z-10 -translate-x-1/2">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -431,27 +518,32 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="relative -mt-0 w-full pb-0">
-  {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
-    <div className="pointer-events-none absolute left-1/2 top-[-54px] z-40 -translate-x-1/2">
-      <div className="animate-[timerUrgent_0.55s_ease-in-out_infinite] rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
-        pick now · {Math.ceil(timeLeftMs / 1000)}
-      </div>
-    </div>
-  )}
+        <div className="relative mt-1 w-full pb-0">
+          {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
+            <div className="pointer-events-none absolute left-1/2 top-[-70px] z-40 -translate-x-1/2">
+              <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
+                pick now · {Math.ceil(timeLeftMs / 1000)}
+              </div>
+            </div>
+          )}
 
-  <ActionButtons
-    choices={state.choices}
-    selectedChoiceId={state.selectedChoiceId}
-    hoveredChoiceId={hoveredChoiceId}
-    onHoverChange={setHoveredChoiceId}
-    onSelect={(choice) => void playChoiceFlow(choice)}
-    disabled={state.phase !== "choosing" || state.gameOver}
-  />
-</div>
+          <ActionButtons
+            choices={state.choices}
+            selectedChoiceId={state.selectedChoiceId}
+            hoveredChoiceId={hoveredChoiceId}
+            onHoverChange={setHoveredChoiceId}
+            onSelect={(choice) => void playChoiceFlow(choice)}
+            disabled={state.phase !== "choosing" || state.gameOver}
+          />
+        </div>
       </section>
 
-      <GameOverOverlay state={state} bestRun={Math.max(bestRun, profile.bestRun)} profile={profile} onReplay={handleReplay} />
+      <GameOverOverlay
+        state={state}
+        bestRun={Math.max(bestRun, profile.bestRun)}
+        profile={profile}
+        onReplay={handleReplay}
+      />
     </main>
   );
 }
