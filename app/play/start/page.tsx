@@ -70,7 +70,7 @@ export default function PlayStartPage() {
 
             <Link
               href="/play?mode=fun"
-              className="group rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition hover:-translate-y-1"
+              className="group rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111]"
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl">
@@ -97,7 +97,7 @@ export default function PlayStartPage() {
               className="rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111]"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6D3BFF] text-2xl shadow-[0_0_18px_rgba(109,59,255,0.35)]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl shadow-[6px_6px_0_#111] transition hover:-translate-y-1">
                   🏆
                 </div>
 
@@ -153,7 +153,7 @@ export default function PlayStartPage() {
                 type="submit"
                 className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white shadow-[0_0_22px_rgba(109,59,255,0.35)] transition hover:-translate-y-0.5 hover:bg-[#5B2BE8] active:translate-y-0"
               >
-                Start Reward Run
+                🎮 Start Reward Run
               </button>
 
               <p className="mt-3 text-center text-xs font-bold text-[#555]">
