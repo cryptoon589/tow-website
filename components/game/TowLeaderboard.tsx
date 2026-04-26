@@ -56,11 +56,11 @@ export default function TowLeaderboard() {
     <section className="w-full rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B14A35]">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-[#5B2BE8]">
             Weekly Leaderboard
           </p>
           <h2 className="text-2xl font-black tracking-tight text-black">
-            Top 10 Reward Boost
+            🏆 Top 10 Reward Boost
           </h2>
         </div>
 
