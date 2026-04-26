@@ -44,14 +44,14 @@ export default function PlayStartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-4 py-5 text-[#111]">
+    <main className="rounded-full border border-black bg-white min-h-screen bg-white px-4 py-5 text-[#111]">
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
         <header className="flex items-center justify-between">
           <Link href="/" className="text-sm font-black tracking-tight">
             TOW
           </Link>
 
-          <p className="rounded-full border border-black bg-white px-3 py-1 text-xs font-black">
+          <p className="px-3 py-1 text-xs font-black">
             Too Tired To Quit
           </p>
         </header>
@@ -59,7 +59,7 @@ export default function PlayStartPage() {
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
           <div className="flex flex-col gap-4">
             <section className="rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-black">
+              <p className="text-xs font uppercase tracking-[0.24em] text-[#6D3BFF]">
                 Choose Your Run
              </p>
 
@@ -94,10 +94,10 @@ export default function PlayStartPage() {
 
             <form
               onSubmit={startRewardRun}
-              className="rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111]"
+              className="rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition hover:-translate-y-1"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl shadow-[6px_6px_0_#111] transition hover:-translate-y-1">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl">
                   🏆
                 </div>
 
