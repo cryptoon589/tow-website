@@ -47,9 +47,12 @@ export default function PlayStartPage() {
     <main className="rounded-full border border-black bg-white min-h-screen bg-white px-4 py-5 text-[#111]">
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
         <header className="flex items-center justify-between">
-          <Link href="/" className="text-sm font-black tracking-tight">
-            TOW
-          </Link>
+          <Link
+           href="/"
+          className="rounded-xl border-2 border-black bg-white px-3 py-1 text-sm font-black tracking-tight shadow-[3px_3px_0_#111] transition hover:-translate-y-0.5 hover:bg-black hover:text-white active:translate-y-0"
+          >
+          TOW
+        </Link>
 
           <p className="px-3 py-1 text-xs font-black">
             Too Tired To Quit
@@ -59,9 +62,9 @@ export default function PlayStartPage() {
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
           <div className="flex flex-col gap-4">
             <section className="rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
-              <p className="text-xs font uppercase tracking-[0.24em] text-[#6D3BFF]">
-                Choose Your Run
-             </p>
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-[#5B2BE8] drop-shadow-[0_0_6px_rgba(91,43,232,0.25)]">
+              Choose Your Run
+            </p>
 
              <h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">
                 Play TOW
@@ -93,73 +96,77 @@ export default function PlayStartPage() {
             </Link>
 
             <form
-              onSubmit={startRewardRun}
-              className="rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition hover:-translate-y-1"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl">
-                  🏆
-                </div>
+  onSubmit={startRewardRun}
+  className="group relative overflow-hidden rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition-all duration-300 before:absolute before:inset-0 before:rounded-[24px] before:bg-[radial-gradient(circle_at_50%_50%,rgba(109,59,255,0.22),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:-translate-y-1 hover:shadow-[10px_10px_0_#111] hover:before:opacity-100"
+>
+  <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[#6D3BFF] opacity-[0.08] blur-2xl animate-pulse" />
 
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight">
-                    Play & Earn Rewards
-                  </h2>
-                  <p className="mt-1 text-sm font-bold text-[#555]">
-                    Submit your run to the weekly leaderboard.
-                  </p>
-                </div>
-              </div>
+  <div className="relative z-10">
+    <div className="flex items-center gap-4">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6D3BFF] text-2xl shadow-[0_0_18px_rgba(109,59,255,0.45)] transition group-hover:scale-110">
+        💎
+      </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-[#555]">
-                    X Username
-                  </span>
-                  <input
-                    value={xUsername}
-                    onChange={(event) => {
-                      setError("");
-                      setXUsername(event.target.value);
-                    }}
-                    placeholder="@username"
-                    className="mt-1 w-full rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-black outline-none focus:border-[#B14A35]"
-                  />
-                </label>
+      <div>
+        <h2 className="text-2xl font-black tracking-tight">
+          Play & Earn Rewards
+        </h2>
+        <p className="mt-1 text-sm font-bold text-[#555]">
+          Submit your run to the weekly leaderboard.
+        </p>
+      </div>
+    </div>
 
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-[#555]">
-                    XRPL Wallet
-                  </span>
-                  <input
-                    value={walletAddress}
-                    onChange={(event) => {
-                      setError("");
-                      setWalletAddress(event.target.value);
-                    }}
-                    placeholder="r..."
-                    className="mt-1 w-full rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-black outline-none focus:border-[#B14A35]"
-                  />
-                </label>
-              </div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <label className="block">
+        <span className="text-xs font-black uppercase tracking-wide text-[#555]">
+          X Username
+        </span>
+        <input
+          value={xUsername}
+          onChange={(event) => {
+            setError("");
+            setXUsername(event.target.value);
+          }}
+          placeholder="@username"
+          className="mt-1 w-full rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-black outline-none focus:border-[#6D3BFF]"
+        />
+      </label>
 
-              {error ? (
-                <p className="mt-3 rounded-2xl border-2 border-[#B14A35] bg-[#FFE8DF] px-3 py-2 text-sm font-black text-[#B14A35]">
-                  {error}
-                </p>
-              ) : null}
+      <label className="block">
+        <span className="text-xs font-black uppercase tracking-wide text-[#555]">
+          XRPL Wallet
+        </span>
+        <input
+          value={walletAddress}
+          onChange={(event) => {
+            setError("");
+            setWalletAddress(event.target.value);
+          }}
+          placeholder="r..."
+          className="mt-1 w-full rounded-2xl border-2 border-black bg-white px-4 py-3 text-sm font-black outline-none focus:border-[#6D3BFF]"
+        />
+      </label>
+    </div>
 
-              <button
-                type="submit"
-                className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white shadow-[0_0_22px_rgba(109,59,255,0.35)] transition hover:-translate-y-0.5 hover:bg-[#5B2BE8] active:translate-y-0"
-              >
-                🎮 Start Reward Run
-              </button>
+    {error ? (
+      <p className="mt-3 rounded-2xl border-2 border-[#B14A35] bg-[#FFE8DF] px-3 py-2 text-sm font-black text-[#B14A35]">
+        {error}
+      </p>
+    ) : null}
 
-              <p className="mt-3 text-center text-xs font-bold text-[#555]">
-                Wallet is only used for reward tracking. No signing. No connection.
-              </p>
-            </form>
+    <button
+      type="submit"
+      className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white shadow-[0_0_22px_rgba(109,59,255,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5B2BE8] hover:shadow-[0_0_32px_rgba(109,59,255,0.6)] active:translate-y-0"
+    >
+      🎮 Start Reward Run
+    </button>
+
+    <p className="mt-3 text-center text-xs font-bold text-[#555]">
+      Wallet is only used for reward tracking. No signing. No connection.
+    </p>
+  </div>
+</form>
           </div>
 
           <div className="lg:sticky lg:top-5">
