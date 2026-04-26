@@ -58,6 +58,7 @@ function getCharacterState(state: GameState): string {
   if (state.tired >= 88) return "idle-stress";
   if (state.tired >= 72) return "idle-lookaway";
   if (state.memory.winStreak >= 3) return "idle-lookaway";
+
   return "idle";
 }
 
@@ -82,6 +83,7 @@ function getRunBeat(
   if (state.tired >= 82) return "survive this";
   if (choiceWindowMs - timeLeftMs < 1200) return arc.title;
   if (persona !== "fresh" && state.turn <= 3) return getPersonaLine(persona);
+
   return arc.line;
 }
 
@@ -142,6 +144,7 @@ function createSoundEngine() {
     );
 
     const data = buffer.getChannelData(0);
+
     for (let i = 0; i < data.length; i += 1) {
       data[i] = (Math.random() * 2 - 1) * 0.7;
     }
@@ -453,7 +456,8 @@ export default function PlayPage() {
   useEffect(() => {
     if (state.phase !== "choosing" || state.gameOver || timeLeftMs > 0 || flowRef.current) return;
 
-    const fallbackChoice = state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
+    const fallbackChoice =
+      state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
 
     if (fallbackChoice) void playChoiceFlow(fallbackChoice, true);
   }, [timeLeftMs, state, playChoiceFlow]);
@@ -484,25 +488,25 @@ export default function PlayPage() {
         </Link>
       </header>
 
-      <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center gap-0">
+      <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center">
         <div className="w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[620px]">
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-3 h-[315px] w-full shrink-0 overflow-visible">
-          <div className="pointer-events-none absolute left-2 top-[82px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
+        <div className="relative mt-2 h-[395px] w-full shrink-0 overflow-visible">
+          <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
             {runArc.title}
           </div>
 
-          <div className="pointer-events-none absolute right-2 top-[90px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
+          <div className="pointer-events-none absolute right-2 top-[104px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
             <span className={market.color}>{market.label}</span>
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 top-[36px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[50px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[64px] z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-[82px] z-10 -translate-x-1/2">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -513,14 +517,14 @@ export default function PlayPage() {
             />
           </div>
 
-          <div className="pointer-events-none absolute bottom-0 left-1/2 z-20 w-full -translate-x-1/2">
+          <div className="pointer-events-none absolute bottom-[14px] left-1/2 z-20 w-full -translate-x-1/2">
             <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
           </div>
         </div>
 
-        <div className="relative mt-1 w-full pb-0">
+        <div className="relative mt-0 w-full pb-0">
           {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
-            <div className="pointer-events-none absolute left-1/2 top-[-70px] z-40 -translate-x-1/2">
+            <div className="pointer-events-none absolute left-1/2 top-[-52px] z-40 -translate-x-1/2">
               <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
                 pick now · {Math.ceil(timeLeftMs / 1000)}
               </div>
