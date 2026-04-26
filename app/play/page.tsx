@@ -493,7 +493,7 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-2 h-[350px] w-full shrink-0 overflow-visible">
+        <div className="relative mt-2 h-[400px] w-full shrink-0 overflow-visible">
           <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-[110px]">
             {runArc.title}
           </div>
