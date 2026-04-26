@@ -493,20 +493,20 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-2 h-[395px] w-full shrink-0 overflow-visible">
-          <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
+        <div className="relative mt-2 h-[430px] w-full shrink-0 overflow-visible">
+          <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-[110px]">
             {runArc.title}
           </div>
 
-          <div className="pointer-events-none absolute right-2 top-[104px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-8">
+          <div className="pointer-events-none absolute right-2 top-[104px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-[110px]">
             <span className={market.color}>{market.label}</span>
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 top-[50px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[34px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[82px] z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-[58px] z-10 -translate-x-1/2">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -524,7 +524,7 @@ export default function PlayPage() {
 
         <div className="relative mt-0 w-full pb-0">
           {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
-            <div className="pointer-events-none absolute left-1/2 top-[-52px] z-40 -translate-x-1/2">
+            <div className="pointer-events-none absolute left-1/2 top-[-62px] z-40 -translate-x-1/2">
               <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
                 pick now · {Math.ceil(timeLeftMs / 1000)}
               </div>
