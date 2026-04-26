@@ -58,19 +58,14 @@ export default function PlayStartPage() {
 
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
           <div className="flex flex-col gap-4">
-            <section className="rounded-[28px] border-2 border-black bg-white p-5 shadow-[8px_8px_0_#111]">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#B14A35]">
+            <section className="rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-black">
                 Choose Your Run
-              </p>
+             </p>
 
-              <h1 className="mt-1 text-4xl font-black tracking-tight md:text-5xl">
+             <h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">
                 Play TOW
-              </h1>
-
-              <p className="mt-2 max-w-[520px] text-sm font-bold leading-relaxed text-[#555]">
-                Play casual, or enter reward mode and fight for a weekly
-                leaderboard boost.
-              </p>
+            </h1>
             </section>
 
             <Link
@@ -92,7 +87,7 @@ export default function PlayStartPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-black px-4 py-3 text-center text-sm font-black text-white transition group-hover:bg-[#B14A35]">
+              <div className="mt-4 rounded-2xl border-2 border-black bg-black px-4 py-3 text-center text-sm font-black text-white transition group-hover:bg-white group-hover:text-black">
                 Start Fun Run
               </div>
             </Link>
@@ -102,7 +97,7 @@ export default function PlayStartPage() {
               className="rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111]"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#B14A35] text-2xl">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6D3BFF] text-2xl shadow-[0_0_18px_rgba(109,59,255,0.35)]">
                   🏆
                 </div>
 
@@ -156,7 +151,7 @@ export default function PlayStartPage() {
 
               <button
                 type="submit"
-                className="mt-4 w-full cursor-pointer rounded-2xl bg-[#B14A35] px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 active:translate-y-0"
+                className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white shadow-[0_0_22px_rgba(109,59,255,0.35)] transition hover:-translate-y-0.5 hover:bg-[#5B2BE8] active:translate-y-0"
               >
                 Start Reward Run
               </button>
