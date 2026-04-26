@@ -403,7 +403,7 @@ export default function PlayPage() {
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative -mt-8 h-[280px] w-full shrink-0 overflow-visible">
+        <div className="relative -mt-6 h-[300px] w-full shrink-0 overflow-visible">
           {/* floating run-state labels live around TOW instead of inside the meter */}
           <div className="pointer-events-none absolute left-2 top-[52px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-8">
             {runArc.title}
@@ -432,15 +432,10 @@ export default function PlayPage() {
         </div>
 
         <div className="-mt-8 w-full pb-0">
-  {state.phase === "choosing" && !state.gameOver && (
+  {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
     <div className="relative z-30 mb-2 flex justify-center">
       <div
-        className={`rounded-full px-4 py-1 text-[12px] font-black shadow-sm backdrop-blur-md transition-all duration-300 ${
-          timeLeftMs <= 3000
-            ? "bg-red-100/90 text-red-600 animate-pulse"
-            : "bg-white/70 text-[#6F685F]"
-        }`}
-      >
+        className="rounded-full bg-red-100/90 px-4 py-1 text-[12px] font-black text-red-600 shadow-sm backdrop-blur-md animate-pulse">
         choose in {Math.ceil(timeLeftMs / 1000)}s
       </div>
     </div>

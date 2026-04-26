@@ -21,7 +21,7 @@ export default function ActionButtons({
   const positions = [
     "left-[4%] top-[10%]",
     "right-[4%] top-[10%]",
-    "left-[47%] -translate-x-1/2 top-[54%]",
+    "left-1/2 -translate-x-1/2 top-[54%]",
   ];
 
   const rotations = ["-rotate-[0.7deg]", "rotate-[0.7deg]", "-rotate-[0.2deg]"];

@@ -183,19 +183,19 @@ export default function GameOverOverlay({
         </div>
 
         {/* Actions */}
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 grid grid-cols-[1.35fr_1fr_1fr] gap-3">
           <button
             onClick={onReplay}
             className="
-              relative overflow-hidden rounded-xl bg-black px-8 py-4
-              text-white font-black
+              relative min-h-[64px] overflow-hidden rounded-2xl bg-black px-10 py-5
+              text-[18px] font-black text-white
               animate-[runBackPulse_2.4s_ease-in-out_infinite]
               transition-all duration-300
-              hover:scale-[1.04] hover:shadow-[0_0_28px_rgba(0,0,0,0.28)]
+              hover:scale-[1.045] hover:shadow-[0_0_34px_rgba(0,0,0,0.34)]
               active:scale-[0.96]
               before:absolute before:inset-0
               before:-translate-x-full
-              before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent
+              before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent
               before:transition-transform before:duration-700
               hover:before:translate-x-full"
           >
