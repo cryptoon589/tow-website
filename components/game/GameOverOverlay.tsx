@@ -207,14 +207,30 @@ style={{
           </button>
 
           <button
-            className="flex-1 rounded-xl border border-[#D9D0C6] py-3 font-semibold transition hover:bg-white/60 active:scale-[0.98]"
+            className="
+              rounded-xl border border-[#D8D2C8]
+              px-6 py-4 font-semibold
+              bg-[#F4EFE8] text-[#2B2621]
+              transition-all duration-200 ease-out
+
+              hover:bg-black hover:text-white hover:border-black
+              active:bg-black active:text-white active:scale-[0.97]
+"
             onClick={downloadCard}
           >
             download card png
           </button>
 
           <button
-            className="flex-1 rounded-xl border border-[#D9D0C6] py-3 font-semibold transition hover:bg-white/60 active:scale-[0.98]"
+            className="
+              rounded-xl border border-[#D8D2C8]
+              px-6 py-4 font-semibold
+              bg-[#F4EFE8] text-[#2B2621]
+              transition-all duration-200 ease-out
+
+              hover:bg-black hover:text-white hover:border-black
+              active:bg-black active:text-white active:scale-[0.97]
+"
             onClick={() => {
               window.open(
                 `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
