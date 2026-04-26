@@ -17,7 +17,7 @@ export type TowLeaderboardEntry = {
 };
 
 const PROFILE_KEY = "tow_reward_player_profile";
-const LEADERBOARD_KEY = "tow_weekly_leaderboard";
+const LOCAL_LEADERBOARD_KEY = "tow_weekly_leaderboard";
 
 export function normalizeXUsername(value: string) {
   return value.trim().replace(/^@+/, "");
@@ -48,11 +48,11 @@ export function getRewardProfile(): TowPlayerProfile | null {
   }
 }
 
-export function getLeaderboard(): TowLeaderboardEntry[] {
+function getLocalLeaderboard(): TowLeaderboardEntry[] {
   if (typeof window === "undefined") return [];
 
   try {
-    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
     const entries = raw ? (JSON.parse(raw) as TowLeaderboardEntry[]) : [];
     return entries.sort((a, b) => b.bestScore - a.bestScore);
   } catch {
@@ -60,13 +60,13 @@ export function getLeaderboard(): TowLeaderboardEntry[] {
   }
 }
 
-export function submitLeaderboardScore(score: number) {
+function submitLocalLeaderboardScore(score: number) {
   if (typeof window === "undefined") return;
 
   const profile = getRewardProfile();
   if (!profile) return;
 
-  const entries = getLeaderboard();
+  const entries = getLocalLeaderboard();
   const existingIndex = entries.findIndex(
     (entry) => entry.walletAddress === profile.walletAddress
   );
@@ -96,7 +96,53 @@ export function submitLeaderboardScore(score: number) {
   }
 
   localStorage.setItem(
-    LEADERBOARD_KEY,
+    LOCAL_LEADERBOARD_KEY,
     JSON.stringify(entries.sort((a, b) => b.bestScore - a.bestScore).slice(0, 50))
   );
+}
+
+export async function getLeaderboard(): Promise<TowLeaderboardEntry[]> {
+  try {
+    const response = await fetch("/api/leaderboard", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!response.ok) throw new Error("Leaderboard failed");
+
+    const data = (await response.json()) as {
+      entries: TowLeaderboardEntry[];
+    };
+
+    return data.entries ?? [];
+  } catch {
+    return getLocalLeaderboard();
+  }
+}
+
+export async function submitLeaderboardScore(score: number) {
+  const profile = getRewardProfile();
+  if (!profile) return;
+
+  submitLocalLeaderboardScore(score);
+
+  try {
+    await fetch("/api/leaderboard", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        xUsername: profile.xUsername,
+        walletAddress: profile.walletAddress,
+        score,
+      }),
+    });
+  } catch {
+    // local fallback already saved
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("tow-leaderboard-update"));
+  }
 }

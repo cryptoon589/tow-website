@@ -409,9 +409,8 @@ export default function PlayPage() {
     setBestRun((current) => Math.max(current, next.bestRun, state.turn));
 
     if (isRewardRun) {
-      submitLeaderboardScore(state.turn);
-      window.dispatchEvent(new Event("tow-leaderboard-update"));
-    }
+  void submitLeaderboardScore(state.turn);
+}
   }, [state, isRewardRun]);
 
   const playChoiceFlow = useCallback(
