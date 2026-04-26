@@ -23,7 +23,7 @@ export default function ActionButtons({
 
   return (
     <div className="relative z-20 mx-auto w-full max-w-[1040px]">
-      <div className="grid w-full grid-cols-3 items-start gap-20">
+      <div className="grid w-full grid-cols-3 items-start gap-12">
         {choices.map((choice, i) => {
           const isActive =
             hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
