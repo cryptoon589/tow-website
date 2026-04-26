@@ -23,7 +23,7 @@ export default function ActionButtons({
 
   return (
     <div className="relative z-20 w-full max-w-[1040px] mx-auto -mt-20">
-     <div className="grid grid-cols-3 items-start gap-12">
+     <div className="grid grid-cols-3 items-start gap-14">
         {choices.map((choice, i) => {
           const isActive =
             hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
@@ -36,7 +36,7 @@ export default function ActionButtons({
               onMouseEnter={() => onHoverChange?.(choice.id)}
               onMouseLeave={() => onHoverChange?.(null)}
               className={clsx(
-                "relative mx-auto mt-6 overflow-visible px-7 py-5 w-[250px]",
+                "relative mx-auto mt-0 overflow-visible px-7 py-5 w-[250px]",
                 "text-center select-none",
                 "border border-white/70 shadow-lg backdrop-blur-md",
                 "transition-transform transition-shadow duration-500 ease-out",
