@@ -522,7 +522,7 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="relative mt-4 w-full pb-4">
+        <div className="relative mt-16 w-full pb-10">
           {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
             <div className="pointer-events-none absolute left-1/2 top-[-62px] z-40 -translate-x-1/2">
               <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">

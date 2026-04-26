@@ -22,8 +22,8 @@ export default function ActionButtons({
   const delays = ["0ms", "140ms", "280ms"];
 
   return (
-    <div className="relative z-20 mx-auto w-full max-w-[1040px]">
-      <div className="grid w-full grid-cols-3 items-start gap-12">
+    <div className="relative z-20 mx-auto w-full max-w-[860px]">
+      <div className="grid w-full grid-cols-3 items-start gap-8">
         {choices.map((choice, i) => {
           const isActive =
             hoveredChoiceId === choice.id || selectedChoiceId === choice.id;
