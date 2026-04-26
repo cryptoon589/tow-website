@@ -24,10 +24,10 @@ export default function HeroSection({ headline }: { headline?: string }) {
               Tired Together
             </Link>
             <Link
-              href="/play"
+              href="/play/start"
               className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
             >
-              🎮 Play Too Tired to Win
+              🎮 Play Tired of Winning
             </Link>
           </div>
         </div>
