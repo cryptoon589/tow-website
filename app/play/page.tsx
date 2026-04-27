@@ -409,8 +409,8 @@ export default function PlayPage() {
     setBestRun((current) => Math.max(current, next.bestRun, state.turn));
 
     if (isRewardRun) {
-  void submitLeaderboardScore(state.turn);
-}
+      void submitLeaderboardScore(state.turn);
+    }
   }, [state, isRewardRun]);
 
   const playChoiceFlow = useCallback(
@@ -540,44 +540,44 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="relative h-screen overflow-hidden px-4 pb-2 pt-8 text-[#1E1B18]">
+    <main className="relative min-h-[100svh] overflow-hidden px-3 pb-[250px] pt-7 text-[#1E1B18] sm:h-screen sm:px-4 sm:pb-2 sm:pt-8">
       <SceneLayer
         state={state}
         timeLeftMs={timeLeftMs}
         choiceWindowMs={choiceWindowMs}
       />
 
-      <header className="absolute left-0 top-0 z-20 flex w-full items-center px-4 py-3 text-sm">
+      <header className="absolute left-0 top-0 z-20 flex w-full items-center px-3 py-3 text-sm sm:px-4">
         <Link href="/" className="font-black tracking-tight text-[#1E1B18]">
           TOW
         </Link>
       </header>
 
-      <div className="absolute right-4 top-3 z-20 rounded-full bg-[#FFFCF8]/80 px-3 py-1 text-xs font-black text-[#1E1B18] shadow-sm backdrop-blur">
+      <div className="absolute right-3 top-3 z-20 max-w-[55vw] truncate rounded-full bg-[#FFFCF8]/85 px-3 py-1 text-xs font-black text-[#1E1B18] shadow-sm backdrop-blur sm:right-4 sm:max-w-none">
         {rewardProfile && isRewardRun
           ? `Reward Run · @${rewardProfile.xUsername}`
           : "Fun Run"}
       </div>
 
-      <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center">
-        <div className="w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl md:max-w-[620px]">
+      <section className="mx-auto flex min-h-[calc(100svh-1.75rem)] w-full max-w-[1040px] flex-col items-center sm:h-full sm:min-h-0">
+        <div className="w-full rounded-[22px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:rounded-[24px] sm:p-2.5 md:max-w-[620px]">
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-2 h-[375px] w-full shrink-0 overflow-visible">
-          <div className="pointer-events-none absolute left-2 top-[96px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] text-[#8A8278] shadow-sm backdrop-blur-md md:left-[110px]">
+        <div className="relative mt-2 h-[430px] w-full shrink-0 overflow-visible min-[390px]:h-[455px] sm:h-[375px]">
+          <div className="pointer-events-none absolute left-1 top-[100px] z-20 max-w-[45vw] truncate rounded-full bg-white/62 px-3 py-1 text-[12px] font-black uppercase tracking-[0.18em] text-[#8A8278] shadow-sm backdrop-blur-md sm:left-2 sm:top-[96px] sm:max-w-none sm:text-[14px] sm:tracking-[0.2em] md:left-[110px]">
             {runArc.title}
           </div>
 
-          <div className="pointer-events-none absolute right-2 top-[104px] z-20 rounded-full bg-white/55 px-3 py-1 text-[14px] font-black uppercase tracking-[0.2em] shadow-sm backdrop-blur-md md:right-[110px]">
+          <div className="pointer-events-none absolute right-1 top-[108px] z-20 max-w-[45vw] truncate rounded-full bg-white/62 px-3 py-1 text-[12px] font-black uppercase tracking-[0.18em] shadow-sm backdrop-blur-md sm:right-2 sm:top-[104px] sm:max-w-none sm:text-[14px] sm:tracking-[0.2em] md:right-[110px]">
             <span className={market.color}>{market.label}</span>
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 top-[34px] z-30 max-w-[500px] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[12px] font-black lowercase text-[#6F685F] shadow-sm backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[32px] z-30 max-w-[78vw] -translate-x-1/2 rounded-full bg-white/68 px-4 py-1 text-center text-[12px] font-black lowercase leading-snug text-[#6F685F] shadow-sm backdrop-blur-md sm:top-[34px] sm:max-w-[500px]">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[58px] z-10 -translate-x-1/2">
+          <div className="absolute left-1/2 top-[72px] z-10 -translate-x-1/2 scale-[0.9] min-[390px]:scale-95 sm:top-[58px] sm:scale-100">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -597,7 +597,7 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="relative mt-0 w-full pb-8">
+        <div className="tow-choice-shell relative mt-0 w-full pb-0 sm:pb-8">
           {state.phase === "choosing" &&
             !state.gameOver &&
             timeLeftMs <= 5000 && (
@@ -618,6 +618,41 @@ export default function PlayPage() {
           />
         </div>
       </section>
+
+      <style jsx global>{`
+        @media (max-width: 639px) {
+          .tow-choice-shell {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: max(10px, env(safe-area-inset-bottom));
+            z-index: 50;
+            padding: 0 12px;
+          }
+
+          .tow-choice-shell > :last-child {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+            width: min(100%, 520px) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            transform: none !important;
+          }
+
+          .tow-choice-shell button {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 64px !important;
+            padding: 10px 14px !important;
+            border-radius: 22px !important;
+          }
+
+          .tow-choice-shell button * {
+            max-width: 100% !important;
+          }
+        }
+      `}</style>
 
       <GameOverOverlay
         state={state}
