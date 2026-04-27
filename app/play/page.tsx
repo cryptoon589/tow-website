@@ -46,7 +46,7 @@ function getChoiceWindowMs(choices: Choice[]) {
 
   return Math.min(
     MAX_CHOICE_WINDOW_MS,
-    MIN_CHOICE_WINDOW_MS + Math.max(0, longest - 26) * 80,
+    MIN_CHOICE_WINDOW_MS + Math.max(0, longest - 26) * 80
   );
 }
 
@@ -68,18 +68,16 @@ function getRunBeat(
   state: GameState,
   timeLeftMs: number,
   choiceWindowMs: number,
-  persona: PlayerProfile["persona"],
+  persona: PlayerProfile["persona"]
 ) {
   const arc = getRunArc(state);
   const kind = state.lastOutcome?.kind;
 
   if (state.gameOver) return `${arc.title}: timeline cooked`;
   if (state.phase === "committed") return "checking phone...";
-  if (state.phase === "resolving" && kind === "glitch")
-    return "timeline forked";
+  if (state.phase === "resolving" && kind === "glitch") return "timeline forked";
   if (state.phase === "resolving" && kind === "rekt") return "oh no";
-  if (state.phase === "resolving" && (kind === "win" || kind === "winSmall"))
-    return "somehow alive";
+  if (state.phase === "resolving" && (kind === "win" || kind === "winSmall")) return "somehow alive";
   if (state.phase === "resolving") return "market reacted";
   if (timeLeftMs < 2600) return "pick before it picks for you";
   if (state.memory.almostSaves >= 1) return "you should be gone";
@@ -100,8 +98,7 @@ function createSoundEngine() {
     if (typeof window === "undefined") return null;
     const AudioContextClass =
       window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-        .webkitAudioContext;
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
     if (!AudioContextClass) return null;
     if (!ctx) ctx = new AudioContextClass();
@@ -114,7 +111,7 @@ function createSoundEngine() {
     duration = 0.08,
     gain = 0.025,
     type: OscillatorType = "sine",
-    delayTime = 0,
+    delayTime = 0
   ) => {
     const audio = getCtx();
     if (!audio) return;
@@ -145,7 +142,7 @@ function createSoundEngine() {
     const buffer = audio.createBuffer(
       1,
       Math.max(1, Math.floor(audio.sampleRate * duration)),
-      audio.sampleRate,
+      audio.sampleRate
     );
 
     const data = buffer.getChannelData(0);
@@ -173,8 +170,7 @@ function createSoundEngine() {
       const pressure = Math.max(tired / 100, urgency);
 
       if (pressure < 0.62) {
-        if (ambient)
-          ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
+        if (ambient) ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
         return;
       }
 
@@ -193,16 +189,8 @@ function createSoundEngine() {
         ambient = { osc, amp };
       }
 
-      ambient.osc.frequency.setTargetAtTime(
-        42 + pressure * 18,
-        audio.currentTime,
-        0.12,
-      );
-      ambient.amp.gain.setTargetAtTime(
-        0.002 + pressure * 0.006,
-        audio.currentTime,
-        0.1,
-      );
+      ambient.osc.frequency.setTargetAtTime(42 + pressure * 18, audio.currentTime, 0.12);
+      ambient.amp.gain.setTargetAtTime(0.002 + pressure * 0.006, audio.currentTime, 0.1);
     },
 
     tap() {
@@ -215,12 +203,7 @@ function createSoundEngine() {
       if (now - lastTick < 450) return;
 
       lastTick = now;
-      tone(
-        msLeft < 1000 ? 740 : 520,
-        0.035,
-        msLeft < 1000 ? 0.024 : 0.014,
-        "square",
-      );
+      tone(msLeft < 1000 ? 740 : 520, 0.035, msLeft < 1000 ? 0.024 : 0.014, "square");
     },
 
     tension() {
@@ -266,7 +249,7 @@ function createSoundEngine() {
 function playOutcomeSound(
   sound: ReturnType<typeof createSoundEngine>,
   kind: OutcomeKind,
-  headline = "",
+  headline = ""
 ) {
   const closeCall = [
     "BARELY ALIVE",
@@ -306,24 +289,18 @@ function saveProfile(profile: PlayerProfile) {
 }
 
 export default function PlayPage() {
-  const [profile, setProfile] = useState<PlayerProfile>(() =>
-    createFreshProfile(),
-  );
+  const [profile, setProfile] = useState<PlayerProfile>(() => createFreshProfile());
   const [bestRun, setBestRun] = useState(0);
-  const [state, setState] = useState<GameState>(() =>
-    beginChoosing(createInitialState(0)),
-  );
+  const [state, setState] = useState<GameState>(() => beginChoosing(createInitialState(0)));
   const [hoveredChoiceId, setHoveredChoiceId] = useState<string | null>(null);
-  const [choiceWindowMs, setChoiceWindowMs] = useState(() =>
-    getChoiceWindowMs(state.choices),
-  );
+  const [choiceWindowMs, setChoiceWindowMs] = useState(() => getChoiceWindowMs(state.choices));
   const [timeLeftMs, setTimeLeftMs] = useState(choiceWindowMs);
   const [showOutcome, setShowOutcome] = useState(false);
-  const [rewardProfile, setRewardProfile] =
-    useState<ReturnType<typeof getRewardProfile>>(null);
-  const [mode, setMode] = useState<"fun" | "earn">("fun");
 
-  const isRewardRun = mode === "earn" && rewardProfile !== null;
+  const [gameMode, setGameMode] = useState<"fun" | "earn">("fun");
+  const [rewardUsername, setRewardUsername] = useState<string | null>(null);
+
+  const isRewardRun = gameMode === "earn" && Boolean(rewardUsername);
 
   const flowRef = useRef(false);
   const gameOverSavedRef = useRef(false);
@@ -337,8 +314,13 @@ export default function PlayPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setMode(params.get("mode") === "earn" ? "earn" : "fun");
-    setRewardProfile(getRewardProfile());
+    const nextMode = params.get("mode") === "earn" ? "earn" : "fun";
+    const rewardProfile = getRewardProfile();
+
+    setGameMode(nextMode);
+    setRewardUsername(
+      nextMode === "earn" && rewardProfile ? rewardProfile.xUsername : null
+    );
   }, []);
 
   useEffect(() => {
@@ -362,7 +344,7 @@ export default function PlayPage() {
 
   const runBeat = useMemo(
     () => getRunBeat(state, timeLeftMs, choiceWindowMs, profile.persona),
-    [state, timeLeftMs, choiceWindowMs, profile.persona],
+    [state, timeLeftMs, choiceWindowMs, profile.persona]
   );
 
   useEffect(() => {
@@ -409,17 +391,16 @@ export default function PlayPage() {
     setBestRun((current) => Math.max(current, next.bestRun, state.turn));
 
     if (isRewardRun) {
-  void submitLeaderboardScore(state.turn);
-}
-  }, [state, isRewardRun]);
+      void submitLeaderboardScore(state.turn);
+    }
+  }, [isRewardRun, state]);
 
   const playChoiceFlow = useCallback(
     async (choice: Choice, wasAutoPicked = false) => {
       const current = stateRef.current;
       const sound = soundRef.current;
 
-      if (flowRef.current || current.gameOver || current.phase !== "choosing")
-        return;
+      if (flowRef.current || current.gameOver || current.phase !== "choosing") return;
 
       flowRef.current = true;
       setHoveredChoiceId(null);
@@ -427,9 +408,7 @@ export default function PlayPage() {
       sound?.tap();
 
       const elapsedRatio = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
-      const hesitationPressure = wasAutoPicked
-        ? 1
-        : Math.max(0, Math.min(1, elapsedRatio));
+      const hesitationPressure = wasAutoPicked ? 1 : Math.max(0, Math.min(1, elapsedRatio));
 
       const committed = commitChoice(current, choice.id, wasAutoPicked);
       stateRef.current = committed;
@@ -438,11 +417,7 @@ export default function PlayPage() {
       await delay(180 + Math.random() * 180);
       sound?.tension();
 
-      if (
-        Math.random() < 0.38 ||
-        current.tired >= 72 ||
-        hesitationPressure > 0.65
-      ) {
+      if (Math.random() < 0.38 || current.tired >= 72 || hesitationPressure > 0.65) {
         await delay(220 + Math.random() * 320);
       }
 
@@ -451,7 +426,7 @@ export default function PlayPage() {
         choice.id,
         wasAutoPicked,
         hesitationPressure,
-        profileRef.current.persona,
+        profileRef.current.persona
       );
 
       stateRef.current = resolved.state;
@@ -461,11 +436,7 @@ export default function PlayPage() {
       await delay(90);
       setShowOutcome(true);
 
-      playOutcomeSound(
-        sound ?? createSoundEngine(),
-        resolved.outcome.kind,
-        resolved.outcome.headline,
-      );
+      playOutcomeSound(sound ?? createSoundEngine(), resolved.outcome.kind, resolved.outcome.headline);
 
       const kind = resolved.outcome.kind as OutcomeKind;
       const almost = [
@@ -478,10 +449,7 @@ export default function PlayPage() {
         "HANGING ON",
       ].includes(resolved.outcome.headline);
 
-      const hold =
-        kind === "rekt" || kind === "glitch" || almost
-          ? 2100
-          : 1650 + Math.random() * 520;
+      const hold = kind === "rekt" || kind === "glitch" || almost ? 2100 : 1650 + Math.random() * 520;
       await delay(hold);
 
       if (resolved.state.gameOver) {
@@ -504,21 +472,14 @@ export default function PlayPage() {
 
       flowRef.current = false;
     },
-    [choiceWindowMs, timeLeftMs],
+    [choiceWindowMs, timeLeftMs]
   );
 
   useEffect(() => {
-    if (
-      state.phase !== "choosing" ||
-      state.gameOver ||
-      timeLeftMs > 0 ||
-      flowRef.current
-    )
-      return;
+    if (state.phase !== "choosing" || state.gameOver || timeLeftMs > 0 || flowRef.current) return;
 
     const fallbackChoice =
-      state.choices[Math.floor(Math.random() * state.choices.length)] ||
-      state.choices[0];
+      state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
 
     if (fallbackChoice) void playChoiceFlow(fallbackChoice, true);
   }, [timeLeftMs, state, playChoiceFlow]);
@@ -540,47 +501,41 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="relative h-[100svh] min-h-[100svh] overflow-hidden px-4 pb-[132px] pt-14 text-[#1E1B18] sm:h-screen sm:pb-2 sm:pt-8">
-      <SceneLayer
-        state={state}
-        timeLeftMs={timeLeftMs}
-        choiceWindowMs={choiceWindowMs}
-      />
+    <main className="relative min-h-[100svh] overflow-hidden px-3 pb-[232px] pt-2 text-[#1E1B18] sm:h-screen sm:px-4 sm:pb-2 sm:pt-8">
+      <SceneLayer state={state} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} />
 
-      <header className="absolute left-0 top-0 z-30 flex w-full items-center px-4 py-4 text-sm sm:py-3">
+      <header className="absolute left-0 top-0 z-30 flex w-full items-center px-3 py-3 text-sm sm:px-4">
         <Link
           href="/"
-          className="rounded-full bg-[#FFFCF8]/86 px-4 py-2 font-black tracking-tight text-[#1E1B18] shadow-sm backdrop-blur-md transition active:scale-95 sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none sm:backdrop-blur-0"
+          className="rounded-full bg-[#FFFCF8]/90 px-4 py-2 font-black tracking-tight text-[#1E1B18] shadow-sm backdrop-blur transition hover:bg-[#1E1B18] hover:text-white"
         >
           TOW
         </Link>
+
+        <div className="ml-auto rounded-full bg-[#FFFCF8]/90 px-4 py-2 font-black text-[#1E1B18] shadow-sm backdrop-blur">
+          {isRewardRun ? `Reward Run • @${rewardUsername}` : "Fun Run"}
+        </div>
       </header>
 
-      <div className="absolute right-4 top-4 z-30 rounded-full bg-[#FFFCF8]/86 px-4 py-2 text-sm font-black text-[#1E1B18] shadow-sm backdrop-blur-md sm:top-3 sm:px-3 sm:py-1 sm:text-xs">
-        {rewardProfile && isRewardRun
-          ? `Reward Run · @${rewardProfile.xUsername}`
-          : "Fun Run"}
-      </div>
-
-      <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center">
-        <div className="mt-14 w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:mt-0 md:max-w-[620px]">
+      <section className="mx-auto flex min-h-[100svh] w-full max-w-[1040px] flex-col items-center pt-[58px] sm:h-full sm:min-h-0 sm:pt-0">
+        <div className="w-full rounded-[22px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:rounded-[24px] sm:p-2.5 md:max-w-[620px]">
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-1 h-[435px] w-full shrink-0 overflow-visible sm:mt-2 sm:h-[375px]">
-          <div className="pointer-events-none absolute left-2 top-[82px] z-20 max-w-[190px] rounded-full bg-white/62 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#8A8278] shadow-sm backdrop-blur-md sm:top-[96px] sm:px-3 sm:py-1 sm:text-[14px] sm:tracking-[0.2em] md:left-[110px]">
+        <div className="relative -mt-1 h-[372px] w-full shrink-0 overflow-visible min-[390px]:h-[388px] sm:mt-2 sm:h-[375px]">
+          <div className="pointer-events-none absolute left-1 top-[76px] z-20 max-w-[42vw] truncate rounded-full bg-white/68 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-[#8A8278] shadow-sm backdrop-blur-md sm:left-2 sm:top-[96px] sm:max-w-none sm:px-3 sm:text-[14px] sm:tracking-[0.2em] md:left-[110px]">
             {runArc.title}
           </div>
 
-          <div className="pointer-events-none absolute right-2 top-[90px] z-20 max-w-[190px] rounded-full bg-white/62 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] shadow-sm backdrop-blur-md sm:top-[104px] sm:px-3 sm:py-1 sm:text-[14px] sm:tracking-[0.2em] md:right-[110px]">
+          <div className="pointer-events-none absolute right-1 top-[82px] z-20 max-w-[42vw] truncate rounded-full bg-white/68 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.13em] shadow-sm backdrop-blur-md sm:right-2 sm:top-[104px] sm:max-w-none sm:px-3 sm:text-[14px] sm:tracking-[0.2em] md:right-[110px]">
             <span className={market.color}>{market.label}</span>
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 top-[4px] z-30 max-w-[340px] -translate-x-1/2 rounded-full bg-white/66 px-5 py-2 text-center text-[17px] font-black lowercase leading-tight text-[#6F685F] shadow-sm backdrop-blur-md sm:top-[34px] sm:max-w-[500px] sm:px-4 sm:py-1 sm:text-[12px]">
+          <div className="pointer-events-none absolute left-1/2 top-[10px] z-30 max-w-[76vw] -translate-x-1/2 rounded-full bg-white/70 px-3.5 py-1 text-center text-[12px] font-black lowercase leading-snug text-[#6F685F] shadow-sm backdrop-blur-md sm:top-[34px] sm:max-w-[500px] sm:px-4">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[36px] z-10 -translate-x-1/2 scale-[1.06] sm:top-[58px] sm:scale-100">
+          <div className="absolute left-1/2 top-[38px] z-10 -translate-x-1/2 scale-[0.96] min-[390px]:scale-100 sm:top-[58px] sm:scale-100">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -591,36 +546,28 @@ export default function PlayPage() {
             />
           </div>
 
-          <div className="pointer-events-none absolute bottom-[18px] left-1/2 z-20 w-full -translate-x-1/2 sm:bottom-[14px]">
-            <OutcomePanel
-              outcome={state.lastOutcome}
-              visible={showOutcome}
-              gameOver={state.gameOver}
-            />
+          <div className="pointer-events-none absolute bottom-[2px] left-1/2 z-20 w-full -translate-x-1/2 sm:bottom-[14px]">
+            <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
           </div>
         </div>
 
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+14px)] left-0 right-0 z-40 mx-auto w-full max-w-[760px] px-3 sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:mt-0 sm:w-full sm:px-0 sm:pb-8">
-          {state.phase === "choosing" &&
-            !state.gameOver &&
-            timeLeftMs <= 5000 && (
-              <div className="pointer-events-none absolute left-1/2 top-[-48px] z-40 -translate-x-1/2 sm:top-[-62px]">
-                <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
-                  pick now · {Math.ceil(timeLeftMs / 1000)}
-                </div>
+        <div className="fixed bottom-[max(10px,env(safe-area-inset-bottom))] left-0 right-0 z-50 mx-auto w-full px-3 sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:mt-0 sm:px-0 sm:pb-8">
+          {state.phase === "choosing" && !state.gameOver && timeLeftMs <= 5000 && (
+            <div className="pointer-events-none absolute left-1/2 top-[-44px] z-40 -translate-x-1/2 sm:top-[-62px]">
+              <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
+                pick now · {Math.ceil(timeLeftMs / 1000)}
               </div>
-            )}
+            </div>
+          )}
 
-          <div className="[&_button]:min-h-[92px] [&_button]:rounded-[24px] [&_button]:px-2.5 [&_button]:py-2.5 [&_button]:leading-tight [&_button]:shadow-[0_10px_30px_rgba(30,27,24,0.12)] [&_button]:backdrop-blur-xl [&_button_*]:leading-tight [&_button_p]:text-[11px] [&_button_p]:leading-tight [&_button_span]:text-[11px] [&_button_span]:leading-tight sm:[&_button]:min-h-[112px] sm:[&_button]:px-5 sm:[&_button]:py-4 sm:[&_button_p]:text-sm sm:[&_button_span]:text-sm">
-            <ActionButtons
-              choices={state.choices}
-              selectedChoiceId={state.selectedChoiceId}
-              hoveredChoiceId={hoveredChoiceId}
-              onHoverChange={setHoveredChoiceId}
-              onSelect={(choice) => void playChoiceFlow(choice)}
-              disabled={state.phase !== "choosing" || state.gameOver}
-            />
-          </div>
+          <ActionButtons
+            choices={state.choices}
+            selectedChoiceId={state.selectedChoiceId}
+            hoveredChoiceId={hoveredChoiceId}
+            onHoverChange={setHoveredChoiceId}
+            onSelect={(choice) => void playChoiceFlow(choice)}
+            disabled={state.phase !== "choosing" || state.gameOver}
+          />
         </div>
       </section>
 
