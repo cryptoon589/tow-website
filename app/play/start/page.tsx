@@ -59,7 +59,7 @@ export default function PlayStartPage() {
 
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
           <div className="flex flex-col gap-4">
-            <section className="rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
+            <section className="rounded-[28px] border-2 border-black bg-white p-4">
               <p className="text-sm font-black uppercase tracking-[0.28em] text-[#5B2BE8] drop-shadow-[0_0_6px_rgba(91,43,232,0.25)]">
                 Choose Your Run
               </p>
@@ -71,13 +71,13 @@ export default function PlayStartPage() {
 
             <form
               onSubmit={startRewardRun}
-              className="group relative overflow-hidden rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition-all duration-300 before:absolute before:inset-0 before:rounded-[24px] before:bg-[radial-gradient(circle_at_50%_50%,rgba(109,59,255,0.22),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:-translate-y-1 hover:shadow-[10px_10px_0_#111] hover:before:opacity-100"
+              className="group relative overflow-hidden rounded-[24px] border-2 border-black bg-white p-4 transition-all duration-300 before:absolute before:inset-0 before:rounded-[24px] before:bg-[radial-gradient(circle_at_50%_50%,rgba(109,59,255,0.22),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:-translate-y-1 hover:before:opacity-100"
             >
               <div className="pointer-events-none absolute inset-0 animate-pulse rounded-[24px] bg-[#6D3BFF] opacity-[0.08] blur-2xl" />
 
               <div className="relative z-10">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6D3BFF] text-2xl shadow-[0_0_18px_rgba(109,59,255,0.45)] transition group-hover:scale-110">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#6D3BFF] text-2xl transition group-hover:scale-110">
                     💎
                   </div>
 
@@ -131,7 +131,7 @@ export default function PlayStartPage() {
 
                 <button
                   type="submit"
-                  className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white shadow-[0_0_22px_rgba(109,59,255,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5B2BE8] hover:shadow-[0_0_32px_rgba(109,59,255,0.6)] active:translate-y-0"
+                  className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5B2BE8] hover:shadow-[0_0_32px_rgba(109,59,255,0.6)] active:translate-y-0"
                 >
                   🎮 Start Reward Run
                 </button>
@@ -145,7 +145,7 @@ export default function PlayStartPage() {
 
             <Link
               href="/play?mode=fun"
-              className="group rounded-[24px] border-2 border-black bg-white p-4 shadow-[6px_6px_0_#111] transition hover:-translate-y-1"
+              className="group rounded-[24px] border-2 border-black bg-white p-4 transition hover:-translate-y-1"
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black text-2xl">
