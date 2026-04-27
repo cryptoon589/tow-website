@@ -53,7 +53,7 @@ export default function TowLeaderboard() {
   const topTen = entries.slice(0, 10);
 
   return (
-    <section className="w-full rounded-[28px] border-2 border-black bg-white p-4 shadow-[8px_8px_0_#111]">
+    <section className="w-full rounded-[28px] border-2 border-black bg-white p-4">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#5B2BE8]">
