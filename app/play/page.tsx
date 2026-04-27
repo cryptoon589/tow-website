@@ -409,8 +409,8 @@ export default function PlayPage() {
     setBestRun((current) => Math.max(current, next.bestRun, state.turn));
 
     if (isRewardRun) {
-      void submitLeaderboardScore(state.turn);
-    }
+  void submitLeaderboardScore(state.turn);
+}
   }, [state, isRewardRun]);
 
   const playChoiceFlow = useCallback(
@@ -540,47 +540,47 @@ export default function PlayPage() {
   };
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden px-4 pb-[154px] pt-[74px] text-[#1E1B18] sm:h-screen sm:pb-2 sm:pt-8">
+    <main className="relative h-[100svh] min-h-[100svh] overflow-hidden px-4 pb-[132px] pt-14 text-[#1E1B18] sm:h-screen sm:pb-2 sm:pt-8">
       <SceneLayer
         state={state}
         timeLeftMs={timeLeftMs}
         choiceWindowMs={choiceWindowMs}
       />
 
-      <header className="absolute left-0 top-0 z-30 flex w-full items-center px-4 py-3 text-sm">
+      <header className="absolute left-0 top-0 z-30 flex w-full items-center px-4 py-4 text-sm sm:py-3">
         <Link
           href="/"
-          className="rounded-full bg-[#FFFCF8]/85 px-3 py-1 text-sm font-black tracking-tight text-[#1E1B18] shadow-sm backdrop-blur transition hover:bg-[#1E1B18] hover:text-white"
+          className="rounded-full bg-[#FFFCF8]/86 px-4 py-2 font-black tracking-tight text-[#1E1B18] shadow-sm backdrop-blur-md transition active:scale-95 sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none sm:backdrop-blur-0"
         >
           TOW
         </Link>
       </header>
 
-      <div className="absolute right-4 top-3 z-30 rounded-full bg-[#FFFCF8]/80 px-3 py-1 text-xs font-black text-[#1E1B18] shadow-sm backdrop-blur">
+      <div className="absolute right-4 top-4 z-30 rounded-full bg-[#FFFCF8]/86 px-4 py-2 text-sm font-black text-[#1E1B18] shadow-sm backdrop-blur-md sm:top-3 sm:px-3 sm:py-1 sm:text-xs">
         {rewardProfile && isRewardRun
           ? `Reward Run · @${rewardProfile.xUsername}`
           : "Fun Run"}
       </div>
 
-      <section className="mx-auto flex min-h-[calc(100svh-74px)] w-full max-w-[1040px] flex-col items-center sm:h-full sm:min-h-0">
-        <div className="mt-0 w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:mt-0 md:max-w-[620px]">
+      <section className="mx-auto flex h-full w-full max-w-[1040px] flex-col items-center">
+        <div className="mt-14 w-full rounded-[24px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2.5 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:mt-0 md:max-w-[620px]">
           <TiredMeter tired={state.tired} max={MAX_TIRED} />
         </div>
 
-        <div className="relative mt-2 h-[500px] w-full shrink-0 overflow-visible sm:mt-2 sm:h-[375px]">
-          <div className="pointer-events-none absolute left-2 top-[104px] z-20 max-w-[44vw] rounded-full bg-white/60 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#8A8278] shadow-sm backdrop-blur-md sm:left-2 sm:top-[96px] sm:text-[14px] sm:tracking-[0.2em] md:left-[110px]">
+        <div className="relative mt-1 h-[435px] w-full shrink-0 overflow-visible sm:mt-2 sm:h-[375px]">
+          <div className="pointer-events-none absolute left-2 top-[82px] z-20 max-w-[190px] rounded-full bg-white/62 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#8A8278] shadow-sm backdrop-blur-md sm:top-[96px] sm:px-3 sm:py-1 sm:text-[14px] sm:tracking-[0.2em] md:left-[110px]">
             {runArc.title}
           </div>
 
-          <div className="pointer-events-none absolute right-2 top-[108px] z-20 max-w-[44vw] rounded-full bg-white/60 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-[0.14em] shadow-sm backdrop-blur-md sm:right-2 sm:top-[104px] sm:text-[14px] sm:tracking-[0.2em] md:right-[110px]">
+          <div className="pointer-events-none absolute right-2 top-[90px] z-20 max-w-[190px] rounded-full bg-white/62 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] shadow-sm backdrop-blur-md sm:top-[104px] sm:px-3 sm:py-1 sm:text-[14px] sm:tracking-[0.2em] md:right-[110px]">
             <span className={market.color}>{market.label}</span>
           </div>
 
-          <div className="pointer-events-none absolute left-1/2 top-[36px] z-30 max-w-[86vw] -translate-x-1/2 rounded-full bg-white/62 px-4 py-1 text-center text-[13px] font-black lowercase leading-tight text-[#6F685F] shadow-sm backdrop-blur-md sm:top-[34px] sm:text-[12px]">
+          <div className="pointer-events-none absolute left-1/2 top-[4px] z-30 max-w-[340px] -translate-x-1/2 rounded-full bg-white/66 px-5 py-2 text-center text-[17px] font-black lowercase leading-tight text-[#6F685F] shadow-sm backdrop-blur-md sm:top-[34px] sm:max-w-[500px] sm:px-4 sm:py-1 sm:text-[12px]">
             {runBeat}
           </div>
 
-          <div className="absolute left-1/2 top-[106px] z-10 -translate-x-1/2 scale-[1.16] sm:top-[58px] sm:scale-100">
+          <div className="absolute left-1/2 top-[36px] z-10 -translate-x-1/2 scale-[1.06] sm:top-[58px] sm:scale-100">
             <div className="absolute bottom-5 left-1/2 h-12 w-36 -translate-x-1/2 rounded-full bg-black/10 blur-2xl" />
             <TowCharacter
               state={characterState}
@@ -591,7 +591,7 @@ export default function PlayPage() {
             />
           </div>
 
-          <div className="pointer-events-none absolute bottom-[38px] left-1/2 z-20 w-full -translate-x-1/2 sm:bottom-[14px]">
+          <div className="pointer-events-none absolute bottom-[18px] left-1/2 z-20 w-full -translate-x-1/2 sm:bottom-[14px]">
             <OutcomePanel
               outcome={state.lastOutcome}
               visible={showOutcome}
@@ -600,69 +600,29 @@ export default function PlayPage() {
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+10px)] z-40 mx-auto w-full max-w-[720px] px-2.5 pb-0 sm:relative sm:inset-auto sm:z-auto sm:mt-0 sm:w-full sm:max-w-none sm:px-0 sm:pb-8 mobile-action-buttons">
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+14px)] left-0 right-0 z-40 mx-auto w-full max-w-[760px] px-3 sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:z-auto sm:mt-0 sm:w-full sm:px-0 sm:pb-8">
           {state.phase === "choosing" &&
             !state.gameOver &&
             timeLeftMs <= 5000 && (
-              <div className="pointer-events-none absolute left-1/2 top-[-44px] z-50 -translate-x-1/2 sm:top-[-62px]">
+              <div className="pointer-events-none absolute left-1/2 top-[-48px] z-40 -translate-x-1/2 sm:top-[-62px]">
                 <div className="animate-pulse rounded-full border border-red-300 bg-red-100/95 px-5 py-1.5 text-[13px] font-black uppercase tracking-[0.12em] text-red-600 shadow-[0_0_22px_rgba(239,68,68,0.35)] backdrop-blur-md">
                   pick now · {Math.ceil(timeLeftMs / 1000)}
                 </div>
               </div>
             )}
 
-          <ActionButtons
-            choices={state.choices}
-            selectedChoiceId={state.selectedChoiceId}
-            hoveredChoiceId={hoveredChoiceId}
-            onHoverChange={setHoveredChoiceId}
-            onSelect={(choice) => void playChoiceFlow(choice)}
-            disabled={state.phase !== "choosing" || state.gameOver}
-          />
+          <div className="[&_button]:min-h-[92px] [&_button]:rounded-[24px] [&_button]:px-2.5 [&_button]:py-2.5 [&_button]:leading-tight [&_button]:shadow-[0_10px_30px_rgba(30,27,24,0.12)] [&_button]:backdrop-blur-xl [&_button_*]:leading-tight [&_button_p]:text-[11px] [&_button_p]:leading-tight [&_button_span]:text-[11px] [&_button_span]:leading-tight sm:[&_button]:min-h-[112px] sm:[&_button]:px-5 sm:[&_button]:py-4 sm:[&_button_p]:text-sm sm:[&_button_span]:text-sm">
+            <ActionButtons
+              choices={state.choices}
+              selectedChoiceId={state.selectedChoiceId}
+              hoveredChoiceId={hoveredChoiceId}
+              onHoverChange={setHoveredChoiceId}
+              onSelect={(choice) => void playChoiceFlow(choice)}
+              disabled={state.phase !== "choosing" || state.gameOver}
+            />
+          </div>
         </div>
       </section>
-
-      <style jsx global>{`
-        @media (max-width: 639px) {
-          .mobile-action-buttons > div:last-child {
-            display: grid !important;
-            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-            gap: 8px !important;
-            align-items: stretch !important;
-          }
-
-          .mobile-action-buttons button {
-            min-width: 0 !important;
-            width: 100% !important;
-            min-height: 82px !important;
-            max-height: 104px !important;
-            padding: 10px 8px !important;
-            border-radius: 24px !important;
-            overflow: hidden !important;
-          }
-
-          .mobile-action-buttons button * {
-            min-width: 0 !important;
-            max-width: 100% !important;
-          }
-
-          .mobile-action-buttons button p,
-          .mobile-action-buttons button span,
-          .mobile-action-buttons button div {
-            line-height: 1.04 !important;
-          }
-
-          .mobile-action-buttons button p:first-child,
-          .mobile-action-buttons button div:first-child {
-            font-size: clamp(18px, 5vw, 23px) !important;
-          }
-
-          .mobile-action-buttons button p:not(:first-child),
-          .mobile-action-buttons button span:not(:first-child) {
-            font-size: 11px !important;
-          }
-        }
-      `}</style>
 
       <GameOverOverlay
         state={state}
