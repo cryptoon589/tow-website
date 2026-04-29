@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toBlob } from "html-to-image";
+import { useMemo, useRef } from "react";
+import { toPng } from "html-to-image";
 
 const STAMPS = [
   "EVENTUALLY REKT",
@@ -46,25 +46,6 @@ function getResultColor(result: string) {
   return "text-[#1F1C18]";
 }
 
-async function waitForImages(root: HTMLElement) {
-  const images = Array.from(root.querySelectorAll("img"));
-
-  await Promise.all(
-    images.map(
-      (image) =>
-        new Promise<void>((resolve) => {
-          if (image.complete) {
-            resolve();
-            return;
-          }
-
-          image.onload = () => resolve();
-          image.onerror = () => resolve();
-        })
-    )
-  );
-}
-
 export default function GameOverOverlay({
   state,
   bestRun,
@@ -77,159 +58,153 @@ export default function GameOverOverlay({
   onReplay: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [portraitFailed, setPortraitFailed] = useState(false);
 
   const result = state?.resultTitle || "The Participant";
   const img = getImage(result);
-  const stamp = useMemo(() => pickStamp(state?.turn || 0, result), [state?.turn, result]);
+  const stamp = useMemo(
+    () => pickStamp(state?.turn || 0, result),
+    [state?.turn, result],
+  );
   const resultColor = getResultColor(result);
-
-  useEffect(() => {
-    setPortraitFailed(false);
-  }, [img]);
 
   if (!state?.gameOver) return null;
 
-  async function downloadCard() {
-    if (!cardRef.current || isDownloading) return;
+  const downloadCard = async () => {
+    if (!cardRef.current) return;
 
-    setIsDownloading(true);
+    const dataUrl = await toPng(cardRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#F6F2EC",
+    });
 
-    try {
-      await document.fonts?.ready;
-      await waitForImages(cardRef.current);
-
-      const blob = await toBlob(cardRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#F6F2EC",
-        fontEmbedCSS: "",
-        style: {
-          transform: "none",
-          opacity: "1",
-        },
-      });
-
-      if (!blob) {
-        throw new Error("PNG blob was empty");
-      }
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = `tow-run-${String(state.turn).padStart(4, "0")}.png`;
-      link.href = url;
-      link.rel = "noopener";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      console.error("Could not download TOW card PNG:", error);
-      alert("Could not download the card PNG. Try taking a screenshot for now.");
-    } finally {
-      setIsDownloading(false);
-    }
-  }
+    const link = document.createElement("a");
+    link.download = `tow-run-${String(state.turn).padStart(4, "0")}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-4">
-      <div className="w-full max-w-[860px] rounded-[24px] bg-[#F6F2EC] p-3 shadow-2xl sm:rounded-[30px] sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-[820px] rounded-[26px] bg-[#F6F2EC] p-4 shadow-2xl">
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[22px] border border-[#DDD3C8] bg-[#F6F2EC] p-4 sm:p-5"
+          className="relative overflow-hidden rounded-[22px] border border-[#DDD3C8] bg-[#F6F2EC] p-5"
         >
+          {/* subtle card texture */}
           <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(90deg,rgba(0,0,0,0.045)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.025)_1px,transparent_1px)] [background-size:12px_12px]" />
 
-          <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="text-[8px] tracking-[0.22em] text-[#837A70] sm:text-[11px]">
-              TOW RUN ID
-              <div className="mt-1 font-mono text-[10px] tracking-[0.12em] text-[#1F1C18] sm:text-[12px]">
-                RUN-{String(state.turn).padStart(4, "0")}
-              </div>
+          {/* Run ID */}
+          <div className="relative z-10 shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-[#837A70] sm:text-[11px]">
+            TOW RUN ID
+            <div className="mt-1 whitespace-nowrap font-mono text-[11px] font-medium tracking-[0.12em] text-[#1F1C18] sm:text-[12px]">
+              RUN-{String(state.turn).padStart(4, "0")}
             </div>
+          </div>
 
-            <div
-              className="rotate-[3deg] rounded-full border-[3px] border-red-400 bg-red-50/80 px-4 py-2 sm:px-8 sm:py-4"
-              style={{
-                boxShadow:
-                  "0 0 0 5px rgba(239,68,68,0.16), 0 14px 30px rgba(239,68,68,0.22)",
-              }}
-            >
+          {/* BIG STAMP */}
+          <div
+            className="absolute right-4 top-8 z-20 rotate-[4deg] rounded-full border-[4px] border-[#EF4444] bg-red-50/90 px-5 py-2.5 text-[#DC2626] sm:right-5 sm:top-9 sm:border-[5px] sm:px-9 sm:py-4"
+            style={{
+              boxShadow:
+                "0 0 0 6px rgba(239,68,68,0.18), 0 14px 30px rgba(239,68,68,0.24)",
+            }}
+          >
+            <div className="whitespace-nowrap text-center text-[17px] font-black uppercase leading-none tracking-[0.08em] text-[#DC2626] sm:text-[29px]">
               {stamp}
             </div>
           </div>
 
-          <div className="relative z-10 mt-4 grid grid-cols-[34%_1fr] gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
-            <div className="relative h-[210px] overflow-hidden rounded-[18px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner sm:h-[280px]">
-              <div className="absolute left-3 top-3 z-10 text-[9px] font-bold tracking-[0.22em] text-[#9A9288] sm:text-[10px]">
+          {/* Main content */}
+          <div className="relative z-10 mt-10 flex gap-5 md:gap-6">
+            {/* Portrait */}
+            <div className="mt-6 relative h-[158px] w-[158px] shrink-0 overflow-hidden rounded-[18px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner">
+              <div className="absolute left-3 top-3 z-10 text-[10px] font-bold tracking-[0.22em] text-[#9A9288]">
                 PORTRAIT
               </div>
-
-              {!portraitFailed ? (
-                <img
-                  src={img}
-                  alt={result}
-                  className="absolute bottom-[-12px] left-1/2 h-[132%] -translate-x-1/2 object-cover sm:bottom-[-18px] sm:h-[145%]"
-                  onError={() => setPortraitFailed(true)}
-                />
-              ) : null}
+              <img
+                src={img}
+                alt={result}
+                className="absolute bottom-[-18px] left-1/2 h-[145%] -translate-x-1/2 object-cover"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
             </div>
 
-            <div className="min-w-0 pt-1 sm:pt-3">
-              <div className={`mb-1 text-[30px] font-black leading-[0.9] sm:text-5xl ${resultColor}`}>
+            {/* Text */}
+            <div className="min-w-0 flex-1 pt-4">
+              <div
+                className={`mb-1 text-4xl font-black leading-none md:text-5xl ${resultColor}`}
+              >
                 {result}
               </div>
 
-              <div className="mb-3 text-[13px] font-medium text-[#6E655C] sm:mb-4 sm:text-sm">
-                You lasted <span className="font-bold text-orange-500">{state.turn}</span> turns.
+              <div className="mb-4 text-sm font-medium text-[#6E655C]">
+                You lasted{" "}
+                <span className="font-bold text-orange-500">{state.turn}</span>{" "}
+                turns.
               </div>
 
-              <div className="mb-3 grid grid-cols-4 gap-1.5 text-center sm:gap-3">
-                <div className="rounded-xl bg-[#EDE7DF] p-1.5 sm:p-3">
-                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">TURNS</div>
-                  <div className="text-base font-black text-orange-500 sm:text-lg">{state.turn}</div>
+              <div className="mb-3 grid grid-cols-4 gap-3 text-sm">
+                <div className="rounded-xl bg-[#EDE7DF] p-3 text-center">
+                  <div className="text-[10px] tracking-wider text-[#91887E]">
+                    TURNS
+                  </div>
+                  <div className="text-lg font-black text-orange-500">
+                    {state.turn}
+                  </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-1.5 sm:p-3">
-                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">BEST</div>
-                  <div className="text-base font-black text-[#1F1C18] sm:text-lg">{bestRun}</div>
+                <div className="rounded-xl bg-[#EDE7DF] p-3 text-center">
+                  <div className="text-[10px] tracking-wider text-[#91887E]">
+                    TIRED
+                  </div>
+                  <div className="text-lg font-black text-red-600">
+                    {state.tired}/100
+                  </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-1.5 sm:p-3">
-                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">TIRED</div>
-                  <div className="text-base font-black text-red-600 sm:text-lg">{state.tired}</div>
+                <div className="rounded-xl bg-[#EDE7DF] p-3 text-center">
+                  <div className="text-[10px] tracking-wider text-[#91887E]">
+                    HEATER
+                  </div>
+                  <div className="text-lg font-black text-green-600">
+                    x{profile?.bestStreak || 1}
+                  </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-1.5 sm:p-3">
-                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">SAVES</div>
-                  <div className="text-base font-black text-purple-600 sm:text-lg">
+                <div className="rounded-xl bg-[#EDE7DF] p-3 text-center">
+                  <div className="text-[10px] tracking-wider text-[#91887E]">
+                    SAVES
+                  </div>
+                  <div className="text-lg font-black text-purple-600">
                     {profile?.almostSaves || 0}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-[#EDE7DF] p-2 sm:p-3">
-                <div className="mb-1 text-[8px] font-bold tracking-[0.2em] text-[#91887E] sm:text-[10px]">
+              <div className="rounded-xl bg-[#EDE7DF] p-3">
+                <div className="mb-1 text-[10px] font-bold tracking-[0.2em] text-[#91887E]">
                   PLAYER MEMORY
                 </div>
-                <div className="text-base font-bold text-[#1F1C18] sm:text-lg">
+                <div className="font-bold text-[#1F1C18]">
                   {profile?.type || "balanced"}
                 </div>
-                <div className="text-xs text-[#6E655C] sm:text-sm">
+                <div className="text-sm text-[#6E655C]">
                   {profile?.description || "you kept going"}
                 </div>
               </div>
 
-              <div className="mt-2 text-[14px] italic leading-snug text-[#746A60] sm:mt-3 sm:text-base">
+              <div className="mt-3 text-base italic text-[#746A60]">
                 I almost made it. Next run might be the one.
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4">
+        {/* Actions */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
           <button
             onClick={onReplay}
             className="relative min-h-[58px] overflow-hidden rounded-[22px] border border-white/70 px-4 py-3 text-lg font-black text-zinc-900 shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)] active:scale-[0.97] sm:min-h-[68px] sm:rounded-[26px] sm:px-10 sm:py-5 sm:text-[19px]"
@@ -243,10 +218,9 @@ export default function GameOverOverlay({
 
           <button
             onClick={downloadCard}
-            disabled={isDownloading}
-            className="min-h-[58px] rounded-[22px] border border-[#D8D2C8] bg-[#F4EFE8] px-4 py-3 text-base font-black text-[#2B2621] transition-all duration-200 ease-out hover:border-black hover:bg-black hover:text-white active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 sm:min-h-[68px] sm:rounded-[26px] sm:px-10 sm:py-5 sm:text-[19px]"
+            className="min-h-[58px] rounded-[22px] border border-[#D8D2C8] bg-[#F4EFE8] px-4 py-3 text-base font-black text-[#2B2621] transition-all duration-200 ease-out hover:border-black hover:bg-black hover:text-white active:scale-[0.97] sm:min-h-[68px] sm:rounded-[26px] sm:px-10 sm:py-5 sm:text-[19px]"
           >
-            {isDownloading ? "making PNG..." : "download card PNG to share"}
+            download card PNG to share
           </button>
         </div>
       </div>
