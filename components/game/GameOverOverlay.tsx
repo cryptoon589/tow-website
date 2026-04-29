@@ -143,7 +143,7 @@ export default function GameOverOverlay({
           <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(90deg,rgba(0,0,0,0.045)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.025)_1px,transparent_1px)] [background-size:12px_12px]" />
 
           <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="text-[9px] tracking-[0.22em] text-[#837A70] sm:text-[11px]">
+            <div className="text-[8px] tracking-[0.22em] text-[#837A70] sm:text-[11px]">
               TOW RUN ID
               <div className="mt-1 font-mono text-[10px] tracking-[0.12em] text-[#1F1C18] sm:text-[12px]">
                 RUN-{String(state.turn).padStart(4, "0")}
@@ -151,7 +151,7 @@ export default function GameOverOverlay({
             </div>
 
             <div
-              className="rotate-3 rounded-full border-[3px] border-red-400 bg-red-50/80 px-4 py-2 text-[15px] font-black uppercase tracking-wide text-red-600 sm:px-8 sm:py-4 sm:text-[24px]"
+              className="rotate-[3deg] rounded-full border-[3px] border-red-400 bg-red-50/80 px-4 py-2 sm:px-8 sm:py-4"
               style={{
                 boxShadow:
                   "0 0 0 5px rgba(239,68,68,0.16), 0 14px 30px rgba(239,68,68,0.22)",
