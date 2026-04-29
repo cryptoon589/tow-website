@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toBlob } from "html-to-image";
 
 const STAMPS = [
   "EVENTUALLY REKT",
@@ -46,6 +46,25 @@ function getResultColor(result: string) {
   return "text-[#1F1C18]";
 }
 
+async function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll("img"));
+
+  await Promise.all(
+    images.map(
+      (image) =>
+        new Promise<void>((resolve) => {
+          if (image.complete) {
+            resolve();
+            return;
+          }
+
+          image.onload = () => resolve();
+          image.onerror = () => resolve();
+        })
+    )
+  );
+}
+
 export default function GameOverOverlay({
   state,
   bestRun,
@@ -59,11 +78,16 @@ export default function GameOverOverlay({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [portraitFailed, setPortraitFailed] = useState(false);
 
   const result = state?.resultTitle || "The Participant";
   const img = getImage(result);
   const stamp = useMemo(() => pickStamp(state?.turn || 0, result), [state?.turn, result]);
   const resultColor = getResultColor(result);
+
+  useEffect(() => {
+    setPortraitFailed(false);
+  }, [img]);
 
   if (!state?.gameOver) return null;
 
@@ -73,21 +97,37 @@ export default function GameOverOverlay({
     setIsDownloading(true);
 
     try {
-      const dataUrl = await toPng(cardRef.current, {
+      await document.fonts?.ready;
+      await waitForImages(cardRef.current);
+
+      const blob = await toBlob(cardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: "#F6F2EC",
+        fontEmbedCSS: "",
+        style: {
+          transform: "none",
+          opacity: "1",
+        },
       });
 
+      if (!blob) {
+        throw new Error("PNG blob was empty");
+      }
+
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = `tow-run-${String(state.turn).padStart(4, "0")}.png`;
-      link.href = dataUrl;
+      link.href = url;
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("Could not download TOW card PNG:", error);
-      alert("Could not download the card PNG. Try again or take a screenshot.");
+      alert("Could not download the card PNG. Try taking a screenshot for now.");
     } finally {
       setIsDownloading(false);
     }
@@ -126,14 +166,15 @@ export default function GameOverOverlay({
               <div className="absolute left-3 top-3 z-10 text-[9px] font-bold tracking-[0.22em] text-[#9A9288] sm:text-[10px]">
                 PORTRAIT
               </div>
-              <img
-                src={img}
-                alt={result}
-                className="absolute bottom-[-12px] left-1/2 h-[132%] -translate-x-1/2 object-cover sm:bottom-[-18px] sm:h-[145%]"
-                onError={(event) => {
-                  event.currentTarget.style.display = "none";
-                }}
-              />
+
+              {!portraitFailed ? (
+                <img
+                  src={img}
+                  alt={result}
+                  className="absolute bottom-[-12px] left-1/2 h-[132%] -translate-x-1/2 object-cover sm:bottom-[-18px] sm:h-[145%]"
+                  onError={() => setPortraitFailed(true)}
+                />
+              ) : null}
             </div>
 
             <div className="min-w-0 pt-1 sm:pt-3">
