@@ -36,7 +36,7 @@ export default function HeroSection() {
           </p>
 
           {/* Much smaller image so buttons can rise */}
-          <div className="mb-0 aspect-square w-full max-w-[250px] overflow-hidden rounded-2xl bg-white md:max-w-[300px] lg:max-w-[340px]">
+          <div className="mb-2 aspect-square w-full max-w-[190px] overflow-hidden rounded-2xl bg-white md:max-w-[240px] lg:max-w-[290px]">
             <img
               src={heroImages[index]}
               alt="TOW Character"
@@ -44,8 +44,7 @@ export default function HeroSection() {
             />
           </div>
 
-          {/* Aggressive pull upward */}
-          <div className="-mt-14 flex flex-wrap gap-3 md:-mt-16 lg:-mt-20">
+          <div className="mt-2 flex flex-wrap gap-3">
             <Link
               href="/meme-generator"
               className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
