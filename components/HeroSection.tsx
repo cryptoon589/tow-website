@@ -1,45 +1,75 @@
-import Link from "next/link";
-import { siteConfig } from "@/config/site";
+"use client";
 
-export default function HeroSection({ headline }: { headline?: string }) {
-  const h = headline || siteConfig.heroHeadlines[0];
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import TiredCounter from "@/components/TiredCounter";
+
+const heroImages = [
+  "/assets/characters/hero-1.png",
+  "/assets/characters/hero-2.png",
+  "/assets/characters/hero-3.png",
+  "/assets/characters/hero-4.png",
+];
+
+export default function HeroSection() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % heroImages.length);
+    }, 3200);
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <section className="pt-2 pb-8 md:pt-4 md:pb-8">
-      <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-4 md:gap-6 items-center">
-        <div className="order-2 md:order-1">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">{h}</h1>
-          <p className="text-lg text-gray-600 mb-8">{siteConfig.heroSubtext}</p>
+    <section className="pb-8 pt-2 md:pb-8 md:pt-4">
+      <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 lg:grid-cols-[1fr_430px]">
+        <div>
+          <h1 className="mb-4 text-4xl font-bold leading-tight md:text-6xl">
+            Still tired.
+            <br />
+            Still here.
+          </h1>
+
+          <p className="mb-6 text-lg text-gray-600 md:text-2xl">
+            Tired now. Tired of winning later.
+          </p>
+
+          <div className="mb-6 aspect-square w-full max-w-[520px] overflow-hidden rounded-2xl bg-white">
+            <img
+              src={heroImages[index]}
+              alt="TOW Character"
+              className="h-full w-full object-contain transition-opacity duration-500"
+            />
+          </div>
+
           <div className="flex flex-wrap gap-4">
             <Link
               href="/meme-generator"
-              className="px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800"
+              className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
             >
               Make Memes
             </Link>
+
             <Link
               href="/tired-counter"
-              className="px-6 py-3 border-2 border-black font-bold rounded hover:bg-black hover:text-white"
+              className="rounded border-2 border-black px-6 py-3 font-bold transition hover:bg-black hover:text-white"
             >
-              Tired Together
+              Everyone&apos;s Tired
             </Link>
+
             <Link
               href="/play/start"
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
+              className="rounded bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
             >
-              🎮 Play Tired of Winning
+              🎮 Play TOW Game
             </Link>
           </div>
         </div>
 
-        <div className="order-1 md:order-2">
-          <div className="aspect-square max-w-[520px] w-full ml-auto flex items-center justify-center overflow-hidden">
-            <img
-              src="/assets/characters/hero.png"
-              alt="TOW"
-              className="w-full h-full object-cover"
-            />
-          </div>
+        <div className="w-full lg:sticky lg:top-6">
+          <TiredCounter />
         </div>
       </div>
     </section>

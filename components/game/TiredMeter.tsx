@@ -5,9 +5,11 @@ import clsx from "clsx";
 export default function TiredMeter({
   tired,
   max,
+  turns,
 }: {
   tired: number;
   max: number;
+  turns: number;
 }) {
   const percent = Math.min(100, (tired / max) * 100);
 
@@ -42,10 +44,10 @@ export default function TiredMeter({
       : "bg-red-500";
 
   return (
-    <div className="w-full max-w-[620px] mx-auto">
+    <div className="mx-auto w-full max-w-[620px]">
       <div
         className={clsx(
-          "flex items-center justify-between px-3 mb-1.5 text-[14px] font-black tracking-tight transition-colors duration-300",
+          "mb-1.5 flex items-center justify-between px-3 text-[14px] font-black tracking-tight transition-colors duration-300",
           toneClass
         )}
       >
@@ -53,8 +55,8 @@ export default function TiredMeter({
         <span>{Math.round(percent)}%</span>
       </div>
 
-      <div className="relative w-full h-6 rounded-full overflow-hidden bg-[#EDE7DF] shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
-        <div className="absolute inset-0 flex items-center px-1.5 gap-[2px]">
+      <div className="relative h-7 w-full overflow-hidden rounded-full bg-[#EDE7DF] shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+        <div className="absolute inset-0 flex items-center gap-[2px] px-1.5">
           {Array.from({ length: segments }).map((_, i) => {
             const active = i < activeSegments;
             const speed = Math.max(0.65, 1.8 - percent / 90);
@@ -79,17 +81,23 @@ export default function TiredMeter({
                   animation: active
                     ? `meterBlockPulse ${speed}s ease-in-out infinite`
                     : undefined,
-                    animationDelay: delay,
-                    transform: active ? `scaleY(${pulseScale})` : undefined,
-                    transformOrigin: "center",
-                  }}
+                  animationDelay: delay,
+                  transform: active ? `scaleY(${pulseScale})` : undefined,
+                  transformOrigin: "center",
+                }}
               />
             );
           })}
         </div>
 
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
-          <div className="h-full w-[35%] bg-white/35 blur-md animate-[meterGlowSweep_2.2s_ease-in-out_infinite]" />
+          <div className="h-full w-[35%] animate-[meterGlowSweep_2.2s_ease-in-out_infinite] bg-white/35 blur-md" />
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="rounded-full bg-[#FFFCF8]/85 px-3 py-0.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#1F1B17] shadow-sm backdrop-blur-sm">
+            turn {turns}
+          </div>
         </div>
       </div>
     </div>

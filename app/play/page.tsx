@@ -519,7 +519,7 @@ export default function PlayPage() {
 
       <section className="mx-auto flex min-h-[100svh] w-full max-w-[1040px] flex-col items-center pt-[58px] sm:h-full sm:min-h-0 sm:pt-0">
         <div className="w-full rounded-[22px] border border-[#DDD7CE]/70 bg-[#FFFCF8]/72 p-2 shadow-[0_16px_52px_rgba(30,27,24,0.07)] backdrop-blur-xl sm:rounded-[24px] sm:p-2.5 md:max-w-[620px]">
-          <TiredMeter tired={state.tired} max={MAX_TIRED} />
+          <TiredMeter tired={state.tired} max={MAX_TIRED} turns={state.turn} />
         </div>
 
         <div className="relative -mt-1 h-[372px] w-full shrink-0 overflow-visible min-[390px]:h-[388px] sm:mt-2 sm:h-[375px]">
