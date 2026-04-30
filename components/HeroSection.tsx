@@ -23,20 +23,21 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="pb-8 pt-2 md:pb-8 md:pt-4">
-      <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 lg:grid-cols-[1fr_430px]">
-        <div>
-          <h1 className="mb-4 text-4xl font-bold leading-tight md:text-6xl">
+    <section className="pb-6 pt-1 md:pb-8 md:pt-2">
+      <div className="mx-auto grid max-w-6xl items-start gap-6 px-4 lg:grid-cols-[1fr_430px]">
+        {/* HERO CONTENT */}
+        <div className="order-2 lg:order-1">
+          <h1 className="mb-4 text-4xl font-bold leading-[1.12] md:text-5xl lg:text-6xl">
             Still tired.
             <br />
             Still here.
           </h1>
 
-          <p className="mb-6 text-lg text-gray-600 md:text-2xl">
+          <p className="mb-6 text-base text-gray-600 md:text-xl lg:text-2xl">
             Tired now. Tired of winning later.
           </p>
 
-          <div className="mb-6 aspect-square w-full max-w-[520px] overflow-hidden rounded-2xl bg-white">
+          <div className="mb-4 aspect-square w-full max-w-[520px] overflow-hidden rounded-2xl bg-white">
             <img
               src={heroImages[index]}
               alt="TOW Character"
@@ -53,7 +54,7 @@ export default function HeroSection() {
             </Link>
 
             <Link
-              href="/tired-counter"
+              href="/raid-board"
               className="rounded border-2 border-black px-6 py-3 font-bold transition hover:bg-black hover:text-white"
             >
               Everyone&apos;s Tired
@@ -68,7 +69,8 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="w-full lg:sticky lg:top-6">
+        {/* TIRED COUNTER */}
+        <div className="order-1 w-full lg:order-2 lg:sticky lg:top-6">
           <TiredCounter />
         </div>
       </div>
