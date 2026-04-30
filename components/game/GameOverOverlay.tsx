@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { toBlob } from "html-to-image";
 
 const STAMPS = [
   "EVENTUALLY REKT",
@@ -46,6 +45,290 @@ function getResultColor(result: string) {
   return "text-[#1F1C18]";
 }
 
+function getCanvasResultColor(result: string) {
+  const r = result.toLowerCase();
+
+  if (r.includes("exit") || r.includes("rekt")) return "#DC2626";
+  if (r.includes("degen")) return "#F97316";
+  if (r.includes("hesitant")) return "#9333EA";
+
+  return "#1F1C18";
+}
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  options?: {
+    font?: string;
+    fillStyle?: string;
+    align?: CanvasTextAlign;
+    baseline?: CanvasTextBaseline;
+    letterSpacing?: number;
+  }
+) {
+  ctx.save();
+  ctx.font = options?.font ?? "24px Arial";
+  ctx.fillStyle = options?.fillStyle ?? "#1F1C18";
+  ctx.textAlign = options?.align ?? "left";
+  ctx.textBaseline = options?.baseline ?? "alphabetic";
+
+  // Canvas letterSpacing support is not universal, so only use native when present.
+  if (typeof (ctx as any).letterSpacing !== "undefined" && options?.letterSpacing) {
+    (ctx as any).letterSpacing = `${options.letterSpacing}px`;
+  }
+
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement | null>((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+async function createCardPng({
+  state,
+  bestRun,
+  profile,
+  result,
+  img,
+  stamp,
+}: {
+  state: any;
+  bestRun: number;
+  profile: any;
+  result: string;
+  img: string;
+  stamp: string;
+}) {
+  const canvas = document.createElement("canvas");
+  const width = 1656;
+  const height = 900;
+  const scale = 2;
+
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+
+  ctx.scale(scale, scale);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Background.
+  ctx.fillStyle = "#F6F2EC";
+  ctx.fillRect(0, 0, width, height);
+
+  // Subtle grid.
+  ctx.strokeStyle = "rgba(0,0,0,0.04)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= width; x += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(0,0,0,0.025)";
+  for (let y = 0; y <= height; y += 24) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // Border.
+  ctx.strokeStyle = "#DDD3C8";
+  ctx.lineWidth = 2;
+  roundedRect(ctx, 1, 1, width - 2, height - 2, 32);
+  ctx.stroke();
+
+  // Run ID.
+  drawText(ctx, "TOW RUN ID", 42, 66, {
+    font: "700 24px Georgia, serif",
+    fillStyle: "#837A70",
+  });
+  drawText(ctx, `RUN-${String(state.turn).padStart(4, "0")}`, 42, 108, {
+    font: "24px monospace",
+    fillStyle: "#1F1C18",
+  });
+
+  // Stamp.
+  ctx.save();
+  ctx.translate(1050, 44);
+  ctx.rotate((3 * Math.PI) / 180);
+
+  ctx.shadowColor = "rgba(225,25,25,0.22)";
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 14;
+  ctx.fillStyle = "#FFF1F1";
+  ctx.strokeStyle = "#E11919";
+  ctx.lineWidth = 8;
+  roundedRect(ctx, 0, 0, 560, 92, 46);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(225,25,25,0.16)";
+  ctx.lineWidth = 10;
+  roundedRect(ctx, -6, -6, 572, 104, 52);
+  ctx.stroke();
+
+  drawText(ctx, stamp, 280, 57, {
+    font: "900 34px Arial, sans-serif",
+    fillStyle: "#E11919",
+    align: "center",
+    baseline: "middle",
+  });
+  ctx.restore();
+
+  // Portrait panel.
+  roundedRect(ctx, 42, 240, 460, 560, 28);
+  ctx.fillStyle = "#EDE7DF";
+  ctx.fill();
+  ctx.strokeStyle = "#DED5CA";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  drawText(ctx, "PORTRAIT", 68, 286, {
+    font: "700 20px Georgia, serif",
+    fillStyle: "#9A9288",
+  });
+
+  const portrait = await loadImage(img);
+  if (portrait) {
+    ctx.save();
+    roundedRect(ctx, 42, 240, 460, 560, 28);
+    ctx.clip();
+
+    const targetW = 430;
+    const targetH = 620;
+    const targetX = 56;
+    const targetY = 218;
+    ctx.drawImage(portrait, targetX, targetY, targetW, targetH);
+    ctx.restore();
+  }
+
+  // Main result.
+  drawText(ctx, result, 550, 342, {
+    font: "900 72px Arial, sans-serif",
+    fillStyle: getCanvasResultColor(result),
+  });
+
+  drawText(ctx, "You lasted", 550, 394, {
+    font: "32px Arial, sans-serif",
+    fillStyle: "#6E655C",
+  });
+  drawText(ctx, String(state.turn), 676, 394, {
+    font: "700 32px Arial, sans-serif",
+    fillStyle: "#F97316",
+  });
+  drawText(ctx, "turns.", 716, 394, {
+    font: "32px Arial, sans-serif",
+    fillStyle: "#6E655C",
+  });
+
+  // Stat boxes.
+  const statY = 438;
+  const statW = 248;
+  const statH = 134;
+  const statGap = 24;
+  const stats = [
+    { label: "TURNS", value: state.turn, color: "#F97316" },
+    { label: "BEST", value: bestRun, color: "#1F1C18" },
+    { label: "TIRED", value: state.tired, color: "#DC2626" },
+    { label: "SAVES", value: profile?.almostSaves || 0, color: "#9333EA" },
+  ];
+
+  stats.forEach((stat, index) => {
+    const x = 550 + index * (statW + statGap);
+    roundedRect(ctx, x, statY, statW, statH, 18);
+    ctx.fillStyle = "#EDE7DF";
+    ctx.fill();
+    drawText(ctx, stat.label, x + statW / 2, statY + 47, {
+      font: "22px Georgia, serif",
+      fillStyle: "#91887E",
+      align: "center",
+    });
+    drawText(ctx, String(stat.value), x + statW / 2, statY + 94, {
+      font: "900 34px Arial, sans-serif",
+      fillStyle: stat.color,
+      align: "center",
+    });
+  });
+
+  // Player memory.
+  roundedRect(ctx, 550, 598, 1064, 180, 18);
+  ctx.fillStyle = "#EDE7DF";
+  ctx.fill();
+
+  drawText(ctx, "PLAYER MEMORY", 574, 646, {
+    font: "700 22px Georgia, serif",
+    fillStyle: "#91887E",
+  });
+  drawText(ctx, profile?.type || "balanced", 574, 698, {
+    font: "900 34px Arial, sans-serif",
+    fillStyle: "#1F1C18",
+  });
+  drawText(ctx, profile?.description || "you kept going", 574, 744, {
+    font: "30px Arial, sans-serif",
+    fillStyle: "#6E655C",
+  });
+
+  drawText(ctx, "I almost made it. Next run might be the one.", 550, 838, {
+    font: "italic 32px Georgia, serif",
+    fillStyle: "#746A60",
+  });
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) reject(new Error("Canvas PNG failed"));
+      else resolve(blob);
+    }, "image/png");
+  });
+}
+
 export default function GameOverOverlay({
   state,
   bestRun,
@@ -71,37 +354,21 @@ export default function GameOverOverlay({
   if (!state?.gameOver) return null;
 
   const downloadCard = async () => {
-    if (!cardRef.current || isDownloading) return;
+    if (isDownloading) return;
 
     setIsDownloading(true);
 
     try {
-      const blob = await toBlob(cardRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#F6F2EC",
-        filter: (node) => {
-          return !(node instanceof HTMLElement && node.dataset.noExport === "true");
-        },
+      const blob = await createCardPng({
+        state,
+        bestRun,
+        profile,
+        result,
+        img,
+        stamp,
       });
 
-      if (!blob) {
-        throw new Error("PNG blob failed");
-      }
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `tow-run-${String(state.turn).padStart(4, "0")}.png`;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      downloadBlob(blob, `tow-run-${String(state.turn).padStart(4, "0")}.png`);
     } catch (error) {
       console.error("TOW card download failed:", error);
       alert("Could not download the card PNG. Try again or take a screenshot.");
