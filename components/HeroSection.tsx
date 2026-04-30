@@ -23,14 +23,12 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="pb-6 pt-1 md:pb-8 md:pt-2">
+    <section className="pb-6 pt-2 md:pb-8 md:pt-2">
       <div className="mx-auto grid max-w-6xl items-start gap-6 px-4 lg:grid-cols-[1fr_430px]">
         {/* HERO CONTENT */}
         <div className="order-2 lg:order-1">
-          <h1 className="mb-4 text-4xl font-bold leading-[1.12] md:text-5xl lg:text-6xl">
-            Still tired.
-            <br />
-            Still here.
+          <h1 className="mb-4 text-3xl font-bold leading-[1.12] md:text-4xl lg:text-5xl">
+            Still tired. Still here.
           </h1>
 
           <p className="mb-6 text-base text-gray-600 md:text-xl lg:text-2xl">
