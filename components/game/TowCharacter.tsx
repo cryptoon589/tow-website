@@ -21,10 +21,19 @@ type ResolvedMode = {
   face: string;
   base: string;
   vfx: string | null;
-  type: "idle" | "thinking" | "win" | "winSmall" | "lose" | "loseSmall" | "rekt" | "glitch";
+  type:
+    | "idle"
+    | "thinking"
+    | "win"
+    | "winSmall"
+    | "lose"
+    | "loseSmall"
+    | "rekt"
+    | "glitch";
 };
 
 type IdleVariant = "neutral" | "blink" | "lookaway" | "sigh" | "leanChoose";
+type UrgencyBucket = "low" | "mid" | "high";
 
 function resolveMode(state: string): ResolvedMode {
   switch (state) {
@@ -133,9 +142,53 @@ function getIdleFaceVariant(baseFace: string, idleVariant: IdleVariant) {
     return baseFace;
   }
 
-  if (idleVariant === "neutral" || idleVariant === "leanChoose") return baseFace;
+  if (idleVariant === "neutral" || idleVariant === "leanChoose") {
+    return baseFace;
+  }
 
   return idleVariant;
+}
+
+function getUrgencyBucket(urgency: number): UrgencyBucket {
+  if (urgency > 0.7) return "high";
+  if (urgency > 0.4) return "mid";
+  return "low";
+}
+
+function pickIdleVariant(bucket: UrgencyBucket): IdleVariant {
+  const roll = Math.random();
+
+  if (bucket === "high") {
+    if (roll < 0.46) return "blink";
+    if (roll < 0.8) return "leanChoose";
+    if (roll < 0.93) return "lookaway";
+    return "sigh";
+  }
+
+  if (bucket === "mid") {
+    if (roll < 0.52) return "blink";
+    if (roll < 0.78) return "leanChoose";
+    if (roll < 0.93) return "lookaway";
+    return "sigh";
+  }
+
+  if (roll < 0.6) return "blink";
+  if (roll < 0.8) return "leanChoose";
+  if (roll < 0.94) return "lookaway";
+  return "sigh";
+}
+
+function getIdleDelay(bucket: UrgencyBucket) {
+  if (bucket === "high") return 520 + Math.random() * 620;
+  if (bucket === "mid") return 650 + Math.random() * 800;
+  return 800 + Math.random() * 950;
+}
+
+function getIdleHoldMs(variant: IdleVariant) {
+  if (variant === "blink") return 135;
+  if (variant === "leanChoose") return 820;
+  if (variant === "sigh") return 760;
+  return 560;
 }
 
 export default function TowCharacter({
@@ -149,9 +202,13 @@ export default function TowCharacter({
 
   const urgency = useMemo(() => {
     if (!timeLeftMs || !choiceWindowMs) return 0;
-    return 1 - timeLeftMs / choiceWindowMs;
+    return Math.max(0, Math.min(1, 1 - timeLeftMs / choiceWindowMs));
   }, [timeLeftMs, choiceWindowMs]);
 
+  // Important: use a stable bucket instead of raw urgency in the idle effect.
+  // Raw timeLeftMs changes constantly during gameplay and was restarting the
+  // blink/lean timers before they could fire.
+  const urgencyBucket = getUrgencyBucket(urgency);
   const isIdleState = mode.type === "idle";
 
   const [idleVariant, setIdleVariant] = useState<IdleVariant>("neutral");
@@ -173,55 +230,18 @@ export default function TowCharacter({
     const scheduleNextIdleBeat = () => {
       if (cancelled) return;
 
-      // More frequent idle beats = more alive.
-      const nextDelay =
-        urgency > 0.7
-          ? 420 + Math.random() * 700
-          : urgency > 0.4
-          ? 520 + Math.random() * 850
-          : 650 + Math.random() * 950;
-
       idleTimerRef.current = setTimeout(() => {
         if (cancelled) return;
 
-        const roll = Math.random();
-        let nextVariant: IdleVariant = "blink";
-
-        // Blink often. Lean-choose also appears often to create life.
-        if (urgency > 0.72) {
-          if (roll < 0.42) nextVariant = "blink";
-          else if (roll < 0.72) nextVariant = "leanChoose";
-          else if (roll < 0.9) nextVariant = "lookaway";
-          else nextVariant = "sigh";
-        } else if (urgency > 0.4) {
-          if (roll < 0.5) nextVariant = "blink";
-          else if (roll < 0.78) nextVariant = "leanChoose";
-          else if (roll < 0.93) nextVariant = "lookaway";
-          else nextVariant = "sigh";
-        } else {
-          if (roll < 0.55) nextVariant = "blink";
-          else if (roll < 0.78) nextVariant = "leanChoose";
-          else if (roll < 0.92) nextVariant = "lookaway";
-          else nextVariant = "sigh";
-        }
-
+        const nextVariant = pickIdleVariant(urgencyBucket);
         setIdleVariant(nextVariant);
-
-        const holdMs =
-          nextVariant === "blink"
-            ? 115
-            : nextVariant === "leanChoose"
-            ? 700
-            : nextVariant === "sigh"
-            ? 760
-            : 520;
 
         resetTimerRef.current = setTimeout(() => {
           if (cancelled) return;
           setIdleVariant("neutral");
           scheduleNextIdleBeat();
-        }, holdMs);
-      }, nextDelay);
+        }, getIdleHoldMs(nextVariant));
+      }, getIdleDelay(urgencyBucket));
     };
 
     setIdleVariant("neutral");
@@ -232,7 +252,7 @@ export default function TowCharacter({
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
-  }, [isIdleState, urgency]);
+  }, [isIdleState, urgencyBucket]);
 
   const finalPose = useMemo<"idle" | "lean">(() => {
     if (isIdleState && idleVariant === "leanChoose") return "lean";
