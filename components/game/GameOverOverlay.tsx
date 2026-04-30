@@ -83,22 +83,39 @@ function drawText(
     fillStyle?: string;
     align?: CanvasTextAlign;
     baseline?: CanvasTextBaseline;
-    letterSpacing?: number;
   }
 ) {
   ctx.save();
-  ctx.font = options?.font ?? "24px Arial";
+  ctx.font = options?.font ?? "24px Arial, sans-serif";
   ctx.fillStyle = options?.fillStyle ?? "#1F1C18";
   ctx.textAlign = options?.align ?? "left";
   ctx.textBaseline = options?.baseline ?? "alphabetic";
-
-  // Canvas letterSpacing support is not universal, so only use native when present.
-  if (typeof (ctx as any).letterSpacing !== "undefined" && options?.letterSpacing) {
-    (ctx as any).letterSpacing = `${options.letterSpacing}px`;
-  }
-
   ctx.fillText(text, x, y);
   ctx.restore();
+}
+
+function drawCenteredStampText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  fontFamily: string
+) {
+  let size = 36;
+
+  while (size > 24) {
+    ctx.font = `900 ${size}px ${fontFamily}`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 2;
+  }
+
+  drawText(ctx, text, x, y, {
+    font: `900 ${size}px ${fontFamily}`,
+    fillStyle: "#E11919",
+    align: "center",
+    baseline: "middle",
+  });
 }
 
 function loadImage(src: string) {
@@ -129,22 +146,29 @@ function downloadBlob(blob: Blob, filename: string) {
 
 async function createCardPng({
   state,
-  bestRun,
   profile,
   result,
   img,
   stamp,
 }: {
   state: any;
-  bestRun: number;
   profile: any;
   result: string;
   img: string;
   stamp: string;
 }) {
+  await document.fonts.ready;
+
+  const computedFont = getComputedStyle(document.body).fontFamily;
+  const fontFamily = computedFont || "Inter, Arial, sans-serif";
+  const serifFamily = "Georgia, 'Times New Roman', serif";
+  const monoFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+
   const canvas = document.createElement("canvas");
-  const width = 1656;
-  const height = 900;
+
+  // Match the live card proportions instead of exporting a huge different card.
+  const width = 1100;
+  const height = 560;
   const scale = 2;
 
   canvas.width = width * scale;
@@ -162,16 +186,17 @@ async function createCardPng({
   ctx.fillRect(0, 0, width, height);
 
   // Subtle grid.
-  ctx.strokeStyle = "rgba(0,0,0,0.04)";
+  ctx.strokeStyle = "rgba(0,0,0,0.045)";
   ctx.lineWidth = 1;
-  for (let x = 0; x <= width; x += 24) {
+  for (let x = 0; x <= width; x += 12) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
     ctx.stroke();
   }
+
   ctx.strokeStyle = "rgba(0,0,0,0.025)";
-  for (let y = 0; y <= height; y += 24) {
+  for (let y = 0; y <= height; y += 12) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
@@ -180,144 +205,150 @@ async function createCardPng({
 
   // Border.
   ctx.strokeStyle = "#DDD3C8";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, 1, 1, width - 2, height - 2, 32);
+  ctx.lineWidth = 1.5;
+  roundedRect(ctx, 1, 1, width - 2, height - 2, 22);
   ctx.stroke();
 
   // Run ID.
-  drawText(ctx, "TOW RUN ID", 42, 66, {
-    font: "700 24px Georgia, serif",
+  drawText(ctx, "TOW RUN ID", 28, 42, {
+    font: `700 16px ${serifFamily}`,
     fillStyle: "#837A70",
   });
-  drawText(ctx, `RUN-${String(state.turn).padStart(4, "0")}`, 42, 108, {
-    font: "24px monospace",
+  drawText(ctx, `RUN-${String(state.turn).padStart(4, "0")}`, 28, 70, {
+    font: `500 14px ${monoFamily}`,
     fillStyle: "#1F1C18",
   });
 
-  // Stamp.
+  // Stamp — one-line, dominant, red, export-safe.
   ctx.save();
-  ctx.translate(1050, 44);
+  ctx.translate(725, 45);
   ctx.rotate((3 * Math.PI) / 180);
 
   ctx.shadowColor = "rgba(225,25,25,0.22)";
-  ctx.shadowBlur = 30;
-  ctx.shadowOffsetY = 14;
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 10;
+
   ctx.fillStyle = "#FFF1F1";
   ctx.strokeStyle = "#E11919";
-  ctx.lineWidth = 8;
-  roundedRect(ctx, 0, 0, 560, 92, 46);
+  ctx.lineWidth = 5;
+  roundedRect(ctx, 0, 0, 340, 70, 35);
   ctx.fill();
   ctx.stroke();
 
   ctx.shadowColor = "transparent";
   ctx.strokeStyle = "rgba(225,25,25,0.16)";
-  ctx.lineWidth = 10;
-  roundedRect(ctx, -6, -6, 572, 104, 52);
+  ctx.lineWidth = 8;
+  roundedRect(ctx, -5, -5, 350, 80, 40);
   ctx.stroke();
 
-  drawText(ctx, stamp, 280, 57, {
-    font: "900 34px Arial, sans-serif",
-    fillStyle: "#E11919",
-    align: "center",
-    baseline: "middle",
-  });
+  drawCenteredStampText(ctx, stamp, 170, 36, 286, fontFamily);
   ctx.restore();
 
   // Portrait panel.
-  roundedRect(ctx, 42, 240, 460, 560, 28);
+  const portraitX = 28;
+  const portraitY = 145;
+  const portraitW = 300;
+  const portraitH = 320;
+
+  roundedRect(ctx, portraitX, portraitY, portraitW, portraitH, 18);
   ctx.fillStyle = "#EDE7DF";
   ctx.fill();
   ctx.strokeStyle = "#DED5CA";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  drawText(ctx, "PORTRAIT", 68, 286, {
-    font: "700 20px Georgia, serif",
+  drawText(ctx, "PORTRAIT", portraitX + 18, portraitY + 30, {
+    font: `700 15px ${serifFamily}`,
     fillStyle: "#9A9288",
   });
 
   const portrait = await loadImage(img);
   if (portrait) {
     ctx.save();
-    roundedRect(ctx, 42, 240, 460, 560, 28);
+    roundedRect(ctx, portraitX, portraitY, portraitW, portraitH, 18);
     ctx.clip();
 
-    const targetW = 430;
-    const targetH = 620;
-    const targetX = 56;
-    const targetY = 218;
+    // Same visual feel as live <img className="h-[145%] bottom-[-18px]" />.
+    const targetH = portraitH * 1.45;
+    const targetW = targetH * (portrait.width / portrait.height);
+    const targetX = portraitX + portraitW / 2 - targetW / 2;
+    const targetY = portraitY + portraitH - targetH - 18;
     ctx.drawImage(portrait, targetX, targetY, targetW, targetH);
     ctx.restore();
   }
 
   // Main result.
-  drawText(ctx, result, 550, 342, {
-    font: "900 72px Arial, sans-serif",
+  const contentX = 360;
+  drawText(ctx, result, contentX, 215, {
+    font: `900 56px ${fontFamily}`,
     fillStyle: getCanvasResultColor(result),
   });
 
-  drawText(ctx, "You lasted", 550, 394, {
-    font: "32px Arial, sans-serif",
-    fillStyle: "#6E655C",
-  });
-  drawText(ctx, String(state.turn), 676, 394, {
-    font: "700 32px Arial, sans-serif",
-    fillStyle: "#F97316",
-  });
-  drawText(ctx, "turns.", 716, 394, {
-    font: "32px Arial, sans-serif",
-    fillStyle: "#6E655C",
-  });
+  // You lasted line, with measured spacing so it does not look broken.
+  const lineY = 255;
+  ctx.font = `500 20px ${fontFamily}`;
+  ctx.fillStyle = "#6E655C";
+  ctx.fillText("You lasted ", contentX, lineY);
+  const lastedWidth = ctx.measureText("You lasted ").width;
 
-  // Stat boxes.
-  const statY = 438;
-  const statW = 248;
-  const statH = 134;
-  const statGap = 24;
+  ctx.font = `800 20px ${fontFamily}`;
+  ctx.fillStyle = "#F97316";
+  ctx.fillText(String(state.turn), contentX + lastedWidth, lineY);
+  const turnWidth = ctx.measureText(String(state.turn)).width;
+
+  ctx.font = `500 20px ${fontFamily}`;
+  ctx.fillStyle = "#6E655C";
+  ctx.fillText(" turns.", contentX + lastedWidth + turnWidth, lineY);
+
+  // Stat boxes match live card order: turns, tired, heater, saves.
+  const statY = 285;
+  const statW = 125;
+  const statH = 74;
+  const statGap = 18;
   const stats = [
     { label: "TURNS", value: state.turn, color: "#F97316" },
-    { label: "BEST", value: bestRun, color: "#1F1C18" },
-    { label: "TIRED", value: state.tired, color: "#DC2626" },
+    { label: "TIRED", value: `${state.tired}/100`, color: "#DC2626" },
+    { label: "HEATER", value: `x${profile?.bestStreak || 1}`, color: "#16A34A" },
     { label: "SAVES", value: profile?.almostSaves || 0, color: "#9333EA" },
   ];
 
   stats.forEach((stat, index) => {
-    const x = 550 + index * (statW + statGap);
-    roundedRect(ctx, x, statY, statW, statH, 18);
+    const x = contentX + index * (statW + statGap);
+    roundedRect(ctx, x, statY, statW, statH, 12);
     ctx.fillStyle = "#EDE7DF";
     ctx.fill();
-    drawText(ctx, stat.label, x + statW / 2, statY + 47, {
-      font: "22px Georgia, serif",
+    drawText(ctx, stat.label, x + statW / 2, statY + 24, {
+      font: `600 11px ${fontFamily}`,
       fillStyle: "#91887E",
       align: "center",
     });
-    drawText(ctx, String(stat.value), x + statW / 2, statY + 94, {
-      font: "900 34px Arial, sans-serif",
+    drawText(ctx, String(stat.value), x + statW / 2, statY + 53, {
+      font: `900 22px ${fontFamily}`,
       fillStyle: stat.color,
       align: "center",
     });
   });
 
   // Player memory.
-  roundedRect(ctx, 550, 598, 1064, 180, 18);
+  roundedRect(ctx, contentX, 378, 690, 86, 12);
   ctx.fillStyle = "#EDE7DF";
   ctx.fill();
 
-  drawText(ctx, "PLAYER MEMORY", 574, 646, {
-    font: "700 22px Georgia, serif",
+  drawText(ctx, "PLAYER MEMORY", contentX + 18, 408, {
+    font: `700 13px ${serifFamily}`,
     fillStyle: "#91887E",
   });
-  drawText(ctx, profile?.type || "balanced", 574, 698, {
-    font: "900 34px Arial, sans-serif",
+  drawText(ctx, profile?.type || "balanced", contentX + 18, 438, {
+    font: `900 20px ${fontFamily}`,
     fillStyle: "#1F1C18",
   });
-  drawText(ctx, profile?.description || "you kept going", 574, 744, {
-    font: "30px Arial, sans-serif",
+  drawText(ctx, profile?.description || "you kept going", contentX + 18, 462, {
+    font: `500 18px ${fontFamily}`,
     fillStyle: "#6E655C",
   });
 
-  drawText(ctx, "I almost made it. Next run might be the one.", 550, 838, {
-    font: "italic 32px Georgia, serif",
+  drawText(ctx, "I almost made it. Next run might be the one.", contentX, 505, {
+    font: `italic 21px ${serifFamily}`,
     fillStyle: "#746A60",
   });
 
@@ -361,7 +392,6 @@ export default function GameOverOverlay({
     try {
       const blob = await createCardPng({
         state,
-        bestRun,
         profile,
         result,
         img,
