@@ -24,6 +24,8 @@ type ResolvedMode = {
   type: "idle" | "thinking" | "win" | "winSmall" | "lose" | "loseSmall" | "rekt" | "glitch";
 };
 
+type IdleVariant = "neutral" | "blink" | "lookaway" | "sigh" | "leanChoose";
+
 function resolveMode(state: string): ResolvedMode {
   switch (state) {
     case "thinking":
@@ -118,17 +120,21 @@ function resolveMode(state: string): ResolvedMode {
   }
 }
 
-function getIdleFaceVariant(
-  baseFace: string,
-  idleVariant: "neutral" | "blink" | "lookaway" | "sigh"
-) {
-  // Idle variants should keep happening even when the base state is stressed
-  // or looking away. That makes TOW feel alive instead of locked into a pose.
-  if (baseFace === "win" || baseFace === "winSmall" || baseFace === "lose" || baseFace === "loseSmall" || baseFace === "rekt" || baseFace === "shock" || baseFace === "confused") {
+function getIdleFaceVariant(baseFace: string, idleVariant: IdleVariant) {
+  if (
+    baseFace === "win" ||
+    baseFace === "winSmall" ||
+    baseFace === "lose" ||
+    baseFace === "loseSmall" ||
+    baseFace === "rekt" ||
+    baseFace === "shock" ||
+    baseFace === "confused"
+  ) {
     return baseFace;
   }
 
-  if (idleVariant === "neutral") return baseFace;
+  if (idleVariant === "neutral" || idleVariant === "leanChoose") return baseFace;
+
   return idleVariant;
 }
 
@@ -148,9 +154,7 @@ export default function TowCharacter({
 
   const isIdleState = mode.type === "idle";
 
-  const [idleVariant, setIdleVariant] = useState<
-    "neutral" | "blink" | "lookaway" | "sigh"
-  >("neutral");
+  const [idleVariant, setIdleVariant] = useState<IdleVariant>("neutral");
 
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,25 +173,35 @@ export default function TowCharacter({
     const scheduleNextIdleBeat = () => {
       if (cancelled) return;
 
-      const nextDelay = urgency > 0.7 ? 650 + Math.random() * 900 : 850 + Math.random() * 1500;
+      // More frequent idle beats = more alive.
+      const nextDelay =
+        urgency > 0.7
+          ? 420 + Math.random() * 700
+          : urgency > 0.4
+          ? 520 + Math.random() * 850
+          : 650 + Math.random() * 950;
 
       idleTimerRef.current = setTimeout(() => {
         if (cancelled) return;
 
         const roll = Math.random();
-        let nextVariant: "neutral" | "blink" | "lookaway" | "sigh" = "blink";
+        let nextVariant: IdleVariant = "blink";
 
+        // Blink often. Lean-choose also appears often to create life.
         if (urgency > 0.72) {
           if (roll < 0.42) nextVariant = "blink";
-          else if (roll < 0.78) nextVariant = "lookaway";
+          else if (roll < 0.72) nextVariant = "leanChoose";
+          else if (roll < 0.9) nextVariant = "lookaway";
           else nextVariant = "sigh";
         } else if (urgency > 0.4) {
-          if (roll < 0.56) nextVariant = "blink";
-          else if (roll < 0.9) nextVariant = "lookaway";
+          if (roll < 0.5) nextVariant = "blink";
+          else if (roll < 0.78) nextVariant = "leanChoose";
+          else if (roll < 0.93) nextVariant = "lookaway";
           else nextVariant = "sigh";
         } else {
-          if (roll < 0.58) nextVariant = "blink";
-          else if (roll < 0.9) nextVariant = "lookaway";
+          if (roll < 0.55) nextVariant = "blink";
+          else if (roll < 0.78) nextVariant = "leanChoose";
+          else if (roll < 0.92) nextVariant = "lookaway";
           else nextVariant = "sigh";
         }
 
@@ -195,10 +209,12 @@ export default function TowCharacter({
 
         const holdMs =
           nextVariant === "blink"
-            ? 140
+            ? 115
+            : nextVariant === "leanChoose"
+            ? 700
             : nextVariant === "sigh"
-            ? 780
-            : 620;
+            ? 760
+            : 520;
 
         resetTimerRef.current = setTimeout(() => {
           if (cancelled) return;
@@ -218,12 +234,25 @@ export default function TowCharacter({
     };
   }, [isIdleState, urgency]);
 
+  const finalPose = useMemo<"idle" | "lean">(() => {
+    if (isIdleState && idleVariant === "leanChoose") return "lean";
+    return mode.pose;
+  }, [isIdleState, idleVariant, mode.pose]);
+
+  const finalBase = useMemo(() => {
+    if (isIdleState && idleVariant === "leanChoose") {
+      return "base-lean-phone-choose";
+    }
+
+    return mode.base;
+  }, [isIdleState, idleVariant, mode.base]);
+
   const finalFace = useMemo(() => {
     return getIdleFaceVariant(mode.face, idleVariant);
   }, [mode.face, idleVariant]);
 
-  const baseFile = `${mode.base}.png`;
-  const faceFile = `face-${mode.pose}-${finalFace}.png`;
+  const baseFile = `${finalBase}.png`;
+  const faceFile = `face-${finalPose}-${finalFace}.png`;
   const vfxFile = mode.vfx ? `${mode.vfx}.png` : null;
 
   const idleScale = 1 + urgency * 0.015;
@@ -276,11 +305,22 @@ export default function TowCharacter({
       style={{ width, height, position: "relative" }}
       animate={{
         y: mode.type === "idle" ? [0, -4, 0] : 0,
-        rotate: mode.type === "idle" ? [0, urgency > 0.65 ? -0.45 : -0.18, 0.18, 0] : 0,
+        rotate:
+          mode.type === "idle"
+            ? [0, urgency > 0.65 ? -0.45 : -0.18, 0.18, 0]
+            : 0,
       }}
       transition={{
-        y: { duration: urgency > 0.7 ? 2.2 : 3.4, repeat: Infinity, ease: "easeInOut" },
-        rotate: { duration: urgency > 0.7 ? 2.4 : 4.2, repeat: Infinity, ease: "easeInOut" },
+        y: {
+          duration: urgency > 0.7 ? 2.2 : 3.4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        },
+        rotate: {
+          duration: urgency > 0.7 ? 2.4 : 4.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        },
       }}
     >
       <motion.div
