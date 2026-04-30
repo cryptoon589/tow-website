@@ -35,8 +35,8 @@ export default function HeroSection() {
             Tired now. Tired of winning later.
           </p>
 
-          {/* Smaller image + much less bottom margin */}
-          <div className="mb-1 aspect-square w-full max-w-[340px] overflow-hidden rounded-2xl bg-white md:max-w-[390px] lg:max-w-[430px]">
+          {/* Much smaller image so buttons can rise */}
+          <div className="mb-0 aspect-square w-full max-w-[250px] overflow-hidden rounded-2xl bg-white md:max-w-[300px] lg:max-w-[340px]">
             <img
               src={heroImages[index]}
               alt="TOW Character"
@@ -44,8 +44,8 @@ export default function HeroSection() {
             />
           </div>
 
-          {/* Pull buttons upward */}
-          <div className="-mt-6 flex flex-wrap gap-3 md:-mt-8">
+          {/* Aggressive pull upward */}
+          <div className="-mt-14 flex flex-wrap gap-3 md:-mt-16 lg:-mt-20">
             <Link
               href="/meme-generator"
               className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
