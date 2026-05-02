@@ -9,6 +9,8 @@ const heroImages = [
   "/assets/characters/hero-2.png",
   "/assets/characters/hero-3.png",
   "/assets/characters/hero-4.png",
+  "/assets/characters/hero-5.png",
+  "/assets/characters/hero-6.png",
 ];
 
 export default function HeroSection() {
