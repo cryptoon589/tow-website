@@ -30,4 +30,16 @@ export const nfts: NFTItem[] = [
     image: "/assets/nfts/4.png",
     url: "https://xrp.cafe/nft/YOUR_ID",
   },
+  {
+    id: "5",
+    name: "TOW #5",
+    image: "/assets/nfts/5.png",
+    url: "https://xrp.cafe/nft/YOUR_ID",
+  },
+  {
+    id: "6",
+    name: "TOW #6",
+    image: "/assets/nfts/6.png",
+    url: "https://xrp.cafe/nft/YOUR_ID",
+  },
 ];
