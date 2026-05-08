@@ -12,7 +12,7 @@ export default function NFTCollectionPage() {
           <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-10 items-center">
             <div className="w-full max-w-[400px] mx-auto">
               <img
-                src="public/assets/nft/preview.png"
+                src="assets/nft/preview.png"
                 className="w-full h-auto border border-black/20 rounded-lg shadow-sm"
               />
             </div>
