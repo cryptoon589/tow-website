@@ -9,7 +9,7 @@ export default function NFTCarousel() {
   }, []);
 
   return (
-    <div className="mt-12">
+    <div className="-mt-4">
       <h3 className="text-2xl font-bold mb-6">Some are more tired than others.</h3>
 
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">

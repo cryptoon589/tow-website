@@ -23,12 +23,12 @@ export default function MemeTemplateGrid() {
           </div>
 
           <div className="order-1 md:order-2">
-            <div className="mx-auto aspect-square w-full max-w-[460px] overflow-hidden rounded-xl border-2 border-black bg-white shadow-sm">
+            <div className="mx-auto w-full max-w-[520px]">
               <img
                 src="/assets/memes/preview.png"
                 alt="TOW meme generator preview"
-                className="h-full w-full object-cover"
-              />
+                className="h-auto w-full object-contain"
+                />
             </div>
           </div>
         </div>

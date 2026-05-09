@@ -37,7 +37,7 @@ export default function HeroSection() {
           </p>
 
           <div className="flex flex-col items-center md:items-start">
-            <div className="mb-2 aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-white md:max-w-[340px] lg:max-w-[380px]">
+            <div className="mb-1 aspect-square w-full max-w-[210px] overflow-hidden rounded-2xl bg-white md:max-w-[250px] lg:max-w-[290px]">
               <img
                 src={heroImages[index]}
                 alt="TOW Character"
@@ -45,7 +45,7 @@ export default function HeroSection() {
               />
             </div>
 
-            <div className="mt-2 flex flex-wrap justify-center gap-3 md:justify-start">
+            <div className="mt-0 flex flex-wrap justify-center gap-3 md:justify-start">
               <Link
                 href="/meme-generator"
                 className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"

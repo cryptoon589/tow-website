@@ -9,6 +9,36 @@ import {
 
 type TextPosition = "left" | "center" | "right";
 
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+) {
+  const manualLines = text.split("\n");
+  const lines: string[] = [];
+
+  manualLines.forEach((manualLine) => {
+    const words = manualLine.split(" ");
+    let line = "";
+
+    words.forEach((word) => {
+      const testLine = line ? `${line} ${word}` : word;
+      const width = ctx.measureText(testLine).width;
+
+      if (width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = testLine;
+      }
+    });
+
+    lines.push(line);
+  });
+
+  return lines;
+}
+
 export default function MemeEditor() {
   const [category, setCategory] = useState<MemeCategory>(memeCategories[0]);
   const [template, setTemplate] = useState<MemeTemplate>(
@@ -21,6 +51,7 @@ export default function MemeEditor() {
   const [status, setStatus] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   const suggestions = [
     ["when chart dips", "still holding"],
@@ -57,10 +88,14 @@ export default function MemeEditor() {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       template.textFields.forEach((f) => {
-        const txt = texts[f.id] || "";
-        const display = upper ? txt.toUpperCase() : txt;
+        const rawText = texts[f.id] || "";
+        const display = upper ? rawText.toUpperCase() : rawText;
 
         const padding = Math.max(28, canvas.width * 0.06);
+        const maxWidth = Math.min(
+          f.maxWidth || canvas.width * 0.82,
+          canvas.width - padding * 2
+        );
 
         const x =
           textPosition === "left"
@@ -77,8 +112,15 @@ export default function MemeEditor() {
         ctx.textBaseline = "middle";
         ctx.lineJoin = "round";
 
-        ctx.strokeText(display, x, f.y);
-        ctx.fillText(display, x, f.y);
+        const lines = wrapText(ctx, display, maxWidth);
+        const lineHeight = size * 1.08;
+        const startY = f.y - ((lines.length - 1) * lineHeight) / 2;
+
+        lines.forEach((line, index) => {
+          const y = startY + index * lineHeight;
+          ctx.strokeText(line, x, y);
+          ctx.fillText(line, x, y);
+        });
       });
     };
 
@@ -122,8 +164,15 @@ export default function MemeEditor() {
     setTemplate(cat.templates[0]);
   };
 
+  const scrollCarousel = (direction: "left" | "right") => {
+    carouselRef.current?.scrollBy({
+      left: direction === "left" ? -240 : 240,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div>
         <h3 className="mb-2 text-lg font-bold">Choose Category</h3>
         <div className="flex flex-wrap gap-3">
@@ -143,40 +192,61 @@ export default function MemeEditor() {
         </div>
       </div>
 
-      <div>
-  <h3 className="mb-2 text-lg font-bold">Choose Variation</h3>
+      <div className="-mt-1">
+        <h3 className="mb-2 text-lg font-bold">Choose Variation</h3>
 
-  <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
-    {category.templates.map((t) => (
-      <button
-        key={t.id}
-        onClick={() => setTemplate(t)}
-        className={`min-w-[180px] snap-start overflow-hidden rounded-lg border-2 transition-all md:min-w-[230px] ${
-          template.id === t.id
-            ? "scale-[1.02] border-black bg-gray-100"
-            : "border-gray-300 bg-white hover:scale-[1.02] hover:border-black"
-        }`}
-      >
-        <div className="aspect-square">
-          <img
-            src={t.imagePath}
-            alt={t.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => scrollCarousel("left")}
+            className="absolute left-1 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black px-3 py-2 text-xl font-black text-white shadow-xl transition hover:scale-110"
+          >
+            ←
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollCarousel("right")}
+            className="absolute right-1 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black px-3 py-2 text-xl font-black text-white shadow-xl transition hover:scale-110"
+          >
+            →
+          </button>
+
+          <div
+            ref={carouselRef}
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-10 pb-2"
+          >
+            {category.templates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTemplate(t)}
+                className={`min-w-[160px] snap-start overflow-hidden rounded-lg border-2 bg-white transition-all md:min-w-[190px] ${
+                  template.id === t.id
+                    ? "border-black bg-gray-100"
+                    : "border-gray-300 hover:border-black"
+                }`}
+              >
+                <div className="aspect-square overflow-hidden">
+                  <img
+                    src={t.imagePath}
+                    alt={t.name}
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+
+                <div className="border-t border-gray-200 bg-white py-1 text-xs font-bold">
+                  {t.name}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <div className="border-t border-gray-200 bg-white py-2 text-xs font-bold">
-          {t.name}
-        </div>
-      </button>
-    ))}
-  </div>
-</div>
-
-      <div className="grid items-start gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid items-start gap-8 pt-3 lg:grid-cols-[420px_minmax(0,1fr)]">
         <div>
           <h3 className="mb-2 text-lg font-bold">Preview</h3>
           <div className="inline-block rounded-lg border border-black/20 bg-white p-4 shadow-sm">
@@ -201,13 +271,13 @@ export default function MemeEditor() {
                 <label className="mb-2 block text-sm font-medium">
                   {f.label}
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={texts[f.id] || ""}
                   onChange={(e) =>
                     setTexts((p) => ({ ...p, [f.id]: e.target.value }))
                   }
-                  className="w-full rounded border-2 border-black px-4 py-2"
+                  rows={2}
+                  className="w-full resize-y rounded border-2 border-black px-4 py-2"
                 />
               </div>
             ))}
