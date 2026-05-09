@@ -114,7 +114,7 @@ function createSoundEngine() {
   const tone = (
     freq: number,
     duration = 0.08,
-    gain = 0.018,
+    gain = 0.026,
     type: OscillatorType = "sine",
     delayTime = 0,
     endFreq?: number
@@ -140,7 +140,7 @@ function createSoundEngine() {
 
     filter.type = "lowpass";
     filter.frequency.value =
-      type === "sawtooth" || type === "square" ? 1200 : 2400;
+      type === "sawtooth" || type === "square" ? 1450 : 2600;
 
     amp.gain.value = 0;
 
@@ -156,7 +156,7 @@ function createSoundEngine() {
     osc.stop(now + duration + 0.03);
   };
 
-  const noise = (duration = 0.08, gain = 0.016, delayTime = 0) => {
+  const noise = (duration = 0.08, gain = 0.026, delayTime = 0) => {
     const audio = getCtx();
     if (!audio) return;
 
@@ -177,7 +177,7 @@ function createSoundEngine() {
     const filter = audio.createBiquadFilter();
 
     filter.type = "bandpass";
-    filter.frequency.value = 760;
+    filter.frequency.value = 780;
     amp.gain.value = gain;
 
     source.buffer = buffer;
@@ -225,15 +225,15 @@ function createSoundEngine() {
         0.12
       );
       ambient.amp.gain.setTargetAtTime(
-        0.0015 + pressure * 0.005,
+        0.0025 + pressure * 0.007,
         audio.currentTime,
         0.1
       );
     },
 
     tap() {
-      tone(190, 0.035, 0.012, "triangle", 0, 120);
-      tone(420, 0.025, 0.008, "sine", 0.025);
+      tone(190, 0.04, 0.024, "triangle", 0, 120);
+      tone(420, 0.03, 0.016, "sine", 0.025);
     },
 
     tick(msLeft: number) {
@@ -243,16 +243,16 @@ function createSoundEngine() {
       lastTick = now;
 
       if (msLeft < 1000) {
-        tone(920, 0.026, 0.018, "square", 0, 640);
+        tone(920, 0.03, 0.034, "square", 0, 640);
         return;
       }
 
-      tone(msLeft < 2200 ? 760 : 540, 0.024, 0.011, "square");
+      tone(msLeft < 2200 ? 760 : 540, 0.026, 0.022, "square");
     },
 
     tension() {
-      tone(110, 0.09, 0.012, "triangle", 0, 150);
-      tone(176, 0.07, 0.008, "sine", 0.07, 220);
+      tone(110, 0.1, 0.024, "triangle", 0, 150);
+      tone(176, 0.08, 0.018, "sine", 0.07, 220);
     },
 
     tiredShift(delta: number) {
@@ -262,48 +262,48 @@ function createSoundEngine() {
       lastTiredShift = now;
 
       if (delta > 0) {
-        tone(155, 0.07, 0.014, "sawtooth", 0, 95);
-        tone(82, 0.09, 0.009, "triangle", 0.04);
+        tone(155, 0.08, 0.03, "sawtooth", 0, 95);
+        tone(82, 0.1, 0.02, "triangle", 0.04);
       } else if (delta < 0) {
-        tone(330, 0.055, 0.012, "sine");
-        tone(495, 0.08, 0.01, "triangle", 0.045);
+        tone(330, 0.06, 0.026, "sine");
+        tone(495, 0.09, 0.022, "triangle", 0.045);
       }
     },
 
     win(big = false) {
-      tone(392, 0.07, 0.016, "sine");
-      tone(big ? 659 : 523, 0.09, 0.017, "triangle", 0.06);
-      tone(big ? 880 : 659, 0.12, 0.014, "sine", 0.14);
+      tone(392, 0.08, 0.032, "sine");
+      tone(big ? 659 : 523, 0.1, 0.034, "triangle", 0.06);
+      tone(big ? 880 : 659, 0.13, 0.028, "sine", 0.14);
     },
 
     closeCall() {
-      tone(260, 0.05, 0.013, "sawtooth", 0, 180);
-      tone(340, 0.05, 0.011, "triangle", 0.055);
-      tone(220, 0.11, 0.011, "sine", 0.13);
+      tone(260, 0.055, 0.03, "sawtooth", 0, 180);
+      tone(340, 0.055, 0.026, "triangle", 0.055);
+      tone(220, 0.12, 0.024, "sine", 0.13);
     },
 
     lose() {
-      tone(170, 0.09, 0.017, "square", 0, 115);
-      tone(95, 0.16, 0.012, "triangle", 0.08);
+      tone(170, 0.1, 0.035, "square", 0, 115);
+      tone(95, 0.17, 0.027, "triangle", 0.08);
     },
 
     rekt() {
-      noise(0.14, 0.018);
-      tone(90, 0.18, 0.023, "sawtooth", 0, 55);
-      tone(55, 0.24, 0.014, "square", 0.08);
+      noise(0.15, 0.035);
+      tone(90, 0.2, 0.044, "sawtooth", 0, 55);
+      tone(55, 0.26, 0.03, "square", 0.08);
     },
 
     glitch() {
-      noise(0.07, 0.014);
-      tone(740, 0.025, 0.012, "square");
-      tone(420, 0.025, 0.012, "sawtooth", 0.035);
-      tone(980, 0.02, 0.009, "square", 0.07);
+      noise(0.08, 0.036);
+      tone(740, 0.03, 0.03, "square");
+      tone(420, 0.03, 0.028, "sawtooth", 0.035);
+      tone(980, 0.025, 0.024, "square", 0.07);
     },
 
     gameOver() {
-      tone(220, 0.12, 0.017, "triangle", 0, 180);
-      tone(150, 0.14, 0.014, "triangle", 0.13, 110);
-      tone(95, 0.24, 0.012, "sine", 0.28, 60);
+      tone(220, 0.13, 0.034, "triangle", 0, 180);
+      tone(150, 0.15, 0.03, "triangle", 0.13, 110);
+      tone(95, 0.26, 0.025, "sine", 0.28, 60);
     },
   };
 }
@@ -324,7 +324,7 @@ function createMusicEngine() {
   const ensure = () => {
     if (typeof window === "undefined") return;
 
-    tiredLoop ??= makeLoop("/audio/tired-loop.mp3", 0.1);
+    tiredLoop ??= makeLoop("/audio/tired-loop.mp3", 0.055);
     pressureLoop ??= makeLoop("/audio/pressure-loop.mp3", 0);
     glitchLoop ??= makeLoop("/audio/glitch-loop.mp3", 0);
   };
@@ -360,13 +360,14 @@ function createMusicEngine() {
       const urgency = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
       const pressure = Math.max(tired / 100, urgency);
 
-      const mainVolume = isGameOver ? 0.045 : 0.1;
+      const mainVolume = isGameOver ? 0.025 : 0.055;
+
       const pressureVolume =
-        phase === "choosing" && pressure > 0.62
-          ? Math.min(0.14, (pressure - 0.62) * 0.35)
+        phase === "choosing" && pressure > 0.42
+          ? Math.min(0.22, 0.045 + (pressure - 0.42) * 0.45)
           : 0;
 
-      const glitchVolume = isGlitch ? 0.16 : 0;
+      const glitchVolume = isGlitch ? 0.26 : 0;
 
       setVolume(tiredLoop, mainVolume);
       setVolume(pressureLoop, pressureVolume);
