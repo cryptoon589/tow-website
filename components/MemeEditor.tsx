@@ -7,6 +7,8 @@ import {
   MemeTemplate,
 } from "@/config/memeTemplates";
 
+type TextPosition = "left" | "center" | "right";
+
 export default function MemeEditor() {
   const [category, setCategory] = useState<MemeCategory>(memeCategories[0]);
   const [template, setTemplate] = useState<MemeTemplate>(
@@ -15,6 +17,7 @@ export default function MemeEditor() {
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [size, setSize] = useState(48);
   const [upper, setUpper] = useState(true);
+  const [textPosition, setTextPosition] = useState<TextPosition>("left");
   const [status, setStatus] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,15 +60,25 @@ export default function MemeEditor() {
         const txt = texts[f.id] || "";
         const display = upper ? txt.toUpperCase() : txt;
 
-        ctx.font = `bold ${size}px Arial, sans-serif`;
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 4;
-        ctx.textAlign = f.align || "center";
-        ctx.textBaseline = "middle";
+        const padding = Math.max(28, canvas.width * 0.06);
 
-        ctx.strokeText(display, f.x, f.y);
-        ctx.fillText(display, f.x, f.y);
+        const x =
+          textPosition === "left"
+            ? padding
+            : textPosition === "right"
+            ? canvas.width - padding
+            : canvas.width / 2;
+
+        ctx.font = `900 ${size}px Arial, sans-serif`;
+        ctx.fillStyle = "#000000";
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = Math.max(4, size * 0.09);
+        ctx.textAlign = textPosition;
+        ctx.textBaseline = "middle";
+        ctx.lineJoin = "round";
+
+        ctx.strokeText(display, x, f.y);
+        ctx.fillText(display, x, f.y);
       });
     };
 
@@ -80,7 +93,7 @@ export default function MemeEditor() {
       ctx.textBaseline = "middle";
       ctx.fillText(template.name, canvas.width / 2, canvas.height / 2);
     };
-  }, [template, texts, size, upper]);
+  }, [template, texts, size, upper, textPosition]);
 
   const randomizeText = () => {
     const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
@@ -110,15 +123,15 @@ export default function MemeEditor() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
-        <h3 className="font-bold text-lg mb-4">Choose Category</h3>
+        <h3 className="mb-2 text-lg font-bold">Choose Category</h3>
         <div className="flex flex-wrap gap-3">
           {memeCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => switchCategory(cat)}
-              className={`px-4 py-2 border-2 rounded font-bold transition ${
+              className={`rounded border-2 px-4 py-2 font-bold transition ${
                 category.id === cat.id
                   ? "border-black bg-black text-white"
                   : "border-gray-300 bg-white text-black hover:border-black"
@@ -131,57 +144,61 @@ export default function MemeEditor() {
       </div>
 
       <div>
-        <h3 className="font-bold text-lg mb-4">Choose Variation</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {category.templates.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTemplate(t)}
-              className={`aspect-square border-2 rounded-lg overflow-hidden transition-all ${
-                template.id === t.id
-                  ? "border-black scale-[1.02] bg-gray-100"
-                  : "border-gray-300 hover:border-black hover:scale-[1.02]"
-              }`}
-            >
-              <img
-                src={t.imagePath}
-                alt={t.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              <div className="text-xs py-2 bg-white border-t border-gray-200">
-                {t.name}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+  <h3 className="mb-2 text-lg font-bold">Choose Variation</h3>
 
-      <div className="grid lg:grid-cols-[420px_minmax(0,1fr)] gap-8 items-start">
+  <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
+    {category.templates.map((t) => (
+      <button
+        key={t.id}
+        onClick={() => setTemplate(t)}
+        className={`min-w-[180px] snap-start overflow-hidden rounded-lg border-2 transition-all md:min-w-[230px] ${
+          template.id === t.id
+            ? "scale-[1.02] border-black bg-gray-100"
+            : "border-gray-300 bg-white hover:scale-[1.02] hover:border-black"
+        }`}
+      >
+        <div className="aspect-square">
+          <img
+            src={t.imagePath}
+            alt={t.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+
+        <div className="border-t border-gray-200 bg-white py-2 text-xs font-bold">
+          {t.name}
+        </div>
+      </button>
+    ))}
+  </div>
+</div>
+
+      <div className="grid items-start gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
         <div>
-          <h3 className="font-bold text-lg mb-4">Preview</h3>
-          <div className="bg-white border border-black/20 rounded-lg p-4 shadow-sm inline-block">
+          <h3 className="mb-2 text-lg font-bold">Preview</h3>
+          <div className="inline-block rounded-lg border border-black/20 bg-white p-4 shadow-sm">
             <canvas
               ref={canvasRef}
-              className="w-full h-auto max-w-[360px]"
+              className="h-auto w-full max-w-[360px]"
               style={{ width: "100%", height: "auto" }}
             />
           </div>
         </div>
 
         <div>
-          <h3 className="font-bold text-lg mb-4">Edit Text</h3>
+          <h3 className="mb-2 text-lg font-bold">Edit Text</h3>
 
-          <div className="space-y-4 max-w-xl">
+          <div className="max-w-xl space-y-4">
             <button onClick={randomizeText} className="text-sm underline">
               feeling tired? generate text
             </button>
 
             {template.textFields.map((f) => (
               <div key={f.id}>
-                <label className="block text-sm font-medium mb-2">
+                <label className="mb-2 block text-sm font-medium">
                   {f.label}
                 </label>
                 <input
@@ -190,13 +207,36 @@ export default function MemeEditor() {
                   onChange={(e) =>
                     setTexts((p) => ({ ...p, [f.id]: e.target.value }))
                   }
-                  className="w-full px-4 py-2 border-2 border-black rounded"
+                  className="w-full rounded border-2 border-black px-4 py-2"
                 />
               </div>
             ))}
 
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="mb-2 block text-sm font-medium">
+                Text Position
+              </label>
+
+              <div className="grid grid-cols-3 gap-2">
+                {(["left", "center", "right"] as TextPosition[]).map((pos) => (
+                  <button
+                    key={pos}
+                    type="button"
+                    onClick={() => setTextPosition(pos)}
+                    className={`rounded border-2 px-4 py-2 text-sm font-bold capitalize transition ${
+                      textPosition === pos
+                        ? "border-black bg-black text-white"
+                        : "border-black bg-white text-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">
                 Size: {size}px
               </label>
               <input
@@ -221,7 +261,7 @@ export default function MemeEditor() {
 
             <button
               onClick={download}
-              className="px-8 py-4 border-2 border-black bg-white text-black font-bold rounded-lg hover:bg-black hover:text-white active:scale-95 transition"
+              className="rounded-lg border-2 border-black bg-white px-8 py-4 font-bold text-black transition hover:bg-black hover:text-white active:scale-95"
             >
               Download Meme
             </button>

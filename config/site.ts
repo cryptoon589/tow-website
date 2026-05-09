@@ -23,9 +23,9 @@ export const navItems = [
   { label: "Home", href: "/" },
   { label: "Play Game", href: "/play" },
   { label: "Make Memes", href: "/meme-generator" },
-  { label: "Tired Together", href: "/tired-counter" },
   { label: "Everyone's Tired", href: "/raid-board" },
   { label: "NFTs", href: "/nft-collection" },
+  { label: "Tired Together", href: "/tired-counter" },
   { label: "Links", href: "/links" },
 ];
 

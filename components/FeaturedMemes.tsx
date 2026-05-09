@@ -1,11 +1,40 @@
-import { featuredMemes } from "@/config/featuredMemes";
+"use client";
+
+const featuredMemes = [
+  "/assets/memes/featured/featured-1.png",
+  "/assets/memes/featured/featured-2.png",
+  "/assets/memes/featured/featured-3.png",
+  "/assets/memes/featured/featured-4.png",
+  "/assets/memes/featured/featured-5.png",
+  "/assets/memes/featured/featured-6.png",
+];
+
 export default function FeaturedMemes() {
   return (
-    <section className="py-16 md:py-24 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-12"><h2 className="text-3xl md:text-4xl font-bold mb-4">Featured Memes</h2><p className="text-lg text-gray-600">Community favorites. Or just ones we liked.</p></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {featuredMemes.map((m) => (<div key={m.id} className="aspect-square bg-white border-2 border-black rounded-lg overflow-hidden"><img src={m.imagePath} alt={m.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /></div>))}
+    <section className="bg-gray-50 py-12 md:py-16">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="mb-8 text-center">
+          <h2 className="mb-3 text-3xl font-bold md:text-4xl">
+            Featured Memes
+          </h2>
+          <p className="text-lg text-gray-600">
+            Community favorites. Or just ones we liked.
+          </p>
+        </div>
+
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+          {featuredMemes.map((src, index) => (
+            <div
+              key={src}
+              className="min-w-[260px] snap-start overflow-hidden rounded-xl border-2 border-black bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg md:min-w-[320px]"
+            >
+              <img
+                src={src}
+                alt={`Featured TOW meme ${index + 1}`}
+                className="h-[260px] w-full object-cover md:h-[320px]"
+              />
+            </div>
+          ))}
         </div>
       </div>
     </section>

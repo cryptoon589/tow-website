@@ -10,7 +10,6 @@ const heroImages = [
   "/assets/characters/hero-3.png",
   "/assets/characters/hero-4.png",
   "/assets/characters/hero-5.png",
-  "/assets/characters/hero-6.png",
 ];
 
 export default function HeroSection() {
@@ -37,36 +36,37 @@ export default function HeroSection() {
             Tired now. Tired of winning later.
           </p>
 
-          {/* Much smaller image so buttons can rise */}
-          <div className="mb-2 aspect-square w-full max-w-[190px] overflow-hidden rounded-2xl bg-white md:max-w-[240px] lg:max-w-[290px]">
-            <img
-              src={heroImages[index]}
-              alt="TOW Character"
-              className="h-full w-full object-contain transition-opacity duration-500"
-            />
-          </div>
+          <div className="flex flex-col items-center md:items-start">
+            <div className="mb-2 aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-white md:max-w-[340px] lg:max-w-[380px]">
+              <img
+                src={heroImages[index]}
+                alt="TOW Character"
+                className="h-full w-full object-contain transition-opacity duration-500"
+              />
+            </div>
 
-          <div className="mt-2 flex flex-wrap gap-3">
-            <Link
-              href="/meme-generator"
-              className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
-            >
-              Make Memes
-            </Link>
+            <div className="mt-2 flex flex-wrap justify-center gap-3 md:justify-start">
+              <Link
+                href="/meme-generator"
+                className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
+              >
+                Make Memes
+              </Link>
 
-            <Link
-              href="/raid-board"
-              className="rounded border-2 border-black px-6 py-3 font-bold transition hover:bg-black hover:text-white"
-            >
-              Everyone&apos;s Tired
-            </Link>
+              <Link
+                href="/raid-board"
+                className="rounded border-2 border-black px-6 py-3 font-bold transition hover:bg-black hover:text-white"
+              >
+                Everyone&apos;s Tired
+              </Link>
 
-            <Link
-              href="/play/start"
-              className="rounded bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
-            >
-              🎮 Play TOW Game
-            </Link>
+              <Link
+                href="/play/start"
+                className="rounded bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
+              >
+                🎮 Play TOW Game
+              </Link>
+            </div>
           </div>
         </div>
 

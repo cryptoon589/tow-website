@@ -1,44 +1,36 @@
 import Link from "next/link";
-import { memeCategories } from "@/config/memeTemplates";
 
 export default function MemeTemplateGrid() {
-  const previewTemplates = memeCategories.flatMap((cat) => cat.templates).slice(0, 4);
-
   return (
     <section className="py-10 md:py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Meme Generator</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Make something tired. Export it. Post it.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <div className="order-2 text-center md:order-1 md:text-left">
+            <h2 className="mb-4 text-3xl font-bold md:text-4xl">
+              Meme Generator
+            </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {previewTemplates.map((t) => (
-            <div
-              key={t.id}
-              className="aspect-square bg-white border border-black/20 rounded-lg overflow-hidden shadow-sm"
+            <p className="mb-6 max-w-xl text-lg text-gray-600">
+              Make something tired. Export it. Post it.
+            </p>
+
+            <Link
+              href="/meme-generator"
+              className="inline-block rounded-lg border-2 border-black bg-white px-8 py-4 font-bold text-black transition hover:bg-black hover:text-white"
             >
+              Open Meme Generator
+            </Link>
+          </div>
+
+          <div className="order-1 md:order-2">
+            <div className="mx-auto aspect-square w-full max-w-[460px] overflow-hidden rounded-xl border-2 border-black bg-white shadow-sm">
               <img
-                src={t.imagePath}
-                alt={t.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
+                src="/assets/memes/preview.png"
+                alt="TOW meme generator preview"
+                className="h-full w-full object-cover"
               />
             </div>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <Link
-            href="/meme-generator"
-            className="inline-block px-8 py-4 border-2 border-black bg-white text-black font-bold rounded-lg hover:bg-black hover:text-white transition"
-          >
-            Open Meme Generator
-          </Link>
+          </div>
         </div>
       </div>
     </section>
