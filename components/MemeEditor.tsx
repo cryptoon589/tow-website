@@ -9,6 +9,19 @@ import {
 
 type TextPosition = "left" | "center" | "right";
 
+type TextPoint = {
+  x: number;
+  y: number;
+};
+
+type TextHitBox = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -49,9 +62,14 @@ export default function MemeEditor() {
   const [upper, setUpper] = useState(true);
   const [textPosition, setTextPosition] = useState<TextPosition>("left");
   const [status, setStatus] = useState<string | null>(null);
+  const [textPoints, setTextPoints] = useState<
+    Record<string, Record<string, TextPoint>>
+  >({});
+  const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const textHitBoxesRef = useRef<TextHitBox[]>([]);
 
   const suggestions = [
     ["when chart dips", "still holding"],
@@ -60,6 +78,26 @@ export default function MemeEditor() {
     ["this was the bottom", "again"],
     ["market destroyed me", "still posting"],
   ];
+
+  const getDefaultX = (canvasWidth: number) => {
+    const padding = Math.max(28, canvasWidth * 0.06);
+
+    if (textPosition === "left") return padding;
+    if (textPosition === "right") return canvasWidth - padding;
+    return canvasWidth / 2;
+  };
+
+  const getCanvasPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
 
   useEffect(() => {
     const nextTexts: Record<string, string> = {};
@@ -87,6 +125,8 @@ export default function MemeEditor() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
+      const nextHitBoxes: TextHitBox[] = [];
+
       template.textFields.forEach((f) => {
         const rawText = texts[f.id] || "";
         const display = upper ? rawText.toUpperCase() : rawText;
@@ -97,12 +137,10 @@ export default function MemeEditor() {
           canvas.width - padding * 2
         );
 
-        const x =
-          textPosition === "left"
-            ? padding
-            : textPosition === "right"
-            ? canvas.width - padding
-            : canvas.width / 2;
+        const savedPoint = textPoints[template.id]?.[f.id];
+
+        const x = savedPoint?.x ?? getDefaultX(canvas.width);
+        const y = savedPoint?.y ?? f.y;
 
         ctx.font = `900 ${size}px Arial, sans-serif`;
         ctx.fillStyle = "#000000";
@@ -114,14 +152,42 @@ export default function MemeEditor() {
 
         const lines = wrapText(ctx, display, maxWidth);
         const lineHeight = size * 1.08;
-        const startY = f.y - ((lines.length - 1) * lineHeight) / 2;
+        const startY = y - ((lines.length - 1) * lineHeight) / 2;
+
+        let widestLine = 0;
 
         lines.forEach((line, index) => {
-          const y = startY + index * lineHeight;
-          ctx.strokeText(line, x, y);
-          ctx.fillText(line, x, y);
+          widestLine = Math.max(widestLine, ctx.measureText(line).width);
+
+          const lineY = startY + index * lineHeight;
+          ctx.strokeText(line, x, lineY);
+          ctx.fillText(line, x, lineY);
+        });
+
+        const boxPadding = 16;
+        const boxWidth = Math.max(widestLine, 80) + boxPadding * 2;
+        const boxHeight = lines.length * lineHeight + boxPadding * 2;
+
+        let boxX = x - boxWidth / 2;
+
+        if (textPosition === "left") {
+          boxX = x - boxPadding;
+        }
+
+        if (textPosition === "right") {
+          boxX = x - boxWidth + boxPadding;
+        }
+
+        nextHitBoxes.push({
+          id: f.id,
+          x: boxX,
+          y: y - boxHeight / 2,
+          width: boxWidth,
+          height: boxHeight,
         });
       });
+
+      textHitBoxesRef.current = nextHitBoxes;
     };
 
     img.onerror = () => {
@@ -135,7 +201,7 @@ export default function MemeEditor() {
       ctx.textBaseline = "middle";
       ctx.fillText(template.name, canvas.width / 2, canvas.height / 2);
     };
-  }, [template, texts, size, upper, textPosition]);
+  }, [template, texts, size, upper, textPosition, textPoints]);
 
   const randomizeText = () => {
     const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
@@ -144,6 +210,14 @@ export default function MemeEditor() {
       top: pick[0],
       bottom: pick[1],
     }));
+  };
+
+  const resetTextPositions = () => {
+    setTextPoints((prev) => {
+      const next = { ...prev };
+      delete next[template.id];
+      return next;
+    });
   };
 
   const download = () => {
@@ -169,6 +243,51 @@ export default function MemeEditor() {
       left: direction === "left" ? -240 : 240,
       behavior: "smooth",
     });
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const point = getCanvasPointer(e);
+    if (!point) return;
+
+    const hitBox = [...textHitBoxesRef.current].reverse().find((box) => {
+      return (
+        point.x >= box.x &&
+        point.x <= box.x + box.width &&
+        point.y >= box.y &&
+        point.y <= box.y + box.height
+      );
+    });
+
+    if (!hitBox) return;
+
+    setDraggingTextId(hitBox.id);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!draggingTextId) return;
+
+    const canvas = canvasRef.current;
+    const point = getCanvasPointer(e);
+
+    if (!canvas || !point) return;
+
+    const padding = 10;
+
+    const x = Math.min(Math.max(point.x, padding), canvas.width - padding);
+    const y = Math.min(Math.max(point.y, padding), canvas.height - padding);
+
+    setTextPoints((prev) => ({
+      ...prev,
+      [template.id]: {
+        ...(prev[template.id] || {}),
+        [draggingTextId]: { x, y },
+      },
+    }));
+  };
+
+  const handlePointerUp = () => {
+    setDraggingTextId(null);
   };
 
   return (
@@ -220,7 +339,7 @@ export default function MemeEditor() {
               <button
                 key={t.id}
                 onClick={() => setTemplate(t)}
-                className={`min-w-[160px] snap-start overflow-hidden rounded-lg border-2 bg-white transition-all md:min-w-[190px] ${
+                className={`w-[160px] flex-none snap-start overflow-hidden rounded-lg border-2 bg-white transition-all md:w-[190px] ${
                   template.id === t.id
                     ? "border-black bg-gray-100"
                     : "border-gray-300 hover:border-black"
@@ -249,10 +368,19 @@ export default function MemeEditor() {
       <div className="grid items-start gap-8 pt-3 lg:grid-cols-[420px_minmax(0,1fr)]">
         <div>
           <h3 className="mb-2 text-lg font-bold">Preview</h3>
+
+          <p className="mb-2 text-xs text-gray-500">
+            Drag text directly on the image to place it anywhere.
+          </p>
+
           <div className="inline-block rounded-lg border border-black/20 bg-white p-4 shadow-sm">
             <canvas
               ref={canvasRef}
-              className="h-auto w-full max-w-[360px]"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+              className="h-auto w-full max-w-[360px] cursor-move touch-none"
               style={{ width: "100%", height: "auto" }}
             />
           </div>
@@ -262,9 +390,15 @@ export default function MemeEditor() {
           <h3 className="mb-2 text-lg font-bold">Edit Text</h3>
 
           <div className="max-w-xl space-y-4">
-            <button onClick={randomizeText} className="text-sm underline">
-              feeling tired? generate text
-            </button>
+            <div className="flex flex-wrap gap-4">
+              <button onClick={randomizeText} className="text-sm underline">
+                feeling tired? generate text
+              </button>
+
+              <button onClick={resetTextPositions} className="text-sm underline">
+                reset text positions
+              </button>
+            </div>
 
             {template.textFields.map((f) => (
               <div key={f.id}>

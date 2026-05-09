@@ -77,7 +77,8 @@ function getRunBeat(
   if (state.phase === "committed") return "checking phone...";
   if (state.phase === "resolving" && kind === "glitch") return "timeline forked";
   if (state.phase === "resolving" && kind === "rekt") return "oh no";
-  if (state.phase === "resolving" && (kind === "win" || kind === "winSmall")) return "somehow alive";
+  if (state.phase === "resolving" && (kind === "win" || kind === "winSmall"))
+    return "somehow alive";
   if (state.phase === "resolving") return "market reacted";
   if (timeLeftMs < 2600) return "pick before it picks for you";
   if (state.memory.almostSaves >= 1) return "you should be gone";
@@ -92,50 +93,70 @@ function getRunBeat(
 function createSoundEngine() {
   let ctx: AudioContext | null = null;
   let lastTick = 0;
+  let lastTiredShift = 0;
   let ambient: { osc: OscillatorNode; amp: GainNode } | null = null;
 
   const getCtx = () => {
     if (typeof window === "undefined") return null;
+
     const AudioContextClass =
       window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
 
     if (!AudioContextClass) return null;
     if (!ctx) ctx = new AudioContextClass();
     if (ctx.state === "suspended") void ctx.resume();
+
     return ctx;
   };
 
   const tone = (
     freq: number,
     duration = 0.08,
-    gain = 0.025,
+    gain = 0.018,
     type: OscillatorType = "sine",
-    delayTime = 0
+    delayTime = 0,
+    endFreq?: number
   ) => {
     const audio = getCtx();
     if (!audio) return;
 
     const osc = audio.createOscillator();
     const amp = audio.createGain();
-
-    osc.type = type;
-    osc.frequency.value = freq;
-    amp.gain.value = 0;
-
-    osc.connect(amp);
-    amp.connect(audio.destination);
+    const filter = audio.createBiquadFilter();
 
     const now = audio.currentTime + delayTime;
-    amp.gain.setValueAtTime(0, now);
-    amp.gain.linearRampToValueAtTime(gain, now + 0.01);
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+
+    if (endFreq) {
+      osc.frequency.exponentialRampToValueAtTime(
+        Math.max(1, endFreq),
+        now + duration
+      );
+    }
+
+    filter.type = "lowpass";
+    filter.frequency.value =
+      type === "sawtooth" || type === "square" ? 1200 : 2400;
+
+    amp.gain.value = 0;
+
+    osc.connect(filter);
+    filter.connect(amp);
+    amp.connect(audio.destination);
+
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.linearRampToValueAtTime(gain, now + 0.008);
     amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     osc.start(now);
-    osc.stop(now + duration + 0.02);
+    osc.stop(now + duration + 0.03);
   };
 
-  const noise = (duration = 0.08, gain = 0.02) => {
+  const noise = (duration = 0.08, gain = 0.016, delayTime = 0) => {
     const audio = getCtx();
     if (!audio) return;
 
@@ -148,18 +169,25 @@ function createSoundEngine() {
     const data = buffer.getChannelData(0);
 
     for (let i = 0; i < data.length; i += 1) {
-      data[i] = (Math.random() * 2 - 1) * 0.7;
+      data[i] = (Math.random() * 2 - 1) * 0.55;
     }
 
     const source = audio.createBufferSource();
     const amp = audio.createGain();
+    const filter = audio.createBiquadFilter();
 
-    source.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.value = 760;
     amp.gain.value = gain;
 
-    source.connect(amp);
+    source.buffer = buffer;
+    source.connect(filter);
+    filter.connect(amp);
     amp.connect(audio.destination);
-    source.start();
+
+    const now = audio.currentTime + delayTime;
+    source.start(now);
+    source.stop(now + duration);
   };
 
   return {
@@ -169,8 +197,10 @@ function createSoundEngine() {
 
       const pressure = Math.max(tired / 100, urgency);
 
-      if (pressure < 0.62) {
-        if (ambient) ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
+      if (pressure < 0.64) {
+        if (ambient) {
+          ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
+        }
         return;
       }
 
@@ -179,7 +209,7 @@ function createSoundEngine() {
         const amp = audio.createGain();
 
         osc.type = "triangle";
-        osc.frequency.value = 44;
+        osc.frequency.value = 42;
         amp.gain.value = 0.0001;
 
         osc.connect(amp);
@@ -189,59 +219,166 @@ function createSoundEngine() {
         ambient = { osc, amp };
       }
 
-      ambient.osc.frequency.setTargetAtTime(42 + pressure * 18, audio.currentTime, 0.12);
-      ambient.amp.gain.setTargetAtTime(0.002 + pressure * 0.006, audio.currentTime, 0.1);
+      ambient.osc.frequency.setTargetAtTime(
+        38 + pressure * 24,
+        audio.currentTime,
+        0.12
+      );
+      ambient.amp.gain.setTargetAtTime(
+        0.0015 + pressure * 0.005,
+        audio.currentTime,
+        0.1
+      );
     },
 
     tap() {
-      tone(220, 0.045, 0.018, "square");
-      tone(440, 0.04, 0.01, "sine", 0.035);
+      tone(190, 0.035, 0.012, "triangle", 0, 120);
+      tone(420, 0.025, 0.008, "sine", 0.025);
     },
 
     tick(msLeft: number) {
       const now = Date.now();
-      if (now - lastTick < 450) return;
+      if (now - lastTick < 430) return;
 
       lastTick = now;
-      tone(msLeft < 1000 ? 740 : 520, 0.035, msLeft < 1000 ? 0.024 : 0.014, "square");
+
+      if (msLeft < 1000) {
+        tone(920, 0.026, 0.018, "square", 0, 640);
+        return;
+      }
+
+      tone(msLeft < 2200 ? 760 : 540, 0.024, 0.011, "square");
     },
 
     tension() {
-      tone(164, 0.11, 0.012, "triangle");
+      tone(110, 0.09, 0.012, "triangle", 0, 150);
+      tone(176, 0.07, 0.008, "sine", 0.07, 220);
+    },
+
+    tiredShift(delta: number) {
+      const now = Date.now();
+      if (now - lastTiredShift < 260) return;
+
+      lastTiredShift = now;
+
+      if (delta > 0) {
+        tone(155, 0.07, 0.014, "sawtooth", 0, 95);
+        tone(82, 0.09, 0.009, "triangle", 0.04);
+      } else if (delta < 0) {
+        tone(330, 0.055, 0.012, "sine");
+        tone(495, 0.08, 0.01, "triangle", 0.045);
+      }
     },
 
     win(big = false) {
-      tone(392, 0.07, 0.022, "sine");
-      tone(big ? 659 : 523, 0.09, 0.024, "sine", 0.055);
-      tone(big ? 784 : 659, 0.11, 0.02, "sine", 0.12);
+      tone(392, 0.07, 0.016, "sine");
+      tone(big ? 659 : 523, 0.09, 0.017, "triangle", 0.06);
+      tone(big ? 880 : 659, 0.12, 0.014, "sine", 0.14);
     },
 
     closeCall() {
-      tone(92, 0.08, 0.02, "sawtooth");
-      tone(523, 0.12, 0.018, "sine", 0.09);
-      tone(784, 0.14, 0.016, "sine", 0.18);
+      tone(260, 0.05, 0.013, "sawtooth", 0, 180);
+      tone(340, 0.05, 0.011, "triangle", 0.055);
+      tone(220, 0.11, 0.011, "sine", 0.13);
     },
 
     lose() {
-      tone(196, 0.09, 0.022, "sawtooth");
-      tone(123, 0.13, 0.018, "triangle", 0.075);
+      tone(170, 0.09, 0.017, "square", 0, 115);
+      tone(95, 0.16, 0.012, "triangle", 0.08);
     },
 
     rekt() {
-      noise(0.13, 0.025);
-      tone(92, 0.22, 0.03, "sawtooth");
+      noise(0.14, 0.018);
+      tone(90, 0.18, 0.023, "sawtooth", 0, 55);
+      tone(55, 0.24, 0.014, "square", 0.08);
     },
 
     glitch() {
-      noise(0.08, 0.018);
-      tone(311, 0.045, 0.02, "square");
-      tone(147, 0.06, 0.018, "square", 0.05);
+      noise(0.07, 0.014);
+      tone(740, 0.025, 0.012, "square");
+      tone(420, 0.025, 0.012, "sawtooth", 0.035);
+      tone(980, 0.02, 0.009, "square", 0.07);
     },
 
     gameOver() {
-      tone(196, 0.12, 0.025, "triangle");
-      tone(147, 0.18, 0.022, "triangle", 0.13);
-      tone(98, 0.22, 0.02, "triangle", 0.28);
+      tone(220, 0.12, 0.017, "triangle", 0, 180);
+      tone(150, 0.14, 0.014, "triangle", 0.13, 110);
+      tone(95, 0.24, 0.012, "sine", 0.28, 60);
+    },
+  };
+}
+
+function createMusicEngine() {
+  let tiredLoop: HTMLAudioElement | null = null;
+  let pressureLoop: HTMLAudioElement | null = null;
+  let glitchLoop: HTMLAudioElement | null = null;
+
+  const makeLoop = (src: string, volume: number) => {
+    const audio = new Audio(src);
+    audio.loop = true;
+    audio.volume = volume;
+    audio.preload = "auto";
+    return audio;
+  };
+
+  const ensure = () => {
+    if (typeof window === "undefined") return;
+
+    tiredLoop ??= makeLoop("/audio/tired-loop.mp3", 0.1);
+    pressureLoop ??= makeLoop("/audio/pressure-loop.mp3", 0);
+    glitchLoop ??= makeLoop("/audio/glitch-loop.mp3", 0);
+  };
+
+  const safePlay = (audio: HTMLAudioElement | null) => {
+    if (!audio) return;
+    void audio.play().catch(() => {});
+  };
+
+  const setVolume = (audio: HTMLAudioElement | null, volume: number) => {
+    if (!audio) return;
+    audio.volume = Math.max(0, Math.min(1, volume));
+  };
+
+  return {
+    start() {
+      ensure();
+      safePlay(tiredLoop);
+      safePlay(pressureLoop);
+      safePlay(glitchLoop);
+    },
+
+    update(
+      tired: number,
+      timeLeftMs: number,
+      choiceWindowMs: number,
+      phase: GameState["phase"],
+      isGameOver: boolean,
+      isGlitch: boolean
+    ) {
+      ensure();
+
+      const urgency = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
+      const pressure = Math.max(tired / 100, urgency);
+
+      const mainVolume = isGameOver ? 0.045 : 0.1;
+      const pressureVolume =
+        phase === "choosing" && pressure > 0.62
+          ? Math.min(0.14, (pressure - 0.62) * 0.35)
+          : 0;
+
+      const glitchVolume = isGlitch ? 0.16 : 0;
+
+      setVolume(tiredLoop, mainVolume);
+      setVolume(pressureLoop, pressureVolume);
+      setVolume(glitchLoop, glitchVolume);
+    },
+
+    stop() {
+      [tiredLoop, pressureLoop, glitchLoop].forEach((audio) => {
+        if (!audio) return;
+        audio.pause();
+        audio.currentTime = 0;
+      });
     },
   };
 }
@@ -289,11 +426,17 @@ function saveProfile(profile: PlayerProfile) {
 }
 
 export default function PlayPage() {
-  const [profile, setProfile] = useState<PlayerProfile>(() => createFreshProfile());
+  const [profile, setProfile] = useState<PlayerProfile>(() =>
+    createFreshProfile()
+  );
   const [bestRun, setBestRun] = useState(0);
-  const [state, setState] = useState<GameState>(() => beginChoosing(createInitialState(0)));
+  const [state, setState] = useState<GameState>(() =>
+    beginChoosing(createInitialState(0))
+  );
   const [hoveredChoiceId, setHoveredChoiceId] = useState<string | null>(null);
-  const [choiceWindowMs, setChoiceWindowMs] = useState(() => getChoiceWindowMs(state.choices));
+  const [choiceWindowMs, setChoiceWindowMs] = useState(() =>
+    getChoiceWindowMs(state.choices)
+  );
   const [timeLeftMs, setTimeLeftMs] = useState(choiceWindowMs);
   const [showOutcome, setShowOutcome] = useState(false);
 
@@ -307,9 +450,15 @@ export default function PlayPage() {
   const stateRef = useRef(state);
   const profileRef = useRef(profile);
   const soundRef = useRef<ReturnType<typeof createSoundEngine> | null>(null);
+  const musicRef = useRef<ReturnType<typeof createMusicEngine> | null>(null);
+  const previousTiredRef = useRef(state.tired);
 
   if (!soundRef.current && typeof window !== "undefined") {
     soundRef.current = createSoundEngine();
+  }
+
+  if (!musicRef.current && typeof window !== "undefined") {
+    musicRef.current = createMusicEngine();
   }
 
   useEffect(() => {
@@ -332,11 +481,37 @@ export default function PlayPage() {
 
   useEffect(() => {
     stateRef.current = state;
-  }, [state]);
+
+    musicRef.current?.update(
+      state.tired,
+      timeLeftMs,
+      choiceWindowMs,
+      state.phase,
+      state.gameOver,
+      state.lastOutcome?.kind === "glitch"
+    );
+  }, [state, timeLeftMs, choiceWindowMs]);
+
+  useEffect(() => {
+    const previous = previousTiredRef.current;
+    const delta = state.tired - previous;
+
+    if (Math.abs(delta) >= 3 && state.phase === "resolving") {
+      soundRef.current?.tiredShift(delta);
+    }
+
+    previousTiredRef.current = state.tired;
+  }, [state.tired, state.phase]);
 
   useEffect(() => {
     profileRef.current = profile;
   }, [profile]);
+
+  useEffect(() => {
+    return () => {
+      musicRef.current?.stop();
+    };
+  }, []);
 
   const market = useMemo(() => getMarketState(state), [state]);
   const characterState = useMemo(() => getCharacterState(state), [state]);
@@ -367,8 +542,19 @@ export default function PlayPage() {
 
       setTimeLeftMs(next);
 
+      const currentState = stateRef.current;
       const urgency = 1 - next / nextWindow;
-      soundRef.current?.setPressure(stateRef.current.tired, urgency);
+
+      soundRef.current?.setPressure(currentState.tired, urgency);
+
+      musicRef.current?.update(
+        currentState.tired,
+        next,
+        nextWindow,
+        currentState.phase,
+        currentState.gameOver,
+        currentState.lastOutcome?.kind === "glitch"
+      );
 
       if (next < 3100 && next > 0) soundRef.current?.tick(next);
       if (next <= 0) window.clearInterval(interval);
@@ -400,15 +586,19 @@ export default function PlayPage() {
       const current = stateRef.current;
       const sound = soundRef.current;
 
-      if (flowRef.current || current.gameOver || current.phase !== "choosing") return;
+      if (flowRef.current || current.gameOver || current.phase !== "choosing")
+        return;
 
       flowRef.current = true;
       setHoveredChoiceId(null);
       setShowOutcome(false);
+      musicRef.current?.start();
       sound?.tap();
 
       const elapsedRatio = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
-      const hesitationPressure = wasAutoPicked ? 1 : Math.max(0, Math.min(1, elapsedRatio));
+      const hesitationPressure = wasAutoPicked
+        ? 1
+        : Math.max(0, Math.min(1, elapsedRatio));
 
       const committed = commitChoice(current, choice.id, wasAutoPicked);
       stateRef.current = committed;
@@ -417,7 +607,11 @@ export default function PlayPage() {
       await delay(180 + Math.random() * 180);
       sound?.tension();
 
-      if (Math.random() < 0.38 || current.tired >= 72 || hesitationPressure > 0.65) {
+      if (
+        Math.random() < 0.38 ||
+        current.tired >= 72 ||
+        hesitationPressure > 0.65
+      ) {
         await delay(220 + Math.random() * 320);
       }
 
@@ -436,7 +630,22 @@ export default function PlayPage() {
       await delay(90);
       setShowOutcome(true);
 
-      playOutcomeSound(sound ?? createSoundEngine(), resolved.outcome.kind, resolved.outcome.headline);
+      if (resolved.outcome.kind === "glitch") {
+        musicRef.current?.update(
+          resolved.state.tired,
+          timeLeftMs,
+          choiceWindowMs,
+          resolved.state.phase,
+          resolved.state.gameOver,
+          true
+        );
+      }
+
+      playOutcomeSound(
+        sound ?? createSoundEngine(),
+        resolved.outcome.kind,
+        resolved.outcome.headline
+      );
 
       const kind = resolved.outcome.kind as OutcomeKind;
       const almost = [
@@ -449,11 +658,23 @@ export default function PlayPage() {
         "HANGING ON",
       ].includes(resolved.outcome.headline);
 
-      const hold = kind === "rekt" || kind === "glitch" || almost ? 2100 : 1650 + Math.random() * 520;
+      const hold =
+        kind === "rekt" || kind === "glitch" || almost
+          ? 2100
+          : 1650 + Math.random() * 520;
+
       await delay(hold);
 
       if (resolved.state.gameOver) {
         sound?.gameOver();
+        musicRef.current?.update(
+          resolved.state.tired,
+          0,
+          choiceWindowMs,
+          resolved.state.phase,
+          true,
+          false
+        );
         flowRef.current = false;
         return;
       }
@@ -470,16 +691,32 @@ export default function PlayPage() {
       setChoiceWindowMs(nextWindow);
       setTimeLeftMs(nextWindow);
 
+      musicRef.current?.update(
+        next.tired,
+        nextWindow,
+        nextWindow,
+        next.phase,
+        next.gameOver,
+        false
+      );
+
       flowRef.current = false;
     },
     [choiceWindowMs, timeLeftMs]
   );
 
   useEffect(() => {
-    if (state.phase !== "choosing" || state.gameOver || timeLeftMs > 0 || flowRef.current) return;
+    if (
+      state.phase !== "choosing" ||
+      state.gameOver ||
+      timeLeftMs > 0 ||
+      flowRef.current
+    )
+      return;
 
     const fallbackChoice =
-      state.choices[Math.floor(Math.random() * state.choices.length)] || state.choices[0];
+      state.choices[Math.floor(Math.random() * state.choices.length)] ||
+      state.choices[0];
 
     if (fallbackChoice) void playChoiceFlow(fallbackChoice, true);
   }, [timeLeftMs, state, playChoiceFlow]);
@@ -489,6 +726,7 @@ export default function PlayPage() {
     gameOverSavedRef.current = false;
     setShowOutcome(false);
     setHoveredChoiceId(null);
+    musicRef.current?.start();
 
     const fresh = beginChoosing(restartRun(Math.max(bestRun, profile.bestRun)));
 
@@ -498,11 +736,25 @@ export default function PlayPage() {
     const nextWindow = getChoiceWindowMs(fresh.choices);
     setChoiceWindowMs(nextWindow);
     setTimeLeftMs(nextWindow);
+    previousTiredRef.current = fresh.tired;
+
+    musicRef.current?.update(
+      fresh.tired,
+      nextWindow,
+      nextWindow,
+      fresh.phase,
+      fresh.gameOver,
+      false
+    );
   };
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden px-3 pb-[232px] pt-2 text-[#1E1B18] sm:h-screen sm:px-4 sm:pb-2 sm:pt-8">
-      <SceneLayer state={state} timeLeftMs={timeLeftMs} choiceWindowMs={choiceWindowMs} />
+      <SceneLayer
+        state={state}
+        timeLeftMs={timeLeftMs}
+        choiceWindowMs={choiceWindowMs}
+      />
 
       <header className="absolute left-0 top-0 z-30 flex w-full items-center px-3 py-3 text-sm sm:px-4">
         <Link
@@ -547,7 +799,11 @@ export default function PlayPage() {
           </div>
 
           <div className="pointer-events-none absolute bottom-[2px] left-1/2 z-20 w-full -translate-x-1/2 sm:bottom-[14px]">
-            <OutcomePanel outcome={state.lastOutcome} visible={showOutcome} gameOver={state.gameOver} />
+            <OutcomePanel
+              outcome={state.lastOutcome}
+              visible={showOutcome}
+              gameOver={state.gameOver}
+            />
           </div>
         </div>
 
