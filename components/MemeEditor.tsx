@@ -7,8 +7,6 @@ import {
   MemeTemplate,
 } from "@/config/memeTemplates";
 
-type TextPosition = "left" | "center" | "right";
-
 type TextPoint = {
   x: number;
   y: number;
@@ -60,7 +58,6 @@ export default function MemeEditor() {
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [size, setSize] = useState(48);
   const [upper, setUpper] = useState(true);
-  const [textPosition, setTextPosition] = useState<TextPosition>("left");
   const [status, setStatus] = useState<string | null>(null);
   const [textPoints, setTextPoints] = useState<
     Record<string, Record<string, TextPoint>>
@@ -78,14 +75,6 @@ export default function MemeEditor() {
     ["this was the bottom", "again"],
     ["market destroyed me", "still posting"],
   ];
-
-  const getDefaultX = (canvasWidth: number) => {
-    const padding = Math.max(28, canvasWidth * 0.06);
-
-    if (textPosition === "left") return padding;
-    if (textPosition === "right") return canvasWidth - padding;
-    return canvasWidth / 2;
-  };
 
   const getCanvasPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -139,14 +128,14 @@ export default function MemeEditor() {
 
         const savedPoint = textPoints[template.id]?.[f.id];
 
-        const x = savedPoint?.x ?? getDefaultX(canvas.width);
+        const x = savedPoint?.x ?? canvas.width / 2;
         const y = savedPoint?.y ?? f.y;
 
-        ctx.font = `900 ${size}px Arial, sans-serif`;
+        ctx.font = `900 ${size}px "Comic Sans MS", "Arial Rounded MT Bold", "Trebuchet MS", Arial, sans-serif`;
         ctx.fillStyle = "#000000";
         ctx.strokeStyle = "#FFFFFF";
-        ctx.lineWidth = Math.max(4, size * 0.09);
-        ctx.textAlign = textPosition;
+        ctx.lineWidth = Math.max(4, size * 0.1);
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.lineJoin = "round";
 
@@ -164,23 +153,13 @@ export default function MemeEditor() {
           ctx.fillText(line, x, lineY);
         });
 
-        const boxPadding = 16;
-        const boxWidth = Math.max(widestLine, 80) + boxPadding * 2;
+        const boxPadding = 18;
+        const boxWidth = Math.max(widestLine, 90) + boxPadding * 2;
         const boxHeight = lines.length * lineHeight + boxPadding * 2;
-
-        let boxX = x - boxWidth / 2;
-
-        if (textPosition === "left") {
-          boxX = x - boxPadding;
-        }
-
-        if (textPosition === "right") {
-          boxX = x - boxWidth + boxPadding;
-        }
 
         nextHitBoxes.push({
           id: f.id,
-          x: boxX,
+          x: x - boxWidth / 2,
           y: y - boxHeight / 2,
           width: boxWidth,
           height: boxHeight,
@@ -201,14 +180,17 @@ export default function MemeEditor() {
       ctx.textBaseline = "middle";
       ctx.fillText(template.name, canvas.width / 2, canvas.height / 2);
     };
-  }, [template, texts, size, upper, textPosition, textPoints]);
+  }, [template, texts, size, upper, textPoints]);
 
   const randomizeText = () => {
     const pick = suggestions[Math.floor(Math.random() * suggestions.length)];
+    const firstField = template.textFields[0]?.id;
+    const secondField = template.textFields[1]?.id;
+
     setTexts((prev) => ({
       ...prev,
-      top: pick[0],
-      bottom: pick[1],
+      ...(firstField ? { [firstField]: pick[0] } : {}),
+      ...(secondField ? { [secondField]: pick[1] } : {}),
     }));
   };
 
@@ -369,9 +351,10 @@ export default function MemeEditor() {
         <div>
           <h3 className="mb-2 text-lg font-bold">Preview</h3>
 
-          <p className="mb-2 text-xs text-gray-500">
-            Drag text directly on the image to place it anywhere.
-          </p>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border-2 border-black bg-yellow-100 px-4 py-2 text-sm font-black uppercase tracking-wide shadow-sm">
+            <span>↕</span>
+            <span>Drag text on the image</span>
+          </div>
 
           <div className="inline-block rounded-lg border border-black/20 bg-white p-4 shadow-sm">
             <canvas
@@ -400,10 +383,10 @@ export default function MemeEditor() {
               </button>
             </div>
 
-            {template.textFields.map((f) => (
+            {template.textFields.map((f, index) => (
               <div key={f.id}>
-                <label className="mb-2 block text-sm font-medium">
-                  {f.label}
+                <label className="mb-2 block text-sm font-bold">
+                  Meme Text {index + 1}
                 </label>
                 <textarea
                   value={texts[f.id] || ""}
@@ -411,37 +394,15 @@ export default function MemeEditor() {
                     setTexts((p) => ({ ...p, [f.id]: e.target.value }))
                   }
                   rows={2}
-                  className="w-full resize-y rounded border-2 border-black px-4 py-2"
+                  placeholder={`Type meme text ${index + 1}`}
+                  className="w-full resize-y rounded border-2 border-black px-4 py-2 text-base font-semibold"
                 />
               </div>
             ))}
 
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Text Position
-              </label>
-
-              <div className="grid grid-cols-3 gap-2">
-                {(["left", "center", "right"] as TextPosition[]).map((pos) => (
-                  <button
-                    key={pos}
-                    type="button"
-                    onClick={() => setTextPosition(pos)}
-                    className={`rounded border-2 px-4 py-2 text-sm font-bold capitalize transition ${
-                      textPosition === pos
-                        ? "border-black bg-black text-white"
-                        : "border-black bg-white text-black hover:bg-black hover:text-white"
-                    }`}
-                  >
-                    {pos}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Size: {size}px
+                Text Size: {size}px
               </label>
               <input
                 type="range"
