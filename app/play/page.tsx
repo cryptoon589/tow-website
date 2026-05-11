@@ -34,38 +34,26 @@ import {
 const MIN_CHOICE_WINDOW_MS = 10800;
 const MAX_CHOICE_WINDOW_MS = 13600;
 const PROFILE_KEY = "tow-player-memory-v1";
-
-type SfxKey =
-  | "click"
-  | "tick"
-  | "tension"
-  | "win"
-  | "winSmall"
-  | "closeCall"
-  | "lose"
-  | "rekt"
-  | "glitch"
-  | "gameOver"
-  | "tiredUp"
-  | "tiredDown";
-
-type VisualFxKind =
-  | "tap"
-  | "win"
-  | "lose"
-  | "rekt"
-  | "glitch"
-  | "closeCall"
-  | "gameOver";
-
-type VisualFx = {
-  id: number;
-  kind: VisualFxKind;
-  label: string;
-};
+const MUSIC_VOLUME_KEY = "tow-music-volume-v1";
+const MUSIC_MUTED_KEY = "tow-music-muted-v1";
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+}
+
+function getStoredMusicVolume() {
+  if (typeof window === "undefined") return 65;
+
+  const raw = window.localStorage.getItem(MUSIC_VOLUME_KEY);
+  const parsed = raw ? Number(raw) : 65;
+
+  if (Number.isNaN(parsed)) return 65;
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function getStoredMusicMuted() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(MUSIC_MUTED_KEY) === "true";
 }
 
 function getChoiceWindowMs(choices: Choice[]) {
@@ -119,62 +107,11 @@ function getRunBeat(
   return arc.line;
 }
 
-function isCloseCallHeadline(headline = "") {
-  return [
-    "BARELY ALIVE",
-    "ONE HP",
-    "ALMOST REKT",
-    "CLUTCH SAVE",
-    "ONE TAP LEFT",
-    "NOT DEAD YET",
-    "HANGING ON",
-  ].includes(headline);
-}
-
-function getOutcomeFx(kind: OutcomeKind, headline = ""): VisualFx {
-  if (isCloseCallHeadline(headline)) {
-    return {
-      id: Date.now(),
-      kind: "closeCall",
-      label: headline || "BARELY ALIVE",
-    };
-  }
-
-  if (kind === "win" || kind === "winSmall") {
-    return {
-      id: Date.now(),
-      kind: "win",
-      label: kind === "win" ? "WE MOVE" : "STILL HERE",
-    };
-  }
-
-  if (kind === "rekt") {
-    return {
-      id: Date.now(),
-      kind: "rekt",
-      label: "REKT",
-    };
-  }
-
-  if (kind === "glitch") {
-    return {
-      id: Date.now(),
-      kind: "glitch",
-      label: "GLITCH",
-    };
-  }
-
-  return {
-    id: Date.now(),
-    kind: "lose",
-    label: "COOKED",
-  };
-}
-
-function createProceduralFallback() {
+function createSoundEngine() {
   let ctx: AudioContext | null = null;
   let lastTick = 0;
   let lastTiredShift = 0;
+  let ambient: { osc: OscillatorNode; amp: GainNode } | null = null;
 
   const getCtx = () => {
     if (typeof window === "undefined") return null;
@@ -205,6 +142,7 @@ function createProceduralFallback() {
     const osc = audio.createOscillator();
     const amp = audio.createGain();
     const filter = audio.createBiquadFilter();
+
     const now = audio.currentTime + delayTime;
 
     osc.type = type;
@@ -254,7 +192,6 @@ function createProceduralFallback() {
     const source = audio.createBufferSource();
     const amp = audio.createGain();
     const filter = audio.createBiquadFilter();
-    const now = audio.currentTime + delayTime;
 
     filter.type = "bandpass";
     filter.frequency.value = 780;
@@ -265,12 +202,53 @@ function createProceduralFallback() {
     filter.connect(amp);
     amp.connect(audio.destination);
 
+    const now = audio.currentTime + delayTime;
     source.start(now);
     source.stop(now + duration);
   };
 
   return {
-    click() {
+    setPressure(tired: number, urgency: number) {
+      const audio = getCtx();
+      if (!audio) return;
+
+      const pressure = Math.max(tired / 100, urgency);
+
+      if (pressure < 0.64) {
+        if (ambient) {
+          ambient.amp.gain.setTargetAtTime(0.0001, audio.currentTime, 0.08);
+        }
+        return;
+      }
+
+      if (!ambient) {
+        const osc = audio.createOscillator();
+        const amp = audio.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.value = 42;
+        amp.gain.value = 0.0001;
+
+        osc.connect(amp);
+        amp.connect(audio.destination);
+        osc.start();
+
+        ambient = { osc, amp };
+      }
+
+      ambient.osc.frequency.setTargetAtTime(
+        38 + pressure * 24,
+        audio.currentTime,
+        0.12
+      );
+      ambient.amp.gain.setTargetAtTime(
+        0.0025 + pressure * 0.007,
+        audio.currentTime,
+        0.1
+      );
+    },
+
+    tap() {
       tone(190, 0.04, 0.024, "triangle", 0, 120);
       tone(420, 0.03, 0.016, "sine", 0.025);
     },
@@ -347,45 +325,12 @@ function createProceduralFallback() {
   };
 }
 
-function createGameAudioEngine() {
-  const fallback = createProceduralFallback();
-
+function createMusicEngine() {
   let mainLoop: HTMLAudioElement | null = null;
   let currentRate = 1;
   let targetRate = 1;
-
-  const sfxPaths: Record<SfxKey, string> = {
-    click: "/audio/sfx-click.mp3",
-    tick: "/audio/sfx-tick.mp3",
-    tension: "/audio/sfx-tension.mp3",
-    win: "/audio/sfx-win.mp3",
-    winSmall: "/audio/sfx-win-small.mp3",
-    closeCall: "/audio/sfx-closecall.mp3",
-    lose: "/audio/sfx-lose.mp3",
-    rekt: "/audio/sfx-rekt.mp3",
-    glitch: "/audio/sfx-glitch.mp3",
-    gameOver: "/audio/sfx-gameover.mp3",
-    tiredUp: "/audio/sfx-tired-up.mp3",
-    tiredDown: "/audio/sfx-tired-down.mp3",
-  };
-
-  const sfxVolume: Record<SfxKey, number> = {
-    click: 0.3,
-    tick: 0.13,
-    tension: 0.18,
-    win: 0.38,
-    winSmall: 0.32,
-    closeCall: 0.36,
-    lose: 0.38,
-    rekt: 0.44,
-    glitch: 0.4,
-    gameOver: 0.44,
-    tiredUp: 0.22,
-    tiredDown: 0.2,
-  };
-
-  const sfx: Partial<Record<SfxKey, HTMLAudioElement>> = {};
-  const unavailable: Partial<Record<SfxKey, boolean>> = {};
+  let currentVolume = 0;
+  let targetVolume = 0;
 
   const ensure = () => {
     if (typeof window === "undefined") return;
@@ -393,47 +338,15 @@ function createGameAudioEngine() {
     if (!mainLoop) {
       mainLoop = new Audio("/audio/tired-loop.mp3");
       mainLoop.loop = true;
-      mainLoop.volume = 0.075;
+      mainLoop.volume = 0;
       mainLoop.playbackRate = 1;
       mainLoop.preload = "auto";
     }
-
-    (Object.keys(sfxPaths) as SfxKey[]).forEach((key) => {
-      if (sfx[key]) return;
-
-      const audio = new Audio(sfxPaths[key]);
-      audio.preload = "auto";
-      audio.volume = sfxVolume[key];
-      audio.onerror = () => {
-        unavailable[key] = true;
-      };
-
-      sfx[key] = audio;
-    });
   };
 
   const safePlay = (audio: HTMLAudioElement | null) => {
     if (!audio) return;
     void audio.play().catch(() => {});
-  };
-
-  const playSfx = (key: SfxKey, fallbackPlay: () => void) => {
-    ensure();
-
-    const base = sfx[key];
-
-    if (!base || unavailable[key]) {
-      fallbackPlay();
-      return;
-    }
-
-    const sound = base.cloneNode(true) as HTMLAudioElement;
-    sound.volume = sfxVolume[key];
-
-    void sound.play().catch(() => {
-      unavailable[key] = true;
-      fallbackPlay();
-    });
   };
 
   return {
@@ -442,80 +355,77 @@ function createGameAudioEngine() {
       safePlay(mainLoop);
     },
 
-    updateMusic(tired: number, timeLeftMs: number, choiceWindowMs: number) {
+    update(
+      tired: number,
+      timeLeftMs: number,
+      choiceWindowMs: number,
+      isGameOver: boolean,
+      userVolume: number,
+      muted: boolean
+    ) {
       ensure();
 
       if (!mainLoop) return;
 
       const tiredPressure = Math.max(0, Math.min(1, tired / MAX_TIRED));
       const urgency = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
-      const combinedPressure = Math.max(tiredPressure, urgency * 0.32);
 
-      targetRate = 0.96 + combinedPressure * 0.1;
-      currentRate += (targetRate - currentRate) * 0.055;
+      const pressure = Math.max(tiredPressure, urgency * 0.18);
 
-      mainLoop.playbackRate = currentRate;
-      mainLoop.volume = 0.068 + combinedPressure * 0.012;
+      targetRate = 0.985 + pressure * 0.03;
+      currentRate += (targetRate - currentRate) * 0.018;
+
+      const baseVolume = isGameOver ? 0.035 : 0.075;
+      const userScale = Math.max(0, Math.min(100, userVolume)) / 100;
+
+      targetVolume = muted ? 0 : baseVolume * userScale;
+      currentVolume += (targetVolume - currentVolume) * 0.12;
+
+      mainLoop.playbackRate = Number(currentRate.toFixed(4));
+      mainLoop.volume = Math.max(0, Math.min(1, currentVolume));
+    },
+
+    setUserVolume(userVolume: number, muted: boolean) {
+      ensure();
+
+      if (!mainLoop) return;
+
+      const userScale = Math.max(0, Math.min(100, userVolume)) / 100;
+      targetVolume = muted ? 0 : 0.075 * userScale;
+      currentVolume += (targetVolume - currentVolume) * 0.35;
+      mainLoop.volume = Math.max(0, Math.min(1, currentVolume));
     },
 
     stop() {
       if (!mainLoop) return;
+
       mainLoop.pause();
       mainLoop.currentTime = 0;
+      mainLoop.playbackRate = 1;
+      mainLoop.volume = 0;
+
       currentRate = 1;
       targetRate = 1;
-    },
-
-    click() {
-      playSfx("click", () => fallback.click());
-    },
-
-    tick(msLeft: number) {
-      playSfx("tick", () => fallback.tick(msLeft));
-    },
-
-    tension() {
-      playSfx("tension", () => fallback.tension());
-    },
-
-    tiredShift(delta: number) {
-      playSfx(delta > 0 ? "tiredUp" : "tiredDown", () =>
-        fallback.tiredShift(delta)
-      );
-    },
-
-    win(big = false) {
-      playSfx(big ? "win" : "winSmall", () => fallback.win(big));
-    },
-
-    closeCall() {
-      playSfx("closeCall", () => fallback.closeCall());
-    },
-
-    lose() {
-      playSfx("lose", () => fallback.lose());
-    },
-
-    rekt() {
-      playSfx("rekt", () => fallback.rekt());
-    },
-
-    glitch() {
-      playSfx("glitch", () => fallback.glitch());
-    },
-
-    gameOver() {
-      playSfx("gameOver", () => fallback.gameOver());
+      currentVolume = 0;
+      targetVolume = 0;
     },
   };
 }
 
 function playOutcomeSound(
-  sound: ReturnType<typeof createGameAudioEngine>,
+  sound: ReturnType<typeof createSoundEngine>,
   kind: OutcomeKind,
   headline = ""
 ) {
-  const closeCall = isCloseCallHeadline(headline);
+  const closeCall = [
+    "BARELY ALIVE",
+    "ONE HP",
+    "ALMOST REKT",
+    "CLUTCH SAVE",
+    "ONE TAP LEFT",
+    "NOT DEAD YET",
+    "HANGING ON",
+  ].includes(headline);
 
   if (closeCall) sound.closeCall();
   else if (kind === "win" || kind === "winSmall") sound.win(kind === "win");
@@ -558,7 +468,8 @@ export default function PlayPage() {
   );
   const [timeLeftMs, setTimeLeftMs] = useState(choiceWindowMs);
   const [showOutcome, setShowOutcome] = useState(false);
-  const [visualFx, setVisualFx] = useState<VisualFx | null>(null);
+  const [musicVolume, setMusicVolume] = useState(() => getStoredMusicVolume());
+  const [musicMuted, setMusicMuted] = useState(() => getStoredMusicMuted());
 
   const [gameMode, setGameMode] = useState<"fun" | "earn">("fun");
   const [rewardUsername, setRewardUsername] = useState<string | null>(null);
@@ -569,29 +480,28 @@ export default function PlayPage() {
   const gameOverSavedRef = useRef(false);
   const stateRef = useRef(state);
   const profileRef = useRef(profile);
-  const soundRef = useRef<ReturnType<typeof createGameAudioEngine> | null>(
-    null
-  );
+  const soundRef = useRef<ReturnType<typeof createSoundEngine> | null>(null);
+  const musicRef = useRef<ReturnType<typeof createMusicEngine> | null>(null);
   const previousTiredRef = useRef(state.tired);
-  const visualFxTimeoutRef = useRef<number | null>(null);
 
   if (!soundRef.current && typeof window !== "undefined") {
-    soundRef.current = createGameAudioEngine();
+    soundRef.current = createSoundEngine();
   }
 
-  const triggerVisualFx = useCallback((kind: VisualFxKind, label: string) => {
-    const id = Date.now() + Math.random();
+  if (!musicRef.current && typeof window !== "undefined") {
+    musicRef.current = createMusicEngine();
+  }
 
-    if (visualFxTimeoutRef.current) {
-      window.clearTimeout(visualFxTimeoutRef.current);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MUSIC_VOLUME_KEY, String(musicVolume));
+      window.localStorage.setItem(MUSIC_MUTED_KEY, String(musicMuted));
+    } catch {
+      // Audio settings are optional.
     }
 
-    setVisualFx({ id, kind, label });
-
-    visualFxTimeoutRef.current = window.setTimeout(() => {
-      setVisualFx((current) => (current?.id === id ? null : current));
-    }, kind === "tap" ? 360 : 760);
-  }, []);
+    musicRef.current?.setUserVolume(musicVolume, musicMuted);
+  }, [musicVolume, musicMuted]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -614,8 +524,15 @@ export default function PlayPage() {
   useEffect(() => {
     stateRef.current = state;
 
-    soundRef.current?.updateMusic(state.tired, timeLeftMs, choiceWindowMs);
-  }, [state, timeLeftMs, choiceWindowMs]);
+    musicRef.current?.update(
+      state.tired,
+      timeLeftMs,
+      choiceWindowMs,
+      state.gameOver,
+      musicVolume,
+      musicMuted
+    );
+  }, [state, timeLeftMs, choiceWindowMs, musicVolume, musicMuted]);
 
   useEffect(() => {
     const previous = previousTiredRef.current;
@@ -634,11 +551,7 @@ export default function PlayPage() {
 
   useEffect(() => {
     return () => {
-      soundRef.current?.stop();
-
-      if (visualFxTimeoutRef.current) {
-        window.clearTimeout(visualFxTimeoutRef.current);
-      }
+      musicRef.current?.stop();
     };
   }, []);
 
@@ -650,19 +563,6 @@ export default function PlayPage() {
     () => getRunBeat(state, timeLeftMs, choiceWindowMs, profile.persona),
     [state, timeLeftMs, choiceWindowMs, profile.persona]
   );
-
-  const screenFxClass =
-    visualFx?.kind === "rekt" || visualFx?.kind === "gameOver"
-      ? "tow-screen-rekt"
-      : visualFx?.kind === "glitch"
-      ? "tow-screen-glitch"
-      : visualFx?.kind === "lose"
-      ? "tow-screen-lose"
-      : visualFx?.kind === "closeCall"
-      ? "tow-screen-close"
-      : visualFx?.kind === "win"
-      ? "tow-screen-win"
-      : "";
 
   useEffect(() => {
     setBestRun((current) => Math.max(current, state.turn));
@@ -685,15 +585,32 @@ export default function PlayPage() {
       setTimeLeftMs(next);
 
       const currentState = stateRef.current;
+      const urgency = 1 - next / nextWindow;
 
-      soundRef.current?.updateMusic(currentState.tired, next, nextWindow);
+      soundRef.current?.setPressure(currentState.tired, urgency);
+
+      musicRef.current?.update(
+        currentState.tired,
+        next,
+        nextWindow,
+        currentState.gameOver,
+        musicVolume,
+        musicMuted
+      );
 
       if (next < 3100 && next > 0) soundRef.current?.tick(next);
       if (next <= 0) window.clearInterval(interval);
     }, 100);
 
     return () => window.clearInterval(interval);
-  }, [state.turn, state.phase, state.gameOver, state.choices]);
+  }, [
+    state.turn,
+    state.phase,
+    state.gameOver,
+    state.choices,
+    musicVolume,
+    musicMuted,
+  ]);
 
   useEffect(() => {
     if (!state.gameOver || gameOverSavedRef.current) return;
@@ -713,6 +630,20 @@ export default function PlayPage() {
     }
   }, [isRewardRun, state]);
 
+  const handleMusicVolumeChange = (value: number) => {
+    const nextVolume = Math.max(0, Math.min(100, value));
+
+    setMusicVolume(nextVolume);
+
+    if (nextVolume > 0 && musicMuted) {
+      setMusicMuted(false);
+    }
+  };
+
+  const toggleMusicMute = () => {
+    setMusicMuted((current) => !current);
+  };
+
   const playChoiceFlow = useCallback(
     async (choice: Choice, wasAutoPicked = false) => {
       const current = stateRef.current;
@@ -724,9 +655,8 @@ export default function PlayPage() {
       flowRef.current = true;
       setHoveredChoiceId(null);
       setShowOutcome(false);
-      sound?.start();
-      sound?.click();
-      triggerVisualFx("tap", "tap");
+      musicRef.current?.start();
+      sound?.tap();
 
       const elapsedRatio = 1 - timeLeftMs / Math.max(1, choiceWindowMs);
       const hesitationPressure = wasAutoPicked
@@ -763,22 +693,22 @@ export default function PlayPage() {
       await delay(90);
       setShowOutcome(true);
 
-      if (sound) {
-        playOutcomeSound(
-          sound,
-          resolved.outcome.kind,
-          resolved.outcome.headline
-        );
-      }
-
-      const outcomeFx = getOutcomeFx(
+      playOutcomeSound(
+        sound ?? createSoundEngine(),
         resolved.outcome.kind,
         resolved.outcome.headline
       );
-      triggerVisualFx(outcomeFx.kind, outcomeFx.label);
 
       const kind = resolved.outcome.kind as OutcomeKind;
-      const almost = isCloseCallHeadline(resolved.outcome.headline);
+      const almost = [
+        "BARELY ALIVE",
+        "ONE HP",
+        "ALMOST REKT",
+        "CLUTCH SAVE",
+        "ONE TAP LEFT",
+        "NOT DEAD YET",
+        "HANGING ON",
+      ].includes(resolved.outcome.headline);
 
       const hold =
         kind === "rekt" || kind === "glitch" || almost
@@ -789,7 +719,14 @@ export default function PlayPage() {
 
       if (resolved.state.gameOver) {
         sound?.gameOver();
-        triggerVisualFx("gameOver", "TIRED OUT");
+        musicRef.current?.update(
+          resolved.state.tired,
+          0,
+          choiceWindowMs,
+          true,
+          musicVolume,
+          musicMuted
+        );
         flowRef.current = false;
         return;
       }
@@ -806,11 +743,18 @@ export default function PlayPage() {
       setChoiceWindowMs(nextWindow);
       setTimeLeftMs(nextWindow);
 
-      sound?.updateMusic(next.tired, nextWindow, nextWindow);
+      musicRef.current?.update(
+        next.tired,
+        nextWindow,
+        nextWindow,
+        next.gameOver,
+        musicVolume,
+        musicMuted
+      );
 
       flowRef.current = false;
     },
-    [choiceWindowMs, timeLeftMs, triggerVisualFx]
+    [choiceWindowMs, timeLeftMs, musicVolume, musicMuted]
   );
 
   useEffect(() => {
@@ -834,8 +778,7 @@ export default function PlayPage() {
     gameOverSavedRef.current = false;
     setShowOutcome(false);
     setHoveredChoiceId(null);
-    setVisualFx(null);
-    soundRef.current?.start();
+    musicRef.current?.start();
 
     const fresh = beginChoosing(restartRun(Math.max(bestRun, profile.bestRun)));
 
@@ -847,145 +790,25 @@ export default function PlayPage() {
     setTimeLeftMs(nextWindow);
     previousTiredRef.current = fresh.tired;
 
-    soundRef.current?.updateMusic(fresh.tired, nextWindow, nextWindow);
+    musicRef.current?.update(
+      fresh.tired,
+      nextWindow,
+      nextWindow,
+      fresh.gameOver,
+      musicVolume,
+      musicMuted
+    );
   };
 
   return (
-    <main
-      className={`relative min-h-[100svh] overflow-hidden px-3 pb-[232px] pt-2 text-[#1E1B18] sm:h-screen sm:px-4 sm:pb-2 sm:pt-8 ${screenFxClass}`}
-    >
-      <style jsx>{`
-        @keyframes towTinyPop {
-          0% {
-            transform: translate(-50%, -50%) scale(0.82);
-            opacity: 0;
-          }
-          18% {
-            transform: translate(-50%, -50%) scale(1.04);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-50%, -120%) scale(0.96);
-            opacity: 0;
-          }
-        }
-
-        @keyframes towScreenShake {
-          0%,
-          100% {
-            transform: translate3d(0, 0, 0);
-          }
-          20% {
-            transform: translate3d(-3px, 2px, 0);
-          }
-          40% {
-            transform: translate3d(3px, -1px, 0);
-          }
-          60% {
-            transform: translate3d(-2px, -2px, 0);
-          }
-          80% {
-            transform: translate3d(2px, 1px, 0);
-          }
-        }
-
-        @keyframes towSoftWin {
-          0% {
-            filter: saturate(1);
-          }
-          45% {
-            filter: saturate(1.18) brightness(1.03);
-          }
-          100% {
-            filter: saturate(1);
-          }
-        }
-
-        @keyframes towGlitch {
-          0%,
-          100% {
-            transform: translate3d(0, 0, 0);
-            filter: none;
-          }
-          20% {
-            transform: translate3d(2px, 0, 0);
-            filter: hue-rotate(8deg) contrast(1.05);
-          }
-          40% {
-            transform: translate3d(-2px, 1px, 0);
-            filter: hue-rotate(-8deg) contrast(1.08);
-          }
-          65% {
-            transform: translate3d(1px, -1px, 0);
-            filter: contrast(1.06);
-          }
-        }
-
-        .tow-screen-rekt {
-          animation: towScreenShake 180ms ease-in-out both;
-        }
-
-        .tow-screen-glitch {
-          animation: towGlitch 260ms steps(2, end) both;
-        }
-
-        .tow-screen-win {
-          animation: towSoftWin 420ms ease both;
-        }
-
-        .tow-screen-lose,
-        .tow-screen-close {
-          animation: towScreenShake 120ms ease-in-out both;
-        }
-
-        .tow-fx-word {
-          animation: towTinyPop 720ms ease-out both;
-        }
-      `}</style>
-
+    <main className="relative min-h-[100svh] overflow-hidden px-3 pb-[232px] pt-2 text-[#1E1B18] sm:h-screen sm:px-4 sm:pb-2 sm:pt-8">
       <SceneLayer
         state={state}
         timeLeftMs={timeLeftMs}
         choiceWindowMs={choiceWindowMs}
       />
 
-      {visualFx && (
-        <>
-          <div
-            key={`edge-${visualFx.id}`}
-            className={`pointer-events-none fixed inset-0 z-40 ${
-              visualFx.kind === "win"
-                ? "bg-emerald-300/10"
-                : visualFx.kind === "closeCall"
-                ? "bg-yellow-300/12"
-                : visualFx.kind === "glitch"
-                ? "bg-cyan-300/10"
-                : visualFx.kind === "tap"
-                ? "bg-white/8"
-                : "bg-red-400/10"
-            }`}
-          />
-
-          <div
-            key={`word-${visualFx.id}`}
-            className={`tow-fx-word pointer-events-none fixed left-1/2 top-[47%] z-[70] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 px-5 py-2 text-center text-[16px] font-black uppercase tracking-[0.18em] shadow-xl backdrop-blur-md sm:text-[22px] ${
-              visualFx.kind === "win"
-                ? "border-emerald-500 bg-emerald-100/90 text-emerald-700"
-                : visualFx.kind === "closeCall"
-                ? "border-yellow-500 bg-yellow-100/95 text-yellow-700"
-                : visualFx.kind === "glitch"
-                ? "border-cyan-500 bg-cyan-100/90 text-cyan-700"
-                : visualFx.kind === "tap"
-                ? "border-black/40 bg-white/80 text-black/70"
-                : "border-red-500 bg-red-100/95 text-red-700"
-            }`}
-          >
-            {visualFx.label}
-          </div>
-        </>
-      )}
-
-      <header className="absolute left-0 top-0 z-30 flex w-full items-center px-3 py-3 text-sm sm:px-4">
+      <header className="absolute left-0 top-0 z-30 flex w-full items-center gap-2 px-3 py-3 text-sm sm:px-4">
         <Link
           href="/"
           className="rounded-full bg-[#FFFCF8]/90 px-4 py-2 font-black tracking-tight text-[#1E1B18] shadow-sm backdrop-blur transition hover:bg-[#1E1B18] hover:text-white"
@@ -993,8 +816,32 @@ export default function PlayPage() {
           TOW
         </Link>
 
-        <div className="ml-auto rounded-full bg-[#FFFCF8]/90 px-4 py-2 font-black text-[#1E1B18] shadow-sm backdrop-blur">
-          {isRewardRun ? `Reward Run • @${rewardUsername}` : "Fun Run"}
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full bg-[#FFFCF8]/90 px-3 py-2 font-black text-[#1E1B18] shadow-sm backdrop-blur">
+            <button
+              type="button"
+              onClick={toggleMusicMute}
+              className="text-sm leading-none transition hover:scale-110"
+              aria-label={musicMuted ? "Unmute music" : "Mute music"}
+              title={musicMuted ? "Unmute music" : "Mute music"}
+            >
+              {musicMuted || musicVolume === 0 ? "🔇" : "🔊"}
+            </button>
+
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={musicMuted ? 0 : musicVolume}
+              onChange={(e) => handleMusicVolumeChange(Number(e.target.value))}
+              className="hidden h-1 w-20 cursor-pointer accent-[#1E1B18] sm:block"
+              aria-label="Music volume"
+            />
+          </div>
+
+          <div className="rounded-full bg-[#FFFCF8]/90 px-4 py-2 font-black text-[#1E1B18] shadow-sm backdrop-blur">
+            {isRewardRun ? `Reward Run • @${rewardUsername}` : "Fun Run"}
+          </div>
         </div>
       </header>
 
