@@ -119,6 +119,14 @@ export const memeCategories: MemeCategory[] = [
         height: 600,
         textFields: defaultTextFields,
       },
+      {
+        id: "son-7",
+        name: "Son-7",
+        imagePath: "/assets/memes/templates/son-7.png",
+        width: 600,
+        height: 600,
+        textFields: defaultTextFields,
+      },
     ],
   },
   {
