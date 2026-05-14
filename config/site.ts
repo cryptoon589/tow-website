@@ -37,12 +37,12 @@ export const officialLinks = [
   },
   {
     label: "DEX / Chart",
-    url: "https://dexscreener.com/xrpl/YOUR_PAIR",
+    url: "https://dexscreener.com/xrpl/tow.rstxmyib49txtv69qiodhadxwxqsnrqrmv_xrp",
     description: "Watch the chart",
   },
   {
     label: "Telegram",
-    url: "https://t.me/YOUR_TELEGRAM",
+    url: "https://t.me/TOW_Tired_Of_Winning",
     description: "Still here",
   },
   {
@@ -52,12 +52,12 @@ export const officialLinks = [
   },
   {
     label: "X (Twitter)",
-    url: "https://x.com/YOUR_HANDLE",
+    url: "https://x.com/TiredTOW",
     description: "Still posting",
   },
   {
     label: "Coinmun",
-    url: "https://coinmun.com",
+    url: "https://coinmun.com/coins/tow",
     description: "View on Coinmun",
 }
 ];

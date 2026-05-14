@@ -26,21 +26,32 @@ function pickStamp(turn: number, result: string) {
 function getImage(result: string) {
   const r = result.toLowerCase();
 
+  if (r.includes("shilling victim")) return "/tow/run-id/shilling-victim.png";
+  if (r.includes("rug casualty")) return "/tow/run-id/rug-casualty.png";
+  if (r.includes("exit liquidity")) return "/tow/run-id/exit-liquidity.png";
+  if (r.includes("round-tripper")) return "/tow/run-id/round-tripper.png";
+  if (r.includes("bagholder")) return "/tow/run-id/bagholder.png";
+  if (r.includes("survivor")) return "/tow/run-id/survivor.png";
   if (r.includes("hesitant")) return "/tow/run-id/hesitant.png";
   if (r.includes("degen")) return "/tow/run-id/degen.png";
-  if (r.includes("participant")) return "/tow/run-id/participant.png";
-  if (r.includes("exit")) return "/tow/run-id/rekt.png";
+  if (r.includes("lucky")) return "/tow/run-id/lucky.png";
+  if (r.includes("noob")) return "/tow/run-id/noob.png";
+  if (r.includes("npc")) return "/tow/run-id/npc.png";
   if (r.includes("rekt")) return "/tow/run-id/rekt.png";
+  if (r.includes("passenger")) return "/tow/run-id/passenger.png";
 
-  return "/tow/run-id/survivor.png";
+  return "/tow/run-id/passenger.png";
 }
 
 function getResultColor(result: string) {
   const r = result.toLowerCase();
 
-  if (r.includes("exit") || r.includes("rekt")) return "text-red-600";
-  if (r.includes("degen")) return "text-orange-500";
-  if (r.includes("hesitant")) return "text-purple-600";
+  if (r.includes("exit") || r.includes("rekt") || r.includes("rug")) return "text-red-600";
+  if (r.includes("degen") || r.includes("round-tripper")) return "text-orange-500";
+  if (r.includes("hesitant") || r.includes("shilling")) return "text-purple-600";
+  if (r.includes("lucky") || r.includes("survivor")) return "text-green-600";
+  if (r.includes("bagholder")) return "text-yellow-700";
+  if (r.includes("npc") || r.includes("noob") || r.includes("passenger")) return "text-zinc-600";
 
   return "text-[#1F1C18]";
 }
@@ -48,9 +59,12 @@ function getResultColor(result: string) {
 function getCanvasResultColor(result: string) {
   const r = result.toLowerCase();
 
-  if (r.includes("exit") || r.includes("rekt")) return "#DC2626";
-  if (r.includes("degen")) return "#F97316";
-  if (r.includes("hesitant")) return "#9333EA";
+  if (r.includes("exit") || r.includes("rekt") || r.includes("rug")) return "#DC2626";
+  if (r.includes("degen") || r.includes("round-tripper")) return "#F97316";
+  if (r.includes("hesitant") || r.includes("shilling")) return "#9333EA";
+  if (r.includes("lucky") || r.includes("survivor")) return "#16A34A";
+  if (r.includes("bagholder")) return "#A16207";
+  if (r.includes("npc") || r.includes("noob") || r.includes("passenger")) return "#52525B";
 
   return "#1F1C18";
 }
@@ -374,7 +388,7 @@ export default function GameOverOverlay({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const result = state?.resultTitle || "The Participant";
+  const result = state?.resultTitle || "Passenger";
   const img = getImage(result);
   const stamp = useMemo(
     () => pickStamp(state?.turn || 0, result),

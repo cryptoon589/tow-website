@@ -1,26 +1,66 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getCurrentUser, getPosts, getLeaderboard, getUserWeeklyCount, savePost, deletePost, clearWeek, isDuplicateUrl, hasSubmittedRecently } from "@/lib/raidStorage";
+import {
+  getCurrentUser,
+  getPosts,
+  savePost,
+  deletePost,
+} from "@/lib/raidStorage";
 import { validateXUrl, getCurrentWeekId, RaidPost } from "@/config/raidBoard";
-import { sendToTelegram } from "@/lib/telegram";
+
+type RaidLeaderboardEntry = {
+  xUsername: string;
+  wallet: string;
+  count: number;
+};
 
 export default function RaidBoard() {
   const [user, setUser] = useState<any>(null);
   const [posts, setPosts] = useState<RaidPost[]>([]);
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [postUrl, setPostUrl] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [adminMode, setAdminMode] = useState(false);
-  const [adminSecret, setAdminSecret] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   const weekId = getCurrentWeekId();
+
+  const leaderboard = useMemo(() => {
+    const counts: Record<string, RaidLeaderboardEntry> = {};
+
+    posts.forEach((post) => {
+      if (!counts[post.xUsername]) {
+        counts[post.xUsername] = {
+          xUsername: post.xUsername,
+          wallet: post.wallet,
+          count: 0,
+        };
+      }
+
+      counts[post.xUsername].count += 1;
+    });
+
+    return Object.values(counts).sort((a, b) => b.count - a.count);
+  }, [posts]);
+
+  async function refreshPosts() {
+    setLoading(true);
+
+    try {
+      const fetchedPosts = await getPosts(weekId);
+      setPosts(fetchedPosts);
+    } catch {
+      setError("Could not load raid posts.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     setUser(getCurrentUser());
-    setPosts(getPosts(weekId));
-    setLeaderboard(getLeaderboard(weekId));
+    refreshPosts();
   }, [weekId]);
 
   const handleSubmit = async () => {
@@ -32,187 +72,219 @@ export default function RaidBoard() {
       return;
     }
 
-    if (!validateXUrl(postUrl)) {
+    const cleanUrl = postUrl.trim();
+
+    if (!validateXUrl(cleanUrl)) {
       setError("Invalid X/Twitter URL. Must be x.com or twitter.com.");
       return;
     }
 
-    if (isDuplicateUrl(postUrl, weekId)) {
+    if (posts.some((p) => p.postUrl === cleanUrl)) {
       setError("This post was already submitted this week.");
       return;
     }
 
-    if (hasSubmittedRecently(user.xUsername, 12)) {
+    const recentlyPosted = posts.some((p) => {
+      if (p.xUsername !== user.xUsername) return false;
+
+      const minutesSincePost =
+        (Date.now() - new Date(p.timestamp).getTime()) / 60000;
+
+      return minutesSincePost < 12;
+    });
+
+    if (recentlyPosted) {
       setError("Wait 12 minutes between posts. You're tired, not a bot.");
       return;
     }
 
     const newPost: RaidPost = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       xUsername: user.xUsername,
       wallet: user.wallet,
       telegram: user.telegram,
-      postUrl,
+      postUrl: cleanUrl,
       timestamp: new Date().toISOString(),
       weekId,
     };
 
-    savePost(newPost);
-    setPosts(getPosts(weekId));
-    setLeaderboard(getLeaderboard(weekId));
-    setPostUrl("");
-    setSuccess("Posted. Still tired.");
+    setSubmitting(true);
 
-    // Always send to Telegram
-    sendToTelegram(user.xUsername, postUrl);
-  };
+    try {
+      await savePost(newPost);
+      await refreshPosts();
 
-  const handleDelete = (postId: string) => {
-    deletePost(postId);
-    setPosts(getPosts(weekId));
-    setLeaderboard(getLeaderboard(weekId));
-  };
-
-  const handleClearWeek = () => {
-    if (confirm("Clear all posts for this week?")) {
-      clearWeek(weekId);
-      setPosts([]);
-      setLeaderboard([]);
-      setSuccess("Week cleared. Everyone's tired again.");
+      setPostUrl("");
+      setSuccess("Posted. Still tired.");
+    } catch {
+      setError("Could not submit post. Try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleAdminLogin = () => {
-    if (adminSecret === "tow-admin-2026") {
-      setAdminMode(true);
-      setAdminSecret("");
-    } else {
-      setError("Wrong admin secret.");
+  const handleDelete = async (postId: string) => {
+    setError("");
+    setSuccess("");
+
+    try {
+      await deletePost(postId);
+      await refreshPosts();
+      setSuccess("Post removed.");
+    } catch {
+      setError("Could not remove post.");
     }
   };
 
   const totalPosts = posts.length;
   const totalContributors = new Set(posts.map((p) => p.xUsername)).size;
-  const userCount = user ? getUserWeeklyCount(user.xUsername, weekId) : 0;
+  const userCount = user
+    ? posts.filter((p) => p.xUsername === user.xUsername).length
+    : 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <h1 className="text-4xl md:text-5xl font-bold mb-2">Everyone's Tired</h1>
-      <p className="text-lg text-gray-600 mb-8">Still posting. Still here. Still tired.</p>
+    <div className="mx-auto max-w-4xl px-4 py-12">
+      <h1 className="mb-2 text-4xl font-bold md:text-5xl">
+        Everyone&apos;s Tired
+      </h1>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-50 border-2 border-black rounded-lg p-4 text-center">
+      <p className="mb-8 text-lg text-gray-600">
+        Still posting. Still here. Still tired.
+      </p>
+
+      <div className="mb-8 grid grid-cols-3 gap-4">
+        <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
           <div className="text-3xl font-bold">{totalPosts}</div>
           <div className="text-sm text-gray-600">Posts This Week</div>
         </div>
-        <div className="bg-gray-50 border-2 border-black rounded-lg p-4 text-center">
+
+        <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
           <div className="text-3xl font-bold">{totalContributors}</div>
           <div className="text-sm text-gray-600">Still Posting</div>
         </div>
-        <div className="bg-gray-50 border-2 border-black rounded-lg p-4 text-center">
+
+        <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
           <div className="text-3xl font-bold">{userCount}</div>
           <div className="text-sm text-gray-600">Your Posts This Week</div>
         </div>
       </div>
 
-      {/* Top 5 Leaderboard */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Most Tired This Week</h2>
+        <h2 className="mb-4 text-xl font-bold">Most Tired This Week</h2>
+
         <div className="space-y-2">
           {leaderboard.slice(0, 5).map((entry, i) => (
-            <div key={entry.xUsername} className="flex items-center justify-between bg-white border-2 border-black rounded-lg p-3">
+            <div
+              key={entry.xUsername}
+              className="flex items-center justify-between rounded-lg border-2 border-black bg-white p-3"
+            >
               <div className="flex items-center gap-3">
-                <span className="font-bold text-lg w-8">#{i + 1}</span>
+                <span className="w-8 text-lg font-bold">#{i + 1}</span>
                 <span className="font-medium">@{entry.xUsername}</span>
               </div>
+
               <span className="font-bold">{entry.count} posts</span>
             </div>
           ))}
-          {leaderboard.length === 0 && <p className="text-gray-500 text-sm">No one's posted yet. That's on you.</p>}
+
+          {!loading && leaderboard.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No one&apos;s posted yet. That&apos;s on you.
+            </p>
+          )}
+
+          {loading && (
+            <p className="text-sm text-gray-500">Loading tired posts...</p>
+          )}
         </div>
       </div>
 
-      {/* Submission Area */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Drop Your Post</h2>
+        <h2 className="mb-4 text-xl font-bold">Drop Your Post</h2>
+
         {!user ? (
-          <Link href="/register" className="inline-block px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800">
+          <Link
+            href="/register"
+            className="inline-block rounded bg-black px-6 py-3 font-bold text-white hover:bg-gray-800"
+          >
             Start Posting
           </Link>
         ) : (
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
-              Posting as <span className="font-bold">@{user.xUsername}</span> ({user.wallet.slice(0, 6)}...{user.wallet.slice(-4)})
+              Posting as{" "}
+              <span className="font-bold">@{user.xUsername}</span>{" "}
+              ({user.wallet.slice(0, 6)}...{user.wallet.slice(-4)})
             </div>
+
             <div className="flex gap-2">
               <input
                 type="text"
                 value={postUrl}
                 onChange={(e) => setPostUrl(e.target.value)}
                 placeholder="Paste X post URL..."
-                className="flex-1 px-4 py-2 border-2 border-black rounded focus:outline-none"
+                className="flex-1 rounded border-2 border-black px-4 py-2 focus:outline-none"
               />
-              <button onClick={handleSubmit} className="px-6 py-2 bg-black text-white font-bold rounded hover:bg-gray-800">
-                Submit
+
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="rounded bg-black px-6 py-2 font-bold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? "Posting..." : "Submit"}
               </button>
             </div>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-            {success && <p className="text-green-600 text-sm">{success}</p>}
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            {success && <p className="text-sm text-green-600">{success}</p>}
           </div>
         )}
       </div>
 
-      {/* Tired Feed */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Tired Feed</h2>
+        <h2 className="mb-4 text-xl font-bold">Tired Feed</h2>
+
         <div className="space-y-2">
           {posts.map((post) => (
-            <div key={post.id} className="bg-white border-2 border-black rounded-lg p-4">
+            <div
+              key={post.id}
+              className="rounded-lg border-2 border-black bg-white p-4"
+            >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <span className="font-bold">@{post.xUsername}</span>
-                    <span className="text-xs text-gray-500">{new Date(post.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(post.timestamp).toLocaleTimeString()}
+                    </span>
                   </div>
-                  <a href={post.postUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
+
+                  <a
+                    href={post.postUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-sm text-blue-600 hover:underline"
+                  >
                     {post.postUrl}
                   </a>
                 </div>
-                {adminMode && (
-                  <button onClick={() => handleDelete(post.id)} className="text-red-600 text-sm hover:underline ml-4">
-                    Remove
-                  </button>
-                )}
+
+                <button
+                  onClick={() => handleDelete(post.id)}
+                  className="ml-4 text-sm text-red-600 hover:underline"
+                >
+                  Remove
+                </button>
               </div>
             </div>
           ))}
-          {posts.length === 0 && <p className="text-gray-500 text-sm">Nothing here yet. Be the first.</p>}
-        </div>
-      </div>
 
-      {/* Admin Section */}
-      <div className="border-t border-black pt-8">
-        {!adminMode ? (
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={adminSecret}
-              onChange={(e) => setAdminSecret(e.target.value)}
-              placeholder="Admin secret..."
-              className="px-4 py-2 border-2 border-black rounded focus:outline-none text-sm"
-            />
-            <button onClick={handleAdminLogin} className="px-4 py-2 bg-gray-200 font-bold rounded hover:bg-gray-300 text-sm">
-              Admin
-            </button>
-          </div>
-        ) : (
-          <div>
-            <button onClick={handleClearWeek} className="px-4 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 text-sm">
-              Clear Week
-            </button>
-          </div>
-        )}
+          {!loading && posts.length === 0 && (
+            <p className="text-sm text-gray-500">
+              Nothing here yet. Be the first.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

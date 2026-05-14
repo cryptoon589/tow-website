@@ -60,6 +60,10 @@ export type RunMemory = {
   glitchCount: number;
   bigWins: number;
   almostSaves: number;
+  npcPicks: number;
+  rugCount: number;
+  peakTired: number;
+  roundTrips: number;
 };
 
 export type PlayerPersona = "fresh" | "hesitant" | "degen" | "survivor" | "heater" | "tilted";
@@ -432,6 +436,10 @@ export function createInitialState(bestRun = 0): GameState {
       glitchCount: 0,
       bigWins: 0,
       almostSaves: 0,
+      npcPicks: 0,
+      rugCount: 0,
+      peakTired: STARTING_TIRED,
+      roundTrips: 0,
     },
     gameOver: false,
   };
@@ -816,6 +824,19 @@ function maybeApplySpecialEffect(
     };
   }
 
+  if (next.kind === "rekt" && (choice.category === "chaos" || Math.random() < 0.22)) {
+    next = {
+      ...next,
+      headline: sample(["RUGGED", "RUG CASUALTY", "LIQUIDITY VANISHED"]),
+      subtext: sample([
+        "The chart pulled the chair while you were still sitting.",
+        "You trusted the map. The map was the trap.",
+        "One second it was early. Next second it was gone.",
+        "Classic timeline safety demonstration.",
+      ]),
+    };
+  }
+
   if (choice.category === "chaos" && next.kind === "win") {
     if (Math.random() < 0.34) {
       appliedModifiers.push(modifier("degen", 2));
@@ -876,14 +897,42 @@ function updateMemory(
   memory: RunMemory,
   choice: Choice,
   outcome: Outcome,
-  wasAutoPicked: boolean
+  wasAutoPicked: boolean,
+  previousTired: number,
+  nextTired: number
 ): RunMemory {
-  const next: RunMemory = { ...memory };
+  const next: RunMemory = {
+    safePicks: memory.safePicks ?? 0,
+    swingPicks: memory.swingPicks ?? 0,
+    chaosPicks: memory.chaosPicks ?? 0,
+    timeouts: memory.timeouts ?? 0,
+    winStreak: memory.winStreak ?? 0,
+    bestWinStreak: memory.bestWinStreak ?? 0,
+    rektCount: memory.rektCount ?? 0,
+    glitchCount: memory.glitchCount ?? 0,
+    bigWins: memory.bigWins ?? 0,
+    almostSaves: memory.almostSaves ?? 0,
+    npcPicks: memory.npcPicks ?? 0,
+    rugCount: memory.rugCount ?? 0,
+    peakTired: memory.peakTired ?? previousTired,
+    roundTrips: memory.roundTrips ?? 0,
+  };
 
   if (choice.category === "safe") next.safePicks += 1;
   if (choice.category === "swing") next.swingPicks += 1;
   if (choice.category === "chaos") next.chaosPicks += 1;
   if (wasAutoPicked) next.timeouts += 1;
+
+  if (wasAutoPicked || (choice.category === "safe" && (outcome.kind === "winSmall" || outcome.kind === "loseSmall"))) {
+    next.npcPicks += 1;
+  }
+
+  const previousPeakTired = next.peakTired;
+  next.peakTired = Math.max(previousPeakTired, nextTired);
+
+  if (previousPeakTired >= 70 && previousTired > 50 && nextTired <= 35) {
+    next.roundTrips += 1;
+  }
 
   const isWin = outcome.kind === "win" || outcome.kind === "winSmall";
 
@@ -900,6 +949,14 @@ function updateMemory(
   if (outcome.kind === "rekt") {
     next.rektCount += 1;
     next.winStreak = 0;
+  }
+
+  if (
+    outcome.headline === "RUGGED" ||
+    outcome.headline === "RUG CASUALTY" ||
+    outcome.headline === "LIQUIDITY VANISHED"
+  ) {
+    next.rugCount += 1;
   }
 
   if (outcome.kind === "glitch") {
@@ -994,7 +1051,14 @@ export function resolveChoice(
   }
 
   const nextTired = clamp(state.tired + outcome.delta, 0, MAX_TIRED);
-  const memory = updateMemory(state.memory, choice, outcome, wasAutoPicked);
+  const memory = updateMemory(
+    state.memory,
+    choice,
+    outcome,
+    wasAutoPicked,
+    state.tired,
+    nextTired
+  );
   const gameOver = nextTired >= MAX_TIRED;
 
   const streakBroken =
@@ -1186,23 +1250,39 @@ export function getMarketState(state: GameState): {
 export function getRunTitle(state: GameState): string {
   const { memory, turn } = state;
 
-  if (memory.almostSaves >= 2) return "The One HP Survivor";
-  if (memory.timeouts >= 3) return "The Hesitant";
-  if (memory.chaosPicks >= 6) return "The Degen";
-  if (memory.bigWins >= 3) return "The Lucky";
-  if (memory.safePicks >= 6) return "The Survivor";
-  if (memory.glitchCount >= 2) return "The Timeline Casualty";
-  if (memory.rektCount >= 2) return "The Exit Liquidity";
-  if (memory.bestWinStreak >= 5) return "The Heater";
-  if (turn >= 18) return "The Endurance Poster";
+  if ((memory.rugCount ?? 0) >= 1) return "Rug Casualty";
+  if ((memory.glitchCount ?? 0) >= 2) return "Shilling Victim";
+  if ((memory.rektCount ?? 0) >= 3) return "Exit Liquidity";
+  if ((memory.rektCount ?? 0) >= 2) return "Rekt";
+  if ((memory.almostSaves ?? 0) >= 2) return "Survivor";
+  if ((memory.chaosPicks ?? 0) >= 6) return "Degen";
+  if ((memory.bigWins ?? 0) >= 3) return "Lucky";
+  if ((memory.timeouts ?? 0) >= 3) return "Hesitant";
+  if ((memory.roundTrips ?? 0) >= 1 || (turn >= 18 && state.tired <= 45)) return "Round-Tripper";
+  if ((memory.npcPicks ?? 0) >= 5) return "NPC";
+  if ((memory.safePicks ?? 0) >= 6) return "Bagholder";
+  if (turn <= 4) return "Noob";
 
-  return "The Participant";
+  return "Passenger";
 }
 
 export function getGameOverHeadline(state: GameState): string {
-  if (state.memory.almostSaves >= 2) return "SO CLOSE";
-  if (state.memory.rektCount >= 2) return "EVENTUALLY REKT";
-  if (state.memory.timeouts >= 3) return "TOO SLOW";
+  const title = getRunTitle(state);
+
+  if (title === "Survivor") return "BARELY MADE IT";
+  if (title === "Hesitant") return "TOO SLOW";
+  if (title === "Degen") return "MAXIMUM CHAOS";
+  if (title === "Lucky") return "PURE LUCK";
+  if (title === "Passenger") return "JUST ALONG FOR THE RIDE";
+  if (title === "Noob") return "WELCOME TO THE TIMELINE";
+  if (title === "Rekt") return "REKT";
+  if (title === "Rug Casualty") return "RUGGED! SHIBO, IS THAT YOU?";
+  if (title === "NPC") return "AUTO-PILOT MODE";
+  if (title === "Bagholder") return "STILL HOLDING";
+  if (title === "Round-Tripper") return "BACK TO WHERE YOU STARTED";
+  if (title === "Shilling Victim") return "TIMELINE SOLD YOU THIN AIR";
+  if (title === "Exit Liquidity") return "EXIT LIQUIDITY";
+
   return "EVENTUALLY NGMI";
 }
 
