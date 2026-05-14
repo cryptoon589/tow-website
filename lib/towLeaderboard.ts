@@ -17,7 +17,6 @@ export type TowLeaderboardEntry = {
 };
 
 const PROFILE_KEY = "tow_reward_player_profile";
-const LOCAL_LEADERBOARD_KEY = "tow_weekly_leaderboard";
 
 export function normalizeXUsername(value: string) {
   return value.trim().replace(/^@+/, "");
@@ -25,90 +24,63 @@ export function normalizeXUsername(value: string) {
 
 export function isValidXUsername(value: string) {
   const username = normalizeXUsername(value);
+
   return /^[A-Za-z0-9_]{1,15}$/.test(username);
 }
 
 export function isValidXrplWallet(value: string) {
-  return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(value.trim());
+  return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(
+    value.trim()
+  );
 }
 
-export function saveRewardProfile(profile: TowPlayerProfile) {
+export function saveRewardProfile(
+  profile: TowPlayerProfile
+) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+
+  localStorage.setItem(
+    PROFILE_KEY,
+    JSON.stringify({
+      ...profile,
+      xUsername: normalizeXUsername(
+        profile.xUsername
+      ),
+      walletAddress: profile.walletAddress.trim(),
+    })
+  );
 }
 
-export function getRewardProfile(): TowPlayerProfile | null {
+export function getRewardProfile():
+  | TowPlayerProfile
+  | null {
   if (typeof window === "undefined") return null;
 
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as TowPlayerProfile) : null;
+
+    return raw
+      ? (JSON.parse(raw) as TowPlayerProfile)
+      : null;
   } catch {
     return null;
   }
 }
 
-function getLocalLeaderboard(): TowLeaderboardEntry[] {
-  if (typeof window === "undefined") return [];
-
+export async function getLeaderboard():
+  Promise<TowLeaderboardEntry[]> {
   try {
-    const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
-    const entries = raw ? (JSON.parse(raw) as TowLeaderboardEntry[]) : [];
-    return entries.sort((a, b) => b.bestScore - a.bestScore);
-  } catch {
-    return [];
-  }
-}
+    const response = await fetch(
+      "/api/leaderboard",
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    );
 
-function submitLocalLeaderboardScore(score: number) {
-  if (typeof window === "undefined") return;
-
-  const profile = getRewardProfile();
-  if (!profile) return;
-
-  const entries = getLocalLeaderboard();
-  const existingIndex = entries.findIndex(
-    (entry) => entry.walletAddress === profile.walletAddress
-  );
-
-  const now = new Date().toISOString();
-
-  if (existingIndex >= 0) {
-    const existing = entries[existingIndex];
-
-    entries[existingIndex] = {
-      ...existing,
-      score,
-      runs: existing.runs + 1,
-      bestScore: Math.max(existing.bestScore, score),
-      lastPlayedAt: now,
-    };
-  } else {
-    entries.push({
-      id: crypto.randomUUID(),
-      xUsername: profile.xUsername,
-      walletAddress: profile.walletAddress,
-      score,
-      runs: 1,
-      bestScore: score,
-      lastPlayedAt: now,
-    });
-  }
-
-  localStorage.setItem(
-    LOCAL_LEADERBOARD_KEY,
-    JSON.stringify(entries.sort((a, b) => b.bestScore - a.bestScore).slice(0, 50))
-  );
-}
-
-export async function getLeaderboard(): Promise<TowLeaderboardEntry[]> {
-  try {
-    const response = await fetch("/api/leaderboard", {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    if (!response.ok) throw new Error("Leaderboard failed");
+    if (!response.ok) {
+      throw new Error("Leaderboard failed");
+    }
 
     const data = (await response.json()) as {
       entries: TowLeaderboardEntry[];
@@ -116,33 +88,44 @@ export async function getLeaderboard(): Promise<TowLeaderboardEntry[]> {
 
     return data.entries ?? [];
   } catch {
-    return getLocalLeaderboard();
+    return [];
   }
 }
 
-export async function submitLeaderboardScore(score: number) {
+export async function submitLeaderboardScore(
+  score: number
+) {
   const profile = getRewardProfile();
+
   if (!profile) return;
 
-  submitLocalLeaderboardScore(score);
-
-  try {
-    await fetch("/api/leaderboard", {
+  const response = await fetch(
+    "/api/leaderboard",
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        xUsername: profile.xUsername,
-        walletAddress: profile.walletAddress,
+        xUsername: normalizeXUsername(
+          profile.xUsername
+        ),
+        walletAddress:
+          profile.walletAddress.trim(),
         score,
       }),
-    });
-  } catch {
-    // local fallback already saved
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Could not submit leaderboard score."
+    );
   }
 
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("tow-leaderboard-update"));
+    window.dispatchEvent(
+      new Event("tow-leaderboard-update")
+    );
   }
 }

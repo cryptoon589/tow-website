@@ -1,27 +1,32 @@
-import { raidConfig } from "@/config/raidBoard";
+export async function sendToTelegram(
+  username: string,
+  postUrl: string
+) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
 
-export async function sendToTelegram(username: string, postUrl: string): Promise<boolean> {
-  if (!raidConfig.telegramBotToken || !raidConfig.telegramChatId) {
-    console.log("Telegram not configured - skipping");
+  if (!botToken || !chatId) {
     return false;
   }
 
-  const message = `New TOW post by @${username}\nRaid it: ${postUrl}`;
-  const url = `https://api.telegram.org/bot${raidConfig.telegramBotToken}/sendMessage`;
+  const message =
+    `🚨 New TOW raid post by @${username}\n\n` +
+    `Raid it:\n${postUrl}`;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: raidConfig.telegramChatId,
-        text: message,
-        disable_web_page_preview: false,
-      }),
-    });
-    return response.ok;
-  } catch (error) {
-    console.error("Telegram send failed:", error);
-    return false;
-  }
+  const url =
+    `https://api.telegram.org/bot${botToken}/sendMessage`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: message,
+      disable_web_page_preview: false,
+    }),
+  });
+
+  return res.ok;
 }
