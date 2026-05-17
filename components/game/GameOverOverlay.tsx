@@ -449,7 +449,7 @@ export default function GameOverOverlay({
         >
           <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(90deg,rgba(0,0,0,0.045)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.025)_1px,transparent_1px)] [background-size:12px_12px]" />
 
-          <div className="relative z-10 flex items-start justify-between gap-2 overflow-hidden sm:gap-3">
+          <div className="relative z-10 flex items-start justify-between gap-2 overflow-visible sm:gap-3">
             <div className="min-w-[82px] shrink-0 whitespace-nowrap text-[8px] tracking-[0.18em] text-[#837A70] sm:min-w-0 sm:text-[11px] sm:tracking-[0.22em]">
               TOW RUN ID
               <div className="mt-1 whitespace-nowrap font-mono text-[9px] tracking-[0.08em] text-[#1F1C18] sm:text-[12px] sm:tracking-[0.12em]">
@@ -458,29 +458,29 @@ export default function GameOverOverlay({
             </div>
 
             <div
-              className="max-w-[calc(100%-92px)] shrink rotate-[3deg] rounded-full border-[3px] border-[#E11919] bg-[#FFF1F1] px-3 py-2 text-[#E11919] sm:max-w-none sm:shrink-0 sm:border-[5px] sm:px-8 sm:py-3"
+              className="max-w-[calc(100%-92px)] shrink rotate-[3deg] rounded-full border-[3px] border-[#E11919] bg-[#FFF1F1] px-2.5 py-2 text-[#E11919] sm:max-w-none sm:shrink-0 sm:border-[5px] sm:px-8 sm:py-3"
               style={{
                 boxShadow:
                   "0 0 0 4px rgba(225,25,25,0.16), 0 10px 24px rgba(225,25,25,0.2)",
               }}
             >
-              <div className="truncate whitespace-nowrap text-center text-[12px] font-black uppercase leading-none tracking-[0.035em] text-[#E11919] min-[390px]:text-[14px] sm:text-[28px] sm:tracking-[0.06em]">
+              <div className="whitespace-nowrap text-center text-[10.5px] font-black uppercase leading-none tracking-[0.02em] text-[#E11919] min-[390px]:text-[12px] sm:text-[28px] sm:tracking-[0.06em]">
                 {stamp}
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-3 grid grid-cols-[112px_1fr] gap-2.5 min-[390px]:grid-cols-[128px_1fr] min-[390px]:gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
-            <div className="relative min-h-[184px] overflow-hidden rounded-[16px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner min-[390px]:min-h-[206px] sm:h-[280px] sm:rounded-[18px]">
+          <div className="relative z-10 mt-3 grid grid-cols-[46%_1fr] gap-2.5 min-[390px]:gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
+            <div className="relative min-h-[292px] overflow-hidden rounded-[16px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner min-[390px]:min-h-[316px] sm:h-[280px] sm:rounded-[18px]">
               <div className="absolute left-2.5 top-2.5 z-10 text-[8px] font-bold tracking-[0.2em] text-[#9A9288] sm:left-3 sm:top-3 sm:text-[10px]">
                 PORTRAIT
               </div>
 
-              <div className="absolute inset-x-2.5 bottom-2.5 top-9 flex items-center justify-center rounded-[10px] bg-[#F6F2EC]/55 sm:inset-2 sm:top-10 sm:rounded-[12px]">
+              <div className="absolute inset-x-2 bottom-2 top-8 flex items-center justify-center overflow-hidden rounded-[12px] bg-[#F6F2EC]/55 sm:inset-2 sm:top-10">
                 <img
                   src={img}
                   alt={result}
-                  className="h-full max-h-full w-full max-w-full object-contain p-1.5 sm:p-2"
+                  className="h-full w-full object-contain scale-[1.32] p-0.5 min-[390px]:scale-[1.38] sm:scale-100 sm:p-2"
                   onError={(event) => {
                     event.currentTarget.style.display = "none";
                   }}
@@ -490,12 +490,12 @@ export default function GameOverOverlay({
 
             <div className="min-w-0 pt-0.5 sm:pt-4">
               <div
-                className={`mb-1 text-[25px] font-black leading-[0.95] tracking-[-0.04em] min-[390px]:text-[30px] sm:text-5xl sm:tracking-[-0.03em] ${resultColor}`}
+                className={`mb-1 text-[24px] font-black leading-[0.95] tracking-[-0.04em] min-[390px]:text-[28px] sm:text-5xl sm:tracking-[-0.03em] ${resultColor}`}
               >
                 {result}
               </div>
 
-              <div className="mb-2 text-[12px] font-medium leading-tight text-[#6E655C] min-[390px]:text-[13px] sm:mb-4 sm:text-sm sm:leading-normal">
+              <div className="mb-2 text-[11px] font-medium leading-tight text-[#6E655C] min-[390px]:text-[12px] sm:mb-4 sm:text-sm sm:leading-normal">
                 {cardSubtext}
               </div>
 
@@ -537,21 +537,22 @@ export default function GameOverOverlay({
                 </div>
               </div>
 
-              <div className="rounded-[12px] bg-[#EDE7DF] p-2 sm:rounded-xl sm:p-3">
-                <div className="mb-0.5 text-[8px] font-bold tracking-[0.16em] text-[#91887E] sm:mb-1 sm:text-[10px] sm:tracking-[0.2em]">
-                  PLAYER MEMORY
-                </div>
-                <div className="text-[15px] font-black leading-tight text-[#1F1C18] sm:text-base">
-                  {persona}
-                </div>
-                <div className="text-[12px] leading-tight text-[#6E655C] sm:text-sm sm:leading-normal">
-                  {personaLine}
-                </div>
-              </div>
+            </div>
 
-              <div className="mt-2 text-[12px] italic leading-tight text-[#746A60] sm:mt-3 sm:text-base sm:leading-normal">
-                {cardSubtext}
+            <div className="col-span-2 rounded-[12px] bg-[#EDE7DF] p-2.5 sm:col-span-1 sm:rounded-xl sm:p-3">
+              <div className="mb-0.5 text-[8px] font-bold tracking-[0.16em] text-[#91887E] sm:mb-1 sm:text-[10px] sm:tracking-[0.2em]">
+                PLAYER MEMORY
               </div>
+              <div className="text-[17px] font-black leading-tight text-[#1F1C18] sm:text-base">
+                {persona}
+              </div>
+              <div className="text-[13px] leading-tight text-[#6E655C] sm:text-sm sm:leading-normal">
+                {personaLine}
+              </div>
+            </div>
+
+            <div className="col-span-2 text-[13px] italic leading-tight text-[#746A60] sm:col-span-1 sm:mt-3 sm:text-base sm:leading-normal">
+              {cardSubtext}
             </div>
           </div>
         </div>
