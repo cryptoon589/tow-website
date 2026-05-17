@@ -441,11 +441,11 @@ export default function GameOverOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 px-2 py-3 backdrop-blur-sm sm:p-4">
-      <div className="w-full max-w-[860px] rounded-[22px] bg-[#F6F2EC] p-2 shadow-2xl sm:rounded-[30px] sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 px-2 py-3 backdrop-blur-sm sm:px-4 sm:py-2">
+      <div className="w-full max-w-[860px] rounded-[22px] bg-[#F6F2EC] p-2 shadow-2xl sm:max-w-[800px] sm:rounded-[26px] sm:p-3">
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[20px] border border-[#DDD3C8] bg-[#F6F2EC] p-3 sm:rounded-[22px] sm:p-5"
+          className="relative overflow-hidden rounded-[20px] border border-[#DDD3C8] bg-[#F6F2EC] p-3 sm:rounded-[22px] sm:p-4"
         >
           <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(90deg,rgba(0,0,0,0.045)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.025)_1px,transparent_1px)] [background-size:12px_12px]" />
 
@@ -458,20 +458,20 @@ export default function GameOverOverlay({
             </div>
 
             <div
-              className="max-w-[calc(100%-92px)] shrink rotate-[3deg] rounded-full border-[3px] border-[#E11919] bg-[#FFF1F1] px-2.5 py-2 text-[#E11919] sm:max-w-none sm:shrink-0 sm:border-[5px] sm:px-8 sm:py-3"
+              className="max-w-[calc(100%-92px)] shrink rotate-[3deg] rounded-full border-[3px] border-[#E11919] bg-[#FFF1F1] px-2.5 py-2 text-[#E11919] sm:max-w-none sm:shrink-0 sm:border-[4px] sm:px-6 sm:py-2.5"
               style={{
                 boxShadow:
                   "0 0 0 4px rgba(225,25,25,0.16), 0 10px 24px rgba(225,25,25,0.2)",
               }}
             >
-              <div className="whitespace-nowrap text-center text-[10.5px] font-black uppercase leading-none tracking-[0.02em] text-[#E11919] min-[390px]:text-[12px] sm:text-[28px] sm:tracking-[0.06em]">
+              <div className="whitespace-nowrap text-center text-[10.5px] font-black uppercase leading-none tracking-[0.02em] text-[#E11919] min-[390px]:text-[12px] sm:text-[22px] sm:tracking-[0.06em]">
                 {stamp}
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-3 grid grid-cols-[46%_1fr] gap-2.5 min-[390px]:gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
-            <div className="relative min-h-[292px] overflow-hidden rounded-[16px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner min-[390px]:min-h-[316px] sm:h-[280px] sm:rounded-[18px]">
+          <div className="relative z-10 mt-3 grid grid-cols-[46%_1fr] gap-2.5 min-[390px]:gap-3 sm:mt-4 sm:grid-cols-[210px_1fr] sm:gap-5">
+            <div className="relative min-h-[292px] overflow-hidden rounded-[16px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner min-[390px]:min-h-[316px] sm:h-[230px] sm:rounded-[18px]">
               <div className="absolute left-2.5 top-2.5 z-10 text-[8px] font-bold tracking-[0.2em] text-[#9A9288] sm:left-3 sm:top-3 sm:text-[10px]">
                 PORTRAIT
               </div>
@@ -488,50 +488,50 @@ export default function GameOverOverlay({
               </div>
             </div>
 
-            <div className="min-w-0 pt-0.5 sm:pt-4">
+            <div className="min-w-0 pt-0.5 sm:pt-2">
               <div
-                className={`mb-1 text-[24px] font-black leading-[0.95] tracking-[-0.04em] min-[390px]:text-[28px] sm:text-5xl sm:tracking-[-0.03em] ${resultColor}`}
+                className={`mb-1 text-[24px] font-black leading-[0.95] tracking-[-0.04em] min-[390px]:text-[28px] sm:text-[40px] sm:tracking-[-0.03em] ${resultColor}`}
               >
                 {result}
               </div>
 
-              <div className="mb-2 text-[11px] font-medium leading-tight text-[#6E655C] min-[390px]:text-[12px] sm:mb-4 sm:text-sm sm:leading-normal">
+              <div className="mb-2 text-[11px] font-medium leading-tight text-[#6E655C] min-[390px]:text-[12px] sm:mb-3 sm:text-[13px] sm:leading-snug">
                 {cardSubtext}
               </div>
 
-              <div className="mb-2 grid grid-cols-2 gap-1.5 text-xs min-[390px]:gap-2 sm:mb-3 sm:grid-cols-4 sm:gap-3 sm:text-sm">
-                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+              <div className="mb-2 grid grid-cols-2 gap-1.5 text-xs min-[390px]:gap-2 sm:mb-2 sm:grid-cols-4 sm:gap-2 sm:text-sm">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:px-2 sm:py-2">
                   <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     TURNS
                   </div>
-                  <div className="text-[16px] font-black leading-tight text-orange-500 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-orange-500 sm:text-[17px]">
                     {state.turn}
                   </div>
                 </div>
 
-                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:px-2 sm:py-2">
                   <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     TIRED
                   </div>
-                  <div className="text-[16px] font-black leading-tight text-red-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-red-600 sm:text-[17px]">
                     {state.tired}/100
                   </div>
                 </div>
 
-                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:px-2 sm:py-2">
                   <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     HEATER
                   </div>
-                  <div className="text-[16px] font-black leading-tight text-green-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-green-600 sm:text-[17px]">
                     x{profile?.bestStreak || 1}
                   </div>
                 </div>
 
-                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:px-2 sm:py-2">
                   <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     SAVES
                   </div>
-                  <div className="text-[16px] font-black leading-tight text-purple-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-purple-600 sm:text-[17px]">
                     {profile?.almostSaves || 0}
                   </div>
                 </div>
@@ -539,11 +539,11 @@ export default function GameOverOverlay({
 
             </div>
 
-            <div className="col-span-2 rounded-[12px] bg-[#EDE7DF] p-2.5 sm:col-span-1 sm:rounded-xl sm:p-3">
+            <div className="col-span-2 rounded-[12px] bg-[#EDE7DF] p-2.5 sm:col-span-1 sm:rounded-xl sm:px-2 sm:py-2">
               <div className="mb-0.5 text-[8px] font-bold tracking-[0.16em] text-[#91887E] sm:mb-1 sm:text-[10px] sm:tracking-[0.2em]">
                 PLAYER MEMORY
               </div>
-              <div className="text-[17px] font-black leading-tight text-[#1F1C18] sm:text-base">
+              <div className="text-[17px] font-black leading-tight text-[#1F1C18] sm:text-[15px]">
                 {persona}
               </div>
               <div className="text-[13px] leading-tight text-[#6E655C] sm:text-sm sm:leading-normal">
@@ -551,16 +551,16 @@ export default function GameOverOverlay({
               </div>
             </div>
 
-            <div className="col-span-2 text-[13px] italic leading-tight text-[#746A60] sm:col-span-1 sm:mt-3 sm:text-base sm:leading-normal">
+            <div className="col-span-2 text-[13px] italic leading-tight text-[#746A60] sm:col-span-1 sm:mt-3 sm:text-[15px] sm:leading-normal">
               {cardSubtext}
             </div>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3" data-no-export="true">
+        <div className="mt-2 grid grid-cols-2 gap-2.5 sm:mt-3 sm:gap-3" data-no-export="true">
           <button
             onClick={onReplay}
-            className="relative min-h-[52px] overflow-hidden rounded-[18px] border border-white/70 px-3 py-3 text-[14px] font-black text-zinc-900 shadow-[0_10px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.04] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)] active:scale-[0.97] sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[19px]"
+            className="relative min-h-[52px] overflow-hidden rounded-[18px] border border-white/70 px-3 py-3 text-[14px] font-black text-zinc-900 shadow-[0_10px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.04] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)] active:scale-[0.97] sm:min-h-[56px] sm:rounded-[22px] sm:px-6 sm:py-3 sm:text-[17px]"
             style={{
               background:
                 "linear-gradient(135deg, rgba(182,230,204,0.85), rgba(255,192,192,0.85))",
@@ -572,7 +572,7 @@ export default function GameOverOverlay({
           <button
             onClick={downloadCard}
             disabled={isDownloading}
-            className="min-h-[52px] rounded-[18px] border border-[#D8D2C8] bg-black px-3 py-3 text-[12px] font-black leading-tight text-white transition-all duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[17px]"
+            className="min-h-[52px] rounded-[18px] border border-[#D8D2C8] bg-black px-3 py-3 text-[12px] font-black leading-tight text-white transition-all duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[56px] sm:rounded-[22px] sm:px-6 sm:py-3 sm:text-[15px]"
           >
             {isDownloading ? "preparing PNG..." : "download card PNG to share"}
           </button>

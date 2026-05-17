@@ -1025,7 +1025,11 @@ function maybeApplySpecialEffect(
     };
   }
 
-  if (next.kind === "rekt" && (choice.category === "chaos" || Math.random() < 0.22)) {
+  // Rug outcomes should feel like a memorable rare collapse, not the default
+  // game-over identity. Chaos clicks raise the odds, but they no longer convert
+  // every rekt into a rug.
+  const rugChance = choice.category === "chaos" ? 0.28 : 0.12;
+  if (next.kind === "rekt" && Math.random() < rugChance) {
     next = {
       ...next,
       headline: sample(["RUGGED", "RUG CASUALTY", "LIQUIDITY VANISHED"]),
@@ -1513,9 +1517,12 @@ export function getRunTitle(state: GameState): string {
   const rugs = memory.rugCount ?? 0;
   const roundTrips = memory.roundTrips ?? 0;
 
-  if (rugs >= 1) return "Rug Casualty";
+  // Keep Rug Casualty special. A single rug-style rekt used to override almost
+  // every run, so other ID variants rarely appeared. Now it requires either
+  // repeated rug events or a clearly chaotic late run.
   if (rekt >= 3) return "Exit Liquidity";
   if (glitches >= 2) return "Shilling Victim";
+  if (rugs >= 2 || (rugs >= 1 && chaos >= 4 && turn >= 8)) return "Rug Casualty";
   if (rekt >= 2) return "Rekt";
 
   if (roundTrips >= 1 || (turn >= 18 && state.tired <= 45)) {
