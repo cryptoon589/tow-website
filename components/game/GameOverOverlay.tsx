@@ -441,123 +441,125 @@ export default function GameOverOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-4">
-      <div className="w-full max-w-[860px] rounded-[24px] bg-[#F6F2EC] p-3 shadow-2xl sm:rounded-[30px] sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 px-2 py-3 backdrop-blur-sm sm:p-4">
+      <div className="w-full max-w-[860px] rounded-[22px] bg-[#F6F2EC] p-2 shadow-2xl sm:rounded-[30px] sm:p-4">
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[22px] border border-[#DDD3C8] bg-[#F6F2EC] p-4 sm:p-5"
+          className="relative overflow-hidden rounded-[20px] border border-[#DDD3C8] bg-[#F6F2EC] p-3 sm:rounded-[22px] sm:p-5"
         >
           <div className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(90deg,rgba(0,0,0,0.045)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.025)_1px,transparent_1px)] [background-size:12px_12px]" />
 
-          <div className="relative z-10 flex items-start justify-between gap-3">
-            <div className="min-w-0 shrink-0 whitespace-nowrap text-[9px] tracking-[0.2em] text-[#837A70] sm:text-[11px] sm:tracking-[0.22em]">
+          <div className="relative z-10 flex items-start justify-between gap-2 overflow-hidden sm:gap-3">
+            <div className="min-w-[82px] shrink-0 whitespace-nowrap text-[8px] tracking-[0.18em] text-[#837A70] sm:min-w-0 sm:text-[11px] sm:tracking-[0.22em]">
               TOW RUN ID
-              <div className="mt-1 whitespace-nowrap font-mono text-[10px] tracking-[0.1em] text-[#1F1C18] sm:text-[12px] sm:tracking-[0.12em]">
+              <div className="mt-1 whitespace-nowrap font-mono text-[9px] tracking-[0.08em] text-[#1F1C18] sm:text-[12px] sm:tracking-[0.12em]">
                 RUN-{String(state.turn).padStart(4, "0")}
               </div>
             </div>
 
             <div
-              className="shrink-0 rotate-[3deg] rounded-full border-[4px] border-[#E11919] bg-[#FFF1F1] px-4 py-2 text-[#E11919] sm:border-[5px] sm:px-8 sm:py-3"
+              className="max-w-[calc(100%-92px)] shrink rotate-[3deg] rounded-full border-[3px] border-[#E11919] bg-[#FFF1F1] px-3 py-2 text-[#E11919] sm:max-w-none sm:shrink-0 sm:border-[5px] sm:px-8 sm:py-3"
               style={{
                 boxShadow:
-                  "0 0 0 5px rgba(225,25,25,0.16), 0 14px 30px rgba(225,25,25,0.22)",
+                  "0 0 0 4px rgba(225,25,25,0.16), 0 10px 24px rgba(225,25,25,0.2)",
               }}
             >
-              <div className="whitespace-nowrap text-center text-[14px] font-black uppercase leading-none tracking-[0.04em] text-[#E11919] sm:text-[28px] sm:tracking-[0.06em]">
+              <div className="truncate whitespace-nowrap text-center text-[12px] font-black uppercase leading-none tracking-[0.035em] text-[#E11919] min-[390px]:text-[14px] sm:text-[28px] sm:tracking-[0.06em]">
                 {stamp}
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-4 grid grid-cols-[34%_1fr] gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
-            <div className="relative h-[210px] overflow-hidden rounded-[18px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner sm:h-[280px]">
-              <div className="absolute left-3 top-3 z-10 text-[9px] font-bold tracking-[0.22em] text-[#9A9288] sm:text-[10px]">
+          <div className="relative z-10 mt-3 grid grid-cols-[112px_1fr] gap-2.5 min-[390px]:grid-cols-[128px_1fr] min-[390px]:gap-3 sm:mt-6 sm:grid-cols-[230px_1fr] sm:gap-6">
+            <div className="relative min-h-[184px] overflow-hidden rounded-[16px] border border-[#DED5CA] bg-[#EDE7DF] shadow-inner min-[390px]:min-h-[206px] sm:h-[280px] sm:rounded-[18px]">
+              <div className="absolute left-2.5 top-2.5 z-10 text-[8px] font-bold tracking-[0.2em] text-[#9A9288] sm:left-3 sm:top-3 sm:text-[10px]">
                 PORTRAIT
               </div>
 
-              <img
-                src={img}
-                alt={result}
-                className="absolute inset-0 h-full w-full object-contain p-2"
-                onError={(event) => {
-                  event.currentTarget.style.display = "none";
-                }}
-              />
+              <div className="absolute inset-x-2.5 bottom-2.5 top-9 flex items-center justify-center rounded-[10px] bg-[#F6F2EC]/55 sm:inset-2 sm:top-10 sm:rounded-[12px]">
+                <img
+                  src={img}
+                  alt={result}
+                  className="h-full max-h-full w-full max-w-full object-contain p-1.5 sm:p-2"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="min-w-0 pt-2 sm:pt-4">
+            <div className="min-w-0 pt-0.5 sm:pt-4">
               <div
-                className={`mb-1 text-2xl font-black leading-none sm:text-5xl ${resultColor}`}
+                className={`mb-1 text-[25px] font-black leading-[0.95] tracking-[-0.04em] min-[390px]:text-[30px] sm:text-5xl sm:tracking-[-0.03em] ${resultColor}`}
               >
                 {result}
               </div>
 
-              <div className="mb-3 text-xs font-medium text-[#6E655C] sm:mb-4 sm:text-sm">
+              <div className="mb-2 text-[12px] font-medium leading-tight text-[#6E655C] min-[390px]:text-[13px] sm:mb-4 sm:text-sm sm:leading-normal">
                 {cardSubtext}
               </div>
 
-              <div className="mb-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 sm:gap-3 sm:text-sm">
-                <div className="rounded-xl bg-[#EDE7DF] p-2 text-center sm:p-3">
-                  <div className="text-[9px] tracking-wider text-[#91887E] sm:text-[10px]">
+              <div className="mb-2 grid grid-cols-2 gap-1.5 text-xs min-[390px]:gap-2 sm:mb-3 sm:grid-cols-4 sm:gap-3 sm:text-sm">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     TURNS
                   </div>
-                  <div className="text-base font-black text-orange-500 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-orange-500 sm:text-lg">
                     {state.turn}
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-2 text-center sm:p-3">
-                  <div className="text-[9px] tracking-wider text-[#91887E] sm:text-[10px]">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     TIRED
                   </div>
-                  <div className="text-base font-black text-red-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-red-600 sm:text-lg">
                     {state.tired}/100
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-2 text-center sm:p-3">
-                  <div className="text-[9px] tracking-wider text-[#91887E] sm:text-[10px]">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     HEATER
                   </div>
-                  <div className="text-base font-black text-green-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-green-600 sm:text-lg">
                     x{profile?.bestStreak || 1}
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-[#EDE7DF] p-2 text-center sm:p-3">
-                  <div className="text-[9px] tracking-wider text-[#91887E] sm:text-[10px]">
+                <div className="rounded-[12px] bg-[#EDE7DF] px-1.5 py-2 text-center sm:rounded-xl sm:p-3">
+                  <div className="text-[8px] tracking-wider text-[#91887E] sm:text-[10px]">
                     SAVES
                   </div>
-                  <div className="text-base font-black text-purple-600 sm:text-lg">
+                  <div className="text-[16px] font-black leading-tight text-purple-600 sm:text-lg">
                     {profile?.almostSaves || 0}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-[#EDE7DF] p-2 sm:p-3">
-                <div className="mb-1 text-[9px] font-bold tracking-[0.18em] text-[#91887E] sm:text-[10px] sm:tracking-[0.2em]">
+              <div className="rounded-[12px] bg-[#EDE7DF] p-2 sm:rounded-xl sm:p-3">
+                <div className="mb-0.5 text-[8px] font-bold tracking-[0.16em] text-[#91887E] sm:mb-1 sm:text-[10px] sm:tracking-[0.2em]">
                   PLAYER MEMORY
                 </div>
-                <div className="text-sm font-bold text-[#1F1C18] sm:text-base">
+                <div className="text-[15px] font-black leading-tight text-[#1F1C18] sm:text-base">
                   {persona}
                 </div>
-                <div className="text-xs text-[#6E655C] sm:text-sm">
+                <div className="text-[12px] leading-tight text-[#6E655C] sm:text-sm sm:leading-normal">
                   {personaLine}
                 </div>
               </div>
 
-              <div className="mt-2 text-xs italic text-[#746A60] sm:mt-3 sm:text-base">
+              <div className="mt-2 text-[12px] italic leading-tight text-[#746A60] sm:mt-3 sm:text-base sm:leading-normal">
                 {cardSubtext}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3" data-no-export="true">
+        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3" data-no-export="true">
           <button
             onClick={onReplay}
-            className="relative min-h-[58px] overflow-hidden rounded-[22px] border border-white/70 px-4 py-4 text-[15px] font-black text-zinc-900 shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.04] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)] active:scale-[0.97] sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[19px]"
+            className="relative min-h-[52px] overflow-hidden rounded-[18px] border border-white/70 px-3 py-3 text-[14px] font-black text-zinc-900 shadow-[0_10px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.04] hover:shadow-[0_18px_42px_rgba(0,0,0,0.22)] active:scale-[0.97] sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[19px]"
             style={{
               background:
                 "linear-gradient(135deg, rgba(182,230,204,0.85), rgba(255,192,192,0.85))",
@@ -569,7 +571,7 @@ export default function GameOverOverlay({
           <button
             onClick={downloadCard}
             disabled={isDownloading}
-            className="min-h-[58px] rounded-[22px] border border-[#D8D2C8] bg-black px-4 py-4 text-[13px] font-black text-white transition-all duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[17px]"
+            className="min-h-[52px] rounded-[18px] border border-[#D8D2C8] bg-black px-3 py-3 text-[12px] font-black leading-tight text-white transition-all duration-200 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[68px] sm:rounded-[26px] sm:px-8 sm:py-5 sm:text-[17px]"
           >
             {isDownloading ? "preparing PNG..." : "download card PNG to share"}
           </button>

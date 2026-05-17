@@ -262,3 +262,16 @@ body {
     opacity: 1;
   }
 }
+
+/* ========================= */
+/* MOBILE SAFE AREA HELPERS */
+/* ========================= */
+
+.mobile-safe {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
