@@ -1,6 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import {
+  getGameOverHeadline,
+  getGameOverSubtext,
+  getPersonaLine,
+  getRunTitle,
+} from "./engine";
 
 const STAMPS = [
   "EVENTUALLY REKT",
@@ -164,12 +170,16 @@ async function createCardPng({
   result,
   img,
   stamp,
+  cardSubtext,
+  personaLine,
 }: {
   state: any;
   profile: any;
   result: string;
   img: string;
   stamp: string;
+  cardSubtext: string;
+  personaLine: string;
 }) {
   await document.fonts.ready;
 
@@ -180,7 +190,6 @@ async function createCardPng({
 
   const canvas = document.createElement("canvas");
 
-  // Match the live card proportions instead of exporting a huge different card.
   const width = 1100;
   const height = 560;
   const scale = 2;
@@ -195,11 +204,9 @@ async function createCardPng({
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  // Background.
   ctx.fillStyle = "#F6F2EC";
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle grid.
   ctx.strokeStyle = "rgba(0,0,0,0.045)";
   ctx.lineWidth = 1;
   for (let x = 0; x <= width; x += 12) {
@@ -217,13 +224,11 @@ async function createCardPng({
     ctx.stroke();
   }
 
-  // Border.
   ctx.strokeStyle = "#DDD3C8";
   ctx.lineWidth = 1.5;
   roundedRect(ctx, 1, 1, width - 2, height - 2, 22);
   ctx.stroke();
 
-  // Run ID.
   drawText(ctx, "TOW RUN ID", 28, 42, {
     font: `700 16px ${serifFamily}`,
     fillStyle: "#837A70",
@@ -233,7 +238,6 @@ async function createCardPng({
     fillStyle: "#1F1C18",
   });
 
-  // Stamp — one-line, dominant, red, export-safe.
   ctx.save();
   ctx.translate(725, 45);
   ctx.rotate((3 * Math.PI) / 180);
@@ -258,7 +262,6 @@ async function createCardPng({
   drawCenteredStampText(ctx, stamp, 170, 36, 286, fontFamily);
   ctx.restore();
 
-  // Portrait panel.
   const portraitX = 28;
   const portraitY = 145;
   const portraitW = 300;
@@ -282,23 +285,30 @@ async function createCardPng({
     roundedRect(ctx, portraitX, portraitY, portraitW, portraitH, 18);
     ctx.clip();
 
-    // Same visual feel as live <img className="h-[145%] bottom-[-18px]" />.
-    const targetH = portraitH * 1.45;
-    const targetW = targetH * (portrait.width / portrait.height);
+    const padding = 12;
+    const boxW = portraitW - padding * 2;
+    const boxH = portraitH - padding * 2;
+
+    const imageScale = Math.min(
+      boxW / portrait.width,
+      boxH / portrait.height
+    );
+
+    const targetW = portrait.width * imageScale;
+    const targetH = portrait.height * imageScale;
     const targetX = portraitX + portraitW / 2 - targetW / 2;
-    const targetY = portraitY + portraitH - targetH - 18;
+    const targetY = portraitY + portraitH / 2 - targetH / 2;
+
     ctx.drawImage(portrait, targetX, targetY, targetW, targetH);
     ctx.restore();
   }
 
-  // Main result.
   const contentX = 360;
   drawText(ctx, result, contentX, 215, {
     font: `900 56px ${fontFamily}`,
     fillStyle: getCanvasResultColor(result),
   });
 
-  // You lasted line, with measured spacing so it does not look broken.
   const lineY = 255;
   ctx.font = `500 20px ${fontFamily}`;
   ctx.fillStyle = "#6E655C";
@@ -314,7 +324,6 @@ async function createCardPng({
   ctx.fillStyle = "#6E655C";
   ctx.fillText(" turns.", contentX + lastedWidth + turnWidth, lineY);
 
-  // Stat boxes match live card order: turns, tired, heater, saves.
   const statY = 285;
   const statW = 125;
   const statH = 74;
@@ -343,7 +352,6 @@ async function createCardPng({
     });
   });
 
-  // Player memory.
   roundedRect(ctx, contentX, 378, 690, 86, 12);
   ctx.fillStyle = "#EDE7DF";
   ctx.fill();
@@ -352,16 +360,16 @@ async function createCardPng({
     font: `700 13px ${serifFamily}`,
     fillStyle: "#91887E",
   });
-  drawText(ctx, profile?.type || "balanced", contentX + 18, 438, {
+  drawText(ctx, profile?.persona || profile?.type || "fresh", contentX + 18, 438, {
     font: `900 20px ${fontFamily}`,
     fillStyle: "#1F1C18",
   });
-  drawText(ctx, profile?.description || "you kept going", contentX + 18, 462, {
+  drawText(ctx, personaLine, contentX + 18, 462, {
     font: `500 18px ${fontFamily}`,
     fillStyle: "#6E655C",
   });
 
-  drawText(ctx, "I almost made it. Next run might be the one.", contentX, 505, {
+  drawText(ctx, cardSubtext, contentX, 505, {
     font: `italic 21px ${serifFamily}`,
     fillStyle: "#746A60",
   });
@@ -388,11 +396,20 @@ export default function GameOverOverlay({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const result = state?.resultTitle || "Passenger";
+  const result = state ? getRunTitle(state) : state?.resultTitle || "Passenger";
   const img = getImage(result);
   const stamp = useMemo(
-    () => pickStamp(state?.turn || 0, result),
-    [state?.turn, result]
+    () => (state ? getGameOverHeadline(state) : pickStamp(state?.turn || 0, result)),
+    [state, state?.turn, result]
+  );
+  const cardSubtext = useMemo(
+    () => (state ? getGameOverSubtext(state) : `You lasted ${state?.turn || 0} turns. ${result}.`),
+    [state, state?.turn, result]
+  );
+  const persona = profile?.persona || profile?.type || "fresh";
+  const personaLine = useMemo(
+    () => getPersonaLine(persona),
+    [persona]
   );
   const resultColor = getResultColor(result);
 
@@ -410,6 +427,8 @@ export default function GameOverOverlay({
         result,
         img,
         stamp,
+        cardSubtext,
+        personaLine,
       });
 
       downloadBlob(blob, `tow-run-${String(state.turn).padStart(4, "0")}.png`);
@@ -460,7 +479,7 @@ export default function GameOverOverlay({
               <img
                 src={img}
                 alt={result}
-                className="absolute bottom-[-18px] left-1/2 h-[145%] -translate-x-1/2 object-cover"
+                className="absolute inset-0 h-full w-full object-contain p-2"
                 onError={(event) => {
                   event.currentTarget.style.display = "none";
                 }}
@@ -475,9 +494,7 @@ export default function GameOverOverlay({
               </div>
 
               <div className="mb-3 text-xs font-medium text-[#6E655C] sm:mb-4 sm:text-sm">
-                You lasted{" "}
-                <span className="font-bold text-orange-500">{state.turn}</span>{" "}
-                turns.
+                {cardSubtext}
               </div>
 
               <div className="mb-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 sm:gap-3 sm:text-sm">
@@ -523,15 +540,15 @@ export default function GameOverOverlay({
                   PLAYER MEMORY
                 </div>
                 <div className="text-sm font-bold text-[#1F1C18] sm:text-base">
-                  {profile?.type || "balanced"}
+                  {persona}
                 </div>
                 <div className="text-xs text-[#6E655C] sm:text-sm">
-                  {profile?.description || "you kept going"}
+                  {personaLine}
                 </div>
               </div>
 
               <div className="mt-2 text-xs italic text-[#746A60] sm:mt-3 sm:text-base">
-                I almost made it. Next run might be the one.
+                {cardSubtext}
               </div>
             </div>
           </div>

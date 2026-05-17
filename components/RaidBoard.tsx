@@ -8,7 +8,13 @@ import {
   savePost,
   deletePost,
 } from "@/lib/raidStorage";
-import { validateXUrl, getCurrentWeekId, RaidPost } from "@/config/raidBoard";
+import {
+  validateXUrl,
+  getCurrentWeekId,
+  RaidPost,
+  formatHandle,
+  normalizeHandle,
+} from "@/config/raidBoard";
 
 type RaidLeaderboardEntry = {
   xUsername: string;
@@ -31,15 +37,17 @@ export default function RaidBoard() {
     const counts: Record<string, RaidLeaderboardEntry> = {};
 
     posts.forEach((post) => {
-      if (!counts[post.xUsername]) {
-        counts[post.xUsername] = {
-          xUsername: post.xUsername,
+      const username = normalizeHandle(post.xUsername);
+
+      if (!counts[username]) {
+        counts[username] = {
+          xUsername: username,
           wallet: post.wallet,
           count: 0,
         };
       }
 
-      counts[post.xUsername].count += 1;
+      counts[username].count += 1;
     });
 
     return Object.values(counts).sort((a, b) => b.count - a.count);
@@ -85,7 +93,7 @@ export default function RaidBoard() {
     }
 
     const recentlyPosted = posts.some((p) => {
-      if (p.xUsername !== user.xUsername) return false;
+      if (normalizeHandle(p.xUsername) !== normalizeHandle(user.xUsername)) return false;
 
       const minutesSincePost =
         (Date.now() - new Date(p.timestamp).getTime()) / 60000;
@@ -100,7 +108,7 @@ export default function RaidBoard() {
 
     const newPost: RaidPost = {
       id: crypto.randomUUID(),
-      xUsername: user.xUsername,
+      xUsername: normalizeHandle(user.xUsername),
       wallet: user.wallet,
       telegram: user.telegram,
       postUrl: cleanUrl,
@@ -137,9 +145,13 @@ export default function RaidBoard() {
   };
 
   const totalPosts = posts.length;
-  const totalContributors = new Set(posts.map((p) => p.xUsername)).size;
+  const totalContributors = new Set(
+    posts.map((p) => normalizeHandle(p.xUsername))
+  ).size;
   const userCount = user
-    ? posts.filter((p) => p.xUsername === user.xUsername).length
+    ? posts.filter(
+        (p) => normalizeHandle(p.xUsername) === normalizeHandle(user.xUsername)
+      ).length
     : 0;
 
   return (
@@ -180,7 +192,7 @@ export default function RaidBoard() {
             >
               <div className="flex items-center gap-3">
                 <span className="w-8 text-lg font-bold">#{i + 1}</span>
-                <span className="font-medium">@{entry.xUsername}</span>
+                <span className="font-medium">{formatHandle(entry.xUsername)}</span>
               </div>
 
               <span className="font-bold">{entry.count} posts</span>
@@ -213,7 +225,7 @@ export default function RaidBoard() {
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
               Posting as{" "}
-              <span className="font-bold">@{user.xUsername}</span>{" "}
+              <span className="font-bold">{formatHandle(user.xUsername)}</span>{" "}
               ({user.wallet.slice(0, 6)}...{user.wallet.slice(-4)})
             </div>
 
@@ -253,7 +265,7 @@ export default function RaidBoard() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="mb-1 flex items-center gap-2">
-                    <span className="font-bold">@{post.xUsername}</span>
+                    <span className="font-bold">{formatHandle(post.xUsername)}</span>
                     <span className="text-xs text-gray-500">
                       {new Date(post.timestamp).toLocaleTimeString()}
                     </span>

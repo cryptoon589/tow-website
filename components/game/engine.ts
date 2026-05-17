@@ -173,6 +173,58 @@ const CHAOS_CHOICES = [
   "this one rips",
 ];
 
+const LATE_SAFE_CHOICES = [
+  "I’ll just survive this",
+  "protect the run",
+  "don’t get greedy",
+  "small recovery only",
+  "this is the calm choice",
+  "I need one clean tap",
+  "safe button save me",
+  "no hero moves",
+  "just reduce the tired",
+  "I can still stabilize",
+];
+
+const LATE_SWING_CHOICES = [
+  "one candle can fix this",
+  "I can recover here",
+  "this is the reversal",
+  "don’t fade the comeback",
+  "I’ve come too far",
+  "this has to bounce",
+  "not selling the run",
+  "one more decent hit",
+  "this is probably support",
+  "maybe this saves it",
+];
+
+const LATE_CHAOS_CHOICES = [
+  "send it or end it",
+  "all in emotionally",
+  "I refuse to lose here",
+  "one tap miracle",
+  "full panic conviction",
+  "this can’t be the top",
+  "the timeline owes me",
+  "revenge click",
+  "last chance alpha",
+  "I’m already cooked anyway",
+];
+
+const DESPERATION_WHISPERS = [
+  "last chance",
+  "phone shaking",
+  "don’t blink",
+  "this is bad",
+  "still alive?",
+  "one tap zone",
+  "be honest",
+  "too late?",
+  "choose fast",
+  "no pressure",
+];
+
 const WHISPERS = [
   "could be bait",
   "looks too clean",
@@ -445,26 +497,43 @@ export function createInitialState(bestRun = 0): GameState {
   };
 }
 
+function getChoicePools(state: GameState) {
+  const arc = getRunArc(state);
+  const late =
+    arc.stage === "desperation" ||
+    arc.stage === "lastStand" ||
+    state.tired >= 72 ||
+    state.turn >= 12;
+
+  return {
+    safe: late ? [...SAFE_CHOICES, ...LATE_SAFE_CHOICES] : SAFE_CHOICES,
+    swing: late ? [...SWING_CHOICES, ...LATE_SWING_CHOICES] : SWING_CHOICES,
+    chaos: late ? [...CHAOS_CHOICES, ...LATE_CHAOS_CHOICES] : CHAOS_CHOICES,
+    whispers: late ? [...WHISPERS, ...DESPERATION_WHISPERS] : WHISPERS,
+  };
+}
+
 export function generateChoices(state: GameState): Choice[] {
   const used = new Set<string>();
+  const pools = getChoicePools(state);
 
   const choices: Choice[] = [
     {
       id: generateId(),
-      label: pickUniqueLabel(SAFE_CHOICES, used),
-      whisper: sample(WHISPERS),
+      label: pickUniqueLabel(pools.safe, used),
+      whisper: sample(pools.whispers),
       category: "safe",
     },
     {
       id: generateId(),
-      label: pickUniqueLabel(SWING_CHOICES, used),
-      whisper: sample(WHISPERS),
+      label: pickUniqueLabel(pools.swing, used),
+      whisper: sample(pools.whispers),
       category: "swing",
     },
     {
       id: generateId(),
-      label: pickUniqueLabel(CHAOS_CHOICES, used),
-      whisper: sample(WHISPERS),
+      label: pickUniqueLabel(pools.chaos, used),
+      whisper: sample(pools.whispers),
       category: "chaos",
     },
   ];
@@ -476,6 +545,43 @@ function getMarketBand(tired: number) {
   if (tired < 35) return "stable";
   if (tired < 70) return "unstable";
   return "panic";
+}
+
+function getRecentBadRunPressure(state: GameState) {
+  const last = state.lastOutcome?.kind;
+
+  if (!last) return 0;
+  if (last === "rekt") return 3;
+  if (last === "lose") return 2;
+  if (last === "loseSmall") return 1;
+
+  return 0;
+}
+
+function getHiddenTimelineEvent(state: GameState):
+  | "none"
+  | "everyoneBullish"
+  | "deadTimeline"
+  | "exitRotation"
+  | "mainCharacter"
+  | "ctFoundMeta"
+  | "nobodyKnows" {
+  // Hidden, lightweight event layer. It changes rolls without changing the
+  // public state shape or any final ID names/images.
+  const eventTurn = state.turn > 1 && state.turn % 4 === 0;
+  const panicEvent = state.tired >= 78 && Math.random() < 0.22;
+
+  if (!eventTurn && !panicEvent) return "none";
+
+  return weightedPick([
+    { value: "everyoneBullish", weight: 16 },
+    { value: "deadTimeline", weight: 16 },
+    { value: "exitRotation", weight: 14 },
+    { value: "mainCharacter", weight: 16 },
+    { value: "ctFoundMeta", weight: 12 },
+    { value: "nobodyKnows", weight: 10 },
+    { value: "none", weight: 16 },
+  ]);
 }
 
 function getOutcomeWeights(
@@ -713,7 +819,102 @@ function getOutcomeWeights(
     );
   }
 
-  return weights;
+  // Hidden timeline moments: more replay variety without adding any new
+  // public outcome kinds, animations, result titles, or image dependencies.
+  const timelineEvent = getHiddenTimelineEvent(state);
+
+  if (timelineEvent === "everyoneBullish") {
+    weights = weights.map((entry) => {
+      if (entry.value === "win" || entry.value === "winSmall") {
+        return { ...entry, weight: entry.weight + 6 };
+      }
+      if (entry.value === "rekt") {
+        return { ...entry, weight: entry.weight + 3 };
+      }
+      return entry;
+    });
+  }
+
+  if (timelineEvent === "deadTimeline") {
+    weights = weights.map((entry) => {
+      if (entry.value === "loseSmall") return { ...entry, weight: entry.weight + 8 };
+      if (entry.value === "win") return { ...entry, weight: Math.max(1, entry.weight - 4) };
+      return entry;
+    });
+  }
+
+  if (timelineEvent === "exitRotation") {
+    weights = weights.map((entry) => {
+      if (category === "safe" && (entry.value === "lose" || entry.value === "rekt")) {
+        return { ...entry, weight: entry.weight + 6 };
+      }
+      if (category === "chaos" && entry.value === "win") {
+        return { ...entry, weight: entry.weight + 4 };
+      }
+      return entry;
+    });
+  }
+
+  if (timelineEvent === "mainCharacter") {
+    weights = weights.map((entry) => {
+      if (entry.value === "win" || entry.value === "rekt") {
+        return { ...entry, weight: entry.weight + 8 };
+      }
+      if (entry.value === "loseSmall") {
+        return { ...entry, weight: Math.max(1, entry.weight - 4) };
+      }
+      return entry;
+    });
+  }
+
+  if (timelineEvent === "ctFoundMeta") {
+    weights = weights.map((entry) =>
+      entry.value === "glitch" || entry.value === "win" || entry.value === "rekt"
+        ? { ...entry, weight: entry.weight + 5 }
+        : entry
+    );
+  }
+
+  if (timelineEvent === "nobodyKnows") {
+    weights = weights.map((entry) => {
+      if (entry.value === "glitch") return { ...entry, weight: entry.weight + 8 };
+      return { ...entry, weight: Math.max(1, Math.round(entry.weight * 0.86 + randInt(0, 6))) };
+    });
+  }
+
+  // Comeback pressure: after bad taps, slightly raise relief/glitch odds so
+  // runs have arcs instead of straight-line decline. It never guarantees a save.
+  const badPressure = getRecentBadRunPressure(state);
+  if (badPressure > 0 && state.tired >= 55) {
+    weights = weights.map((entry) => {
+      if (entry.value === "winSmall" || entry.value === "glitch") {
+        return { ...entry, weight: entry.weight + badPressure * 3 };
+      }
+      if (entry.value === "loseSmall") {
+        return { ...entry, weight: Math.max(1, entry.weight - badPressure) };
+      }
+      return entry;
+    });
+  }
+
+  // Early-game texture: chaos can occasionally print early and safe can betray.
+  // This keeps the first few turns from feeling solved.
+  if (state.turn <= 4) {
+    weights = weights.map((entry) => {
+      if (category === "chaos" && entry.value === "win") {
+        return { ...entry, weight: entry.weight + 3 };
+      }
+      if (category === "safe" && entry.value === "lose") {
+        return { ...entry, weight: entry.weight + 3 };
+      }
+      return entry;
+    });
+  }
+
+  return weights.map((entry) => ({
+    ...entry,
+    weight: Math.max(1, Math.round(entry.weight)),
+  }));
 }
 
 function buildBaseOutcome(kind: OutcomeKind): Outcome {
@@ -857,6 +1058,56 @@ function maybeApplySpecialEffect(
 
   if (next.kind === "rekt" && Math.random() < 0.22) {
     appliedModifiers.push(modifier("narrativeShift", 2));
+  }
+
+  if (next.kind === "glitch") {
+    const glitchFlavor = weightedPick([
+      { value: "relief", weight: 34 },
+      { value: "trap", weight: 24 },
+      { value: "shuffle", weight: 26 },
+      { value: "nothing", weight: 16 },
+    ]);
+
+    if (glitchFlavor === "relief") {
+      next = {
+        ...next,
+        headline: sample(["TIMELINE MERCY", "WRONG WAY PUMP", "RANDOM SAVE"]),
+        subtext: sample([
+          "Nobody knows why that helped. Take it.",
+          "The chart glitched in your favor.",
+          "A terrible click produced temporary hope.",
+        ]),
+        delta: -randInt(4, 16),
+      };
+      appliedModifiers.push(modifier("copium", 1));
+    }
+
+    if (glitchFlavor === "trap") {
+      next = {
+        ...next,
+        headline: sample(["FAKE RELIEF", "GLITCH TRAP", "BAIT CANDLE"]),
+        subtext: sample([
+          "It looked like a save until it wasn’t.",
+          "The timeline showed mercy, then charged interest.",
+          "That was not recovery. That was theater.",
+        ]),
+        delta: randInt(8, 22),
+      };
+      appliedModifiers.push(modifier("cursed", 1));
+    }
+
+    if (glitchFlavor === "shuffle") {
+      next = {
+        ...next,
+        headline: sample(["NARRATIVE FLIP", "CT DESYNC", "META BROKE"]),
+        subtext: sample([
+          "The old rules stopped working mid-run.",
+          "Everyone found the meta, so the meta left.",
+          "Nothing is priced in, including your mistake.",
+        ]),
+      };
+      appliedModifiers.push(modifier("narrativeShift", 2));
+    }
   }
 
   next.appliedModifiers = appliedModifiers;
@@ -1250,18 +1501,40 @@ export function getMarketState(state: GameState): {
 export function getRunTitle(state: GameState): string {
   const { memory, turn } = state;
 
-  if ((memory.rugCount ?? 0) >= 1) return "Rug Casualty";
-  if ((memory.glitchCount ?? 0) >= 2) return "Shilling Victim";
-  if ((memory.rektCount ?? 0) >= 3) return "Exit Liquidity";
-  if ((memory.rektCount ?? 0) >= 2) return "Rekt";
-  if ((memory.almostSaves ?? 0) >= 2) return "Survivor";
-  if ((memory.chaosPicks ?? 0) >= 6) return "Degen";
-  if ((memory.bigWins ?? 0) >= 3) return "Lucky";
-  if ((memory.timeouts ?? 0) >= 3) return "Hesitant";
-  if ((memory.roundTrips ?? 0) >= 1 || (turn >= 18 && state.tired <= 45)) return "Round-Tripper";
-  if ((memory.npcPicks ?? 0) >= 5) return "NPC";
-  if ((memory.safePicks ?? 0) >= 6) return "Bagholder";
+  const safe = memory.safePicks ?? 0;
+  const swing = memory.swingPicks ?? 0;
+  const chaos = memory.chaosPicks ?? 0;
+  const timeouts = memory.timeouts ?? 0;
+  const rekt = memory.rektCount ?? 0;
+  const glitches = memory.glitchCount ?? 0;
+  const bigWins = memory.bigWins ?? 0;
+  const almostSaves = memory.almostSaves ?? 0;
+  const npc = memory.npcPicks ?? 0;
+  const rugs = memory.rugCount ?? 0;
+  const roundTrips = memory.roundTrips ?? 0;
+
+  if (rugs >= 1) return "Rug Casualty";
+  if (rekt >= 3) return "Exit Liquidity";
+  if (glitches >= 2) return "Shilling Victim";
+  if (rekt >= 2) return "Rekt";
+
+  if (roundTrips >= 1 || (turn >= 18 && state.tired <= 45)) {
+    return "Round-Tripper";
+  }
+
+  if (chaos >= 6) return "Degen";
+  if (bigWins >= 3) return "Lucky";
+  if (timeouts >= 3) return "Hesitant";
+  if (npc >= 5) return "NPC";
+  if (safe >= 6) return "Bagholder";
+
+  if (almostSaves >= 3 && turn >= 14) return "Survivor";
+
   if (turn <= 4) return "Noob";
+
+  if (swing >= safe && swing >= chaos) return "Passenger";
+  if (safe > chaos) return "Bagholder";
+  if (chaos > safe) return "Degen";
 
   return "Passenger";
 }
@@ -1288,7 +1561,56 @@ export function getGameOverHeadline(state: GameState): string {
 
 export function getGameOverSubtext(state: GameState): string {
   const title = getRunTitle(state);
-  return `You lasted ${state.turn} turns. ${title}.`;
+
+  if (title === "Rug Casualty") {
+    return `You lasted ${state.turn} turns. You trusted the floor. The floor disappeared.`;
+  }
+
+  if (title === "Shilling Victim") {
+    return `You lasted ${state.turn} turns. The timeline sold you confidence. You bought the top.`;
+  }
+
+  if (title === "Exit Liquidity") {
+    return `You lasted ${state.turn} turns. You weren’t early. You were the donation.`;
+  }
+
+  if (title === "Rekt") {
+    return `You lasted ${state.turn} turns. The chart did not respect your recovery plan.`;
+  }
+
+  if (title === "Survivor") {
+    return `You lasted ${state.turn} turns. Nobody knows how you’re still here.`;
+  }
+
+  if (title === "Degen") {
+    return `You lasted ${state.turn} turns. You didn’t manage risk. You became the risk.`;
+  }
+
+  if (title === "Lucky") {
+    return `You lasted ${state.turn} turns. No skill detected. Still counts.`;
+  }
+
+  if (title === "Hesitant") {
+    return `You lasted ${state.turn} turns. You waited, blinked, and the timeline moved on.`;
+  }
+
+  if (title === "Round-Tripper") {
+    return `You lasted ${state.turn} turns. You went somewhere emotionally. Financially, nowhere.`;
+  }
+
+  if (title === "NPC") {
+    return `You lasted ${state.turn} turns. You clicked like the buttons were choosing you.`;
+  }
+
+  if (title === "Bagholder") {
+    return `You lasted ${state.turn} turns. You called it conviction. The chart called it luggage.`;
+  }
+
+  if (title === "Noob") {
+    return `You lasted ${state.turn} turns. First lesson: the timeline is not your friend.`;
+  }
+
+  return `You lasted ${state.turn} turns. You were just along for the ride.`;
 }
 
 export function getStreakLabel(streak: number): string {

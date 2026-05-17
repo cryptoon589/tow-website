@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import TowLeaderboard from "@/components/game/TowLeaderboard";
 import {
+  getRewardProfile,
   isValidXrplWallet,
   isValidXUsername,
   normalizeXUsername,
@@ -17,6 +18,25 @@ export default function PlayStartPage() {
   const [xUsername, setXUsername] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [error, setError] = useState("");
+  const [hasSavedProfile, setHasSavedProfile] = useState(false);
+
+  useEffect(() => {
+    const profile = getRewardProfile();
+
+    if (!profile) return;
+
+    setXUsername(profile.xUsername ?? "");
+    setWalletAddress(profile.walletAddress ?? "");
+    setHasSavedProfile(true);
+  }, []);
+
+  const canContinue = useMemo(() => {
+    return (
+      hasSavedProfile &&
+      isValidXUsername(xUsername) &&
+      isValidXrplWallet(walletAddress)
+    );
+  }, [hasSavedProfile, walletAddress, xUsername]);
 
   function startRewardRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,7 +60,19 @@ export default function PlayStartPage() {
       createdAt: new Date().toISOString(),
     });
 
+    setHasSavedProfile(true);
     router.push("/play?mode=earn");
+  }
+
+  function clearSavedProfile() {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("tow_reward_player_profile");
+    }
+
+    setXUsername("");
+    setWalletAddress("");
+    setHasSavedProfile(false);
+    setError("");
   }
 
   return (
@@ -81,15 +113,45 @@ export default function PlayStartPage() {
                     💎
                   </div>
 
-                  <div>
-                    <h2 className="text-2xl font-black tracking-tight">
-                      Play & Earn Rewards
-                    </h2>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-2xl font-black tracking-tight">
+                        Play & Earn Rewards
+                      </h2>
+
+                      {hasSavedProfile ? (
+                        <span className="rounded-full border border-black bg-[#DDFBE8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#146C36]">
+                          remembered
+                        </span>
+                      ) : null}
+                    </div>
+
                     <p className="mt-1 text-sm font-bold text-[#555]">
                       Submit your run to the weekly leaderboard.
                     </p>
                   </div>
                 </div>
+
+                {hasSavedProfile ? (
+                  <div className="mt-4 rounded-2xl border-2 border-black bg-white px-3 py-3 text-sm font-bold text-[#333]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p>
+                        Saved profile: <span className="font-black">@{xUsername}</span>{" "}
+                        <span className="text-[#777]">
+                          ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})
+                        </span>
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={clearSavedProfile}
+                        className="rounded-full border border-black px-3 py-1 text-xs font-black transition hover:bg-black hover:text-white"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <label className="block">
@@ -133,7 +195,7 @@ export default function PlayStartPage() {
                   type="submit"
                   className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5B2BE8] hover:shadow-[0_0_32px_rgba(109,59,255,0.6)] active:translate-y-0"
                 >
-                  🎮 Start Reward Run
+                  {canContinue ? "🎮 Continue Reward Run" : "🎮 Start Reward Run"}
                 </button>
 
                 <p className="mt-3 text-center text-xs font-bold text-[#555]">

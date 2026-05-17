@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveRaider, getCurrentUser } from "@/lib/raidStorage";
+import { formatHandle, normalizeHandle } from "@/config/raidBoard";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -19,25 +20,34 @@ export default function RegisterForm() {
   const handleSubmit = () => {
     setError("");
 
-    if (!xUsername.trim()) {
+    const cleanXUsername = normalizeHandle(xUsername);
+    const cleanWallet = wallet.trim();
+    const cleanTelegram = normalizeHandle(telegram);
+
+    if (!cleanXUsername) {
       setError("X username is required.");
       return;
     }
 
-    if (!wallet.trim()) {
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(cleanXUsername)) {
+      setError("Enter your X username only, without @.");
+      return;
+    }
+
+    if (!cleanWallet) {
       setError("Wallet address is required.");
       return;
     }
 
-    if (wallet.length < 10) {
+    if (cleanWallet.length < 10) {
       setError("Invalid wallet address.");
       return;
     }
 
     saveRaider({
-      xUsername: xUsername.trim(),
-      wallet: wallet.trim(),
-      telegram: telegram.trim() || undefined,
+      xUsername: cleanXUsername,
+      wallet: cleanWallet,
+      telegram: cleanTelegram || undefined,
       registeredAt: new Date().toISOString(),
     });
 
@@ -46,14 +56,28 @@ export default function RegisterForm() {
 
   if (existingUser) {
     return (
-      <div className="max-w-md mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-6">Already Registered</h1>
-        <div className="bg-gray-50 border-2 border-black rounded-lg p-6">
-          <p className="mb-2"><span className="font-bold">X:</span> @{existingUser.xUsername}</p>
-          <p className="mb-2"><span className="font-bold">Wallet:</span> {existingUser.wallet.slice(0, 6)}...{existingUser.wallet.slice(-4)}</p>
-          {existingUser.telegram && <p className="mb-4"><span className="font-bold">Telegram:</span> @{existingUser.telegram}</p>}
-          <button onClick={() => router.push("/raid-board")} className="w-full px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800">
-            Go to Everyone's Tired
+      <div className="mx-auto max-w-md px-4 py-12">
+        <h1 className="mb-6 text-3xl font-bold">Already Registered</h1>
+        <div className="rounded-lg border-2 border-black bg-gray-50 p-6">
+          <p className="mb-2">
+            <span className="font-bold">X:</span>{" "}
+            {formatHandle(existingUser.xUsername)}
+          </p>
+          <p className="mb-2">
+            <span className="font-bold">Wallet:</span>{" "}
+            {existingUser.wallet.slice(0, 6)}...{existingUser.wallet.slice(-4)}
+          </p>
+          {existingUser.telegram && (
+            <p className="mb-4">
+              <span className="font-bold">Telegram:</span>{" "}
+              {formatHandle(existingUser.telegram)}
+            </p>
+          )}
+          <button
+            onClick={() => router.push("/raid-board")}
+            className="w-full rounded bg-black px-6 py-3 font-bold text-white hover:bg-gray-800"
+          >
+            Go to Everyone&apos;s Tired
           </button>
         </div>
       </div>
@@ -61,47 +85,60 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-2">Start Posting</h1>
-      <p className="text-gray-600 mb-8">One-time setup. Your info stays in your browser.</p>
+    <div className="mx-auto max-w-md px-4 py-12">
+      <h1 className="mb-2 text-3xl font-bold">Start Posting</h1>
+      <p className="mb-8 text-gray-600">
+        One-time setup. Your info stays in your browser.
+      </p>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">X Username (required)</label>
+          <label className="mb-2 block text-sm font-medium">
+            X Username (required)
+          </label>
           <input
             type="text"
             value={xUsername}
-            onChange={(e) => setXUsername(e.target.value)}
+            onChange={(event) => setXUsername(normalizeHandle(event.target.value))}
             placeholder="your_username"
-            className="w-full px-4 py-2 border-2 border-black rounded focus:outline-none"
+            className="w-full rounded border-2 border-black px-4 py-2 focus:outline-none"
           />
+          <p className="mt-1 text-xs text-gray-500">No @ needed.</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Wallet Address (required)</label>
+          <label className="mb-2 block text-sm font-medium">
+            Wallet Address (required)
+          </label>
           <input
             type="text"
             value={wallet}
-            onChange={(e) => setWallet(e.target.value)}
+            onChange={(event) => setWallet(event.target.value)}
             placeholder="r..."
-            className="w-full px-4 py-2 border-2 border-black rounded focus:outline-none"
+            className="w-full rounded border-2 border-black px-4 py-2 focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Telegram Username (optional)</label>
+          <label className="mb-2 block text-sm font-medium">
+            Telegram Username (optional)
+          </label>
           <input
             type="text"
             value={telegram}
-            onChange={(e) => setTelegram(e.target.value)}
-            placeholder="@your_telegram"
-            className="w-full px-4 py-2 border-2 border-black rounded focus:outline-none"
+            onChange={(event) => setTelegram(normalizeHandle(event.target.value))}
+            placeholder="your_telegram"
+            className="w-full rounded border-2 border-black px-4 py-2 focus:outline-none"
           />
+          <p className="mt-1 text-xs text-gray-500">No @ needed.</p>
         </div>
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button onClick={handleSubmit} className="w-full px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800">
+        <button
+          onClick={handleSubmit}
+          className="w-full rounded bg-black px-6 py-3 font-bold text-white hover:bg-gray-800"
+        >
           Start Posting
         </button>
       </div>

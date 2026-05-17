@@ -32,7 +32,7 @@ export const navItems = [
 export const officialLinks = [
   {
     label: "First Ledger",
-    url: "https://xrpscan.com/tx/YOUR_FIRST_LEDGER_TX_HASH",
+    url: "https://firstledger.net/token-v2/r9kzhatDuUyAxAYbbsZAbs8nLr3t7sa6Wk/LOX",
     description: "Where it started",
   },
   {

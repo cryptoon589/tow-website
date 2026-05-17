@@ -16,12 +16,18 @@ export interface RaidPost {
 }
 
 export const raidConfig = {
-  telegramBotToken: process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN || "",
-  telegramChatId: process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID || "",
-  telegramEnabled: false, // Set to true when bot token and chat ID are configured
   maxPostsPerHour: 5,
   adminSecret: process.env.NEXT_PUBLIC_ADMIN_SECRET || "tow-admin-2026",
 };
+
+export function normalizeHandle(value: string): string {
+  return value.trim().replace(/^@+/, "");
+}
+
+export function formatHandle(value: string): string {
+  const normalized = normalizeHandle(value);
+  return normalized ? `@${normalized}` : "";
+}
 
 export function getCurrentWeekId(): string {
   const now = new Date();
@@ -33,10 +39,14 @@ export function getCurrentWeekId(): string {
 
 export function validateXUrl(url: string): boolean {
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./, "");
+    const parts = parsed.pathname.split("/").filter(Boolean);
+
     return (
-      (parsed.hostname === "x.com" || parsed.hostname === "twitter.com") &&
-      parsed.pathname.split("/").length >= 3
+      (host === "x.com" || host === "twitter.com") &&
+      parts.length >= 3 &&
+      parts[1] === "status"
     );
   } catch {
     return false;
