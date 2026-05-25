@@ -10,7 +10,6 @@ import {
 } from "@/lib/raidStorage";
 import {
   validateXUrl,
-  getCurrentWeekId,
   RaidPost,
   formatHandle,
   normalizeHandle,
@@ -22,6 +21,8 @@ type RaidLeaderboardEntry = {
   count: number;
 };
 
+const ALL_TIME_RAID_KEY = "all-time";
+
 export default function RaidBoard() {
   const [user, setUser] = useState<any>(null);
   const [posts, setPosts] = useState<RaidPost[]>([]);
@@ -31,7 +32,7 @@ export default function RaidBoard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const weekId = getCurrentWeekId();
+  const raidKey = ALL_TIME_RAID_KEY;
 
   const leaderboard = useMemo(() => {
     const counts: Record<string, RaidLeaderboardEntry> = {};
@@ -57,7 +58,7 @@ export default function RaidBoard() {
     setLoading(true);
 
     try {
-      const fetchedPosts = await getPosts(weekId);
+      const fetchedPosts = await getPosts(raidKey);
       setPosts(fetchedPosts);
     } catch {
       setError("Could not load raid posts.");
@@ -69,7 +70,7 @@ export default function RaidBoard() {
   useEffect(() => {
     setUser(getCurrentUser());
     refreshPosts();
-  }, [weekId]);
+  }, []);
 
   const handleSubmit = async () => {
     setError("");
@@ -88,7 +89,7 @@ export default function RaidBoard() {
     }
 
     if (posts.some((p) => p.postUrl === cleanUrl)) {
-      setError("This post was already submitted this week.");
+      setError("This post was already submitted.");
       return;
     }
 
@@ -113,7 +114,7 @@ export default function RaidBoard() {
       telegram: user.telegram,
       postUrl: cleanUrl,
       timestamp: new Date().toISOString(),
-      weekId,
+      weekId: raidKey,
     };
 
     setSubmitting(true);
@@ -161,13 +162,13 @@ export default function RaidBoard() {
       </h1>
 
       <p className="mb-8 text-lg text-gray-600">
-        Still posting. Still here. Still tired.
+        Still posting. Still here. Every raid adds to your TOW history.
       </p>
 
       <div className="mb-8 grid grid-cols-3 gap-4">
         <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
           <div className="text-3xl font-bold">{totalPosts}</div>
-          <div className="text-sm text-gray-600">Posts This Week</div>
+          <div className="text-sm text-gray-600">Total Posts</div>
         </div>
 
         <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
@@ -177,12 +178,12 @@ export default function RaidBoard() {
 
         <div className="rounded-lg border-2 border-black bg-gray-50 p-4 text-center">
           <div className="text-3xl font-bold">{userCount}</div>
-          <div className="text-sm text-gray-600">Your Posts This Week</div>
+          <div className="text-sm text-gray-600">Your Total Posts</div>
         </div>
       </div>
 
       <div className="mb-8">
-        <h2 className="mb-4 text-xl font-bold">Most Tired This Week</h2>
+        <h2 className="mb-4 text-xl font-bold">Most Tired All-Time</h2>
 
         <div className="space-y-2">
           {leaderboard.slice(0, 5).map((entry, i) => (
