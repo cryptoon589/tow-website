@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+const ALL_TIME_KEY = "all-time";
+
 type SubmitBody = {
   xUsername?: string;
   walletAddress?: string;
@@ -20,17 +22,6 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-function getWeeklyKey() {
-  const now = new Date();
-  const firstDay = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const dayNumber = Math.floor(
-    (now.getTime() - firstDay.getTime()) / 86400000
-  );
-  const weekNumber = Math.ceil((dayNumber + firstDay.getUTCDay() + 1) / 7);
-
-  return `${now.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
-}
-
 function normalizeXUsername(value: string) {
   return value.trim().replace(/^@+/, "");
 }
@@ -46,14 +37,11 @@ function isValidXrplWallet(value: string) {
 export async function GET() {
   try {
     const supabase = getSupabase();
-    const weeklyKey = getWeeklyKey();
 
     const { data, error } = await supabase
       .from("tow_weekly_scores")
-      .select(
-        "id,x_username,wallet_address,best_score,last_score,runs,updated_at"
-      )
-      .eq("weekly_key", weeklyKey)
+      .select("id,x_username,wallet_address,best_score,last_score,runs,updated_at")
+      .eq("weekly_key", ALL_TIME_KEY)
       .order("best_score", { ascending: false })
       .order("updated_at", { ascending: true })
       .limit(10);
@@ -61,7 +49,7 @@ export async function GET() {
     if (error) throw error;
 
     return NextResponse.json({
-      weeklyKey,
+      leaderboardKey: ALL_TIME_KEY,
       entries:
         data?.map((entry) => ({
           id: entry.id,
@@ -74,10 +62,7 @@ export async function GET() {
         })) ?? [],
     });
   } catch {
-    return NextResponse.json(
-      { error: "Could not load leaderboard." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Could not load leaderboard." }, { status: 500 });
   }
 }
 
@@ -102,12 +87,11 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase();
-    const weeklyKey = getWeeklyKey();
 
     const { data: existing } = await supabase
       .from("tow_weekly_scores")
       .select("id,best_score,runs")
-      .eq("weekly_key", weeklyKey)
+      .eq("weekly_key", ALL_TIME_KEY)
       .eq("wallet_address", walletAddress)
       .maybeSingle();
 
@@ -126,7 +110,7 @@ export async function POST(request: Request) {
       if (error) throw error;
     } else {
       const { error } = await supabase.from("tow_weekly_scores").insert({
-        weekly_key: weeklyKey,
+        weekly_key: ALL_TIME_KEY,
         x_username: xUsername,
         wallet_address: walletAddress,
         last_score: score,
@@ -139,9 +123,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json(
-      { error: "Could not submit score." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Could not submit score." }, { status: 500 });
   }
 }
