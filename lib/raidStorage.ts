@@ -1,6 +1,7 @@
 import { Raider, RaidPost } from "@/config/raidBoard";
 
 const USER_KEY = "tow-raider-user";
+const REWARD_PROFILE_KEY = "tow_reward_player_profile";
 
 export function saveRaider(raider: Raider): void {
   if (typeof window === "undefined") return;
@@ -13,7 +14,30 @@ export function getCurrentUser(): Raider | null {
 
   try {
     const data = localStorage.getItem(USER_KEY);
-    return data ? JSON.parse(data) : null;
+
+    if (data) {
+      return JSON.parse(data) as Raider;
+    }
+
+    const rewardProfile = localStorage.getItem(REWARD_PROFILE_KEY);
+
+    if (rewardProfile) {
+      const parsed = JSON.parse(rewardProfile) as {
+        xUsername?: string;
+        walletAddress?: string;
+        createdAt?: string;
+      };
+
+      if (parsed.xUsername && parsed.walletAddress) {
+        return {
+          xUsername: parsed.xUsername,
+          wallet: parsed.walletAddress,
+          registeredAt: parsed.createdAt ?? new Date().toISOString(),
+        };
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }
