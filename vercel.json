@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/tired-scan-all",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
