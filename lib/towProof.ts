@@ -16,9 +16,9 @@ export type TiredStatus = {
   disqualifiedPositions: number;
   totalQualifyingXrp: number;
   totalTowAmount: number;
-  maxRewardXrp: number;
-  unlockedRewardXrp: number;
-  remainingRewardXrp: number;
+  maxRewardTow: number;
+  unlockedRewardTow: number;
+  remainingRewardTow: number;
   gameBestScore: number;
   gameRuns: number;
   raidPosts: number;
@@ -33,8 +33,8 @@ export type TiredPosition = {
   buyTxHash: string;
   buyValueXrp: number;
   towAmount: number;
-  maxRewardXrp: number;
-  unlockedRewardXrp: number;
+  maxRewardTow: number;
+  unlockedRewardTow: number;
   status: "alive" | "disqualified";
   createdAt: string;
   disqualifiedAt?: string | null;
@@ -42,7 +42,7 @@ export type TiredPosition = {
 };
 
 export const MIN_QUALIFYING_BUY_XRP = 50;
-export const MAX_REWARD_RATIO = 0.5;
+export const MAX_REWARD_TOW_RATIO = 0.5;
 
 export const TIRED_LEVELS: TiredLevel[] = [
   { label: "Barely Tired", emoji: "😴", minDays: 0 },
@@ -80,13 +80,19 @@ export function getTiredLevel(days: number) {
     .find((level) => days >= level.minDays) ?? TIRED_LEVELS[0];
 }
 
-export function calculateUnlockedReward(maxRewardXrp: number, holdDays: number) {
-  if (!Number.isFinite(maxRewardXrp) || maxRewardXrp <= 0) return 0;
+export function calculateMaxRewardTow(towAmount: number) {
+  if (!Number.isFinite(towAmount) || towAmount <= 0) return 0;
+
+  return Number((towAmount * MAX_REWARD_TOW_RATIO).toFixed(6));
+}
+
+export function calculateUnlockedRewardTow(maxRewardTow: number, holdDays: number) {
+  if (!Number.isFinite(maxRewardTow) || maxRewardTow <= 0) return 0;
 
   const weeklyUnlocks = Math.min(4, Math.floor(holdDays / 7));
   const unlockRatio = weeklyUnlocks * 0.25;
 
-  return Number((maxRewardXrp * unlockRatio).toFixed(6));
+  return Number((maxRewardTow * unlockRatio).toFixed(6));
 }
 
 export function getCurrentWeekId() {
@@ -101,6 +107,12 @@ export function getCurrentWeekId() {
 export function maskWallet(wallet: string) {
   if (!wallet) return "";
   return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+}
+
+export function formatTow(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 export function calculateActivityScore(input: {
