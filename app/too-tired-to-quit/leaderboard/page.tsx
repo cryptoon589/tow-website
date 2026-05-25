@@ -41,7 +41,7 @@ export default function TooTiredLeaderboardPage() {
           <p className="text-sm font-black uppercase tracking-[0.3em] text-[#5B2BE8]">Proof Of Tiredness</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight md:text-6xl">Too Tired To Quit</h1>
           <p className="mt-4 max-w-3xl text-lg text-[#555]">
-            The holders who stayed tired the longest. Ranked by commitment, activity, raids, game participation, and overall survival.
+            All-time survival rankings. Built from hold time, active commitments, total TOW committed, game history, and raid contribution.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -69,10 +69,10 @@ export default function TooTiredLeaderboardPage() {
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Rank</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Wallet</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">State</th>
-                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Still Here</th>
+                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Commitments</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Committed</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Unlocked</th>
-                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Score</th>
+                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Survival Score</th>
                   </tr>
                 </thead>
 
@@ -85,7 +85,7 @@ export default function TooTiredLeaderboardPage() {
                       <td className="px-3 py-4 font-black">{entry.alivePositions}</td>
                       <td className="px-3 py-4 font-black">{formatTow(entry.totalTowAmount)} TOW</td>
                       <td className="px-3 py-4 font-black text-[#146C36]">{formatTow(entry.unlockedRewardTow)} TOW</td>
-                      <td className="px-3 py-4 text-xl font-black">{entry.activityScore}</td>
+                      <td className="px-3 py-4 text-xl font-black">{entry.survivalScore ?? entry.activityScore}</td>
                     </tr>
                   ))}
                 </tbody>
