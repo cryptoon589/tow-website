@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
-  calculateActivityScore,
   calculateMaxRewardTow,
+  calculateSurvivalScore,
   calculateUnlockedRewardTow,
   getHoldDays,
   getTiredLevel,
@@ -20,7 +20,7 @@ type WalletSummary = {
   gameBestScore: number;
   gameRuns: number;
   raidPosts: number;
-  activityScore: number;
+  survivalScore: number;
 };
 
 function getSupabase() {
@@ -53,7 +53,7 @@ export async function GET() {
           gameBestScore: 0,
           gameRuns: 0,
           raidPosts: 0,
-          activityScore: 0,
+          survivalScore: 0,
         });
       }
       return walletMap.get(walletAddress)!;
@@ -89,19 +89,25 @@ export async function GET() {
     });
 
     const entries = Array.from(walletMap.values())
-      .map((summary) => ({
-        ...summary,
-        remainingRewardTow: Math.max(0, summary.maxRewardTow - summary.unlockedRewardTow),
-        tiredLevel: getTiredLevel(summary.holdDays),
-        activityScore: calculateActivityScore({
+      .map((summary) => {
+        const survivalScore = calculateSurvivalScore({
           holdDays: summary.holdDays,
           gameBestScore: summary.gameBestScore,
           gameRuns: summary.gameRuns,
           raidPosts: summary.raidPosts,
           alivePositions: summary.alivePositions,
-        }),
-      }))
-      .sort((a, b) => b.activityScore - a.activityScore)
+          totalTowAmount: summary.totalTowAmount,
+        });
+
+        return {
+          ...summary,
+          survivalScore,
+          activityScore: survivalScore,
+          remainingRewardTow: Math.max(0, summary.maxRewardTow - summary.unlockedRewardTow),
+          tiredLevel: getTiredLevel(summary.holdDays),
+        };
+      })
+      .sort((a, b) => b.survivalScore - a.survivalScore)
       .slice(0, 25)
       .map((entry, index) => ({ rank: index + 1, ...entry }));
 
