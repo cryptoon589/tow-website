@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -69,6 +70,29 @@ export default function TooTiredToQuitPage() {
             Hold through the exhaustion. Track your TOW commitment, activity,
             rewards, and how long you have managed to stay here.
           </p>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/too-tired-to-quit/leaderboard"
+              className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
+            >
+              View Leaderboard
+            </Link>
+
+            <Link
+              href="/play/start"
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5"
+            >
+              Play TOW Game
+            </Link>
+
+            <Link
+              href="/raid-board"
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5"
+            >
+              Everyone’s Tired
+            </Link>
+          </div>
         </section>
 
         <section className="rounded-[28px] border-2 border-black bg-white p-5">
@@ -135,63 +159,6 @@ export default function TooTiredToQuitPage() {
               <Card label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
               <Card label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
               <Card label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-            </div>
-
-            <div className="rounded-[28px] border-2 border-black bg-white p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.25em] text-[#5B2BE8]">
-                    Still Here
-                  </p>
-
-                  <h3 className="text-2xl font-black">
-                    Commitments
-                  </h3>
-                </div>
-
-                <div className="rounded-full border border-black px-3 py-1 text-xs font-black uppercase">
-                  Selling Ends Eligibility
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                {status.positions.length === 0 ? (
-                  <p className="rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-                    No qualifying commitments found yet.
-                  </p>
-                ) : (
-                  status.positions.map((position: any) => (
-                    <div
-                      key={position.id}
-                      className="rounded-2xl border-2 border-black p-4"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-lg font-black">
-                            {formatTow(position.towAmount)} TOW
-                          </p>
-
-                          <p className="text-sm text-[#555]">
-                            Max unlock: {formatTow(position.maxRewardTow)} TOW
-                          </p>
-                        </div>
-
-                        <div
-                          className={`rounded-full px-3 py-1 text-xs font-black uppercase ${
-                            position.status === "alive"
-                              ? "bg-[#DDFBE8] text-[#146C36]"
-                              : "bg-[#FFE8DF] text-[#B14A35]"
-                          }`}
-                        >
-                          {position.status === "alive"
-                            ? "Still Here"
-                            : "Gave Up"}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           </section>
         ) : null}
