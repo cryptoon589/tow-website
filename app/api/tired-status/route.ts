@@ -51,7 +51,9 @@ export async function GET(request: NextRequest) {
     }) ?? [];
 
     const alivePositions = normalizedPositions.filter((position) => position.status === "alive");
-    const holdDays = getHoldDays(alivePositions[0]?.createdAt);
+    const oldestAlivePosition = alivePositions[0];
+    const stillHereSince = oldestAlivePosition?.createdAt ?? null;
+    const holdDays = getHoldDays(stillHereSince);
     const totalQualifyingXrp = alivePositions.reduce((sum, position) => sum + position.buyValueXrp, 0);
     const totalTowAmount = alivePositions.reduce((sum, position) => sum + position.towAmount, 0);
     const maxRewardTow = alivePositions.reduce((sum, position) => sum + position.maxRewardTow, 0);
@@ -74,6 +76,7 @@ export async function GET(request: NextRequest) {
       disqualified: normalizedPositions.length > 0 && alivePositions.length === 0,
       tiredLevel: getTiredLevel(holdDays),
       holdDays,
+      stillHereSince,
       alivePositions: alivePositions.length,
       disqualifiedPositions: normalizedPositions.length - alivePositions.length,
       totalQualifyingXrp,
