@@ -32,7 +32,7 @@ export const navItems = [
 export const officialLinks = [
   {
     label: "First Ledger",
-    url: "https://firstledger.net/token-v2/r9kzhatDuUyAxAYbbsZAbs8nLr3t7sa6Wk/LOX",
+    url: "https://firstledger.net/token-v2/rstXMYib49TXTv69QioDhADxwxqSNrqRmV/TOW",
     description: "Where it started",
   },
   {
