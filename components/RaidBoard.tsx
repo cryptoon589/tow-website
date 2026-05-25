@@ -150,9 +150,14 @@ export default function RaidBoard() {
     posts.map((p) => normalizeHandle(p.xUsername))
   ).size;
   const userCount = user
-    ? posts.filter(
-        (p) => normalizeHandle(p.xUsername) === normalizeHandle(user.xUsername)
-      ).length
+    ? posts.filter((post) => {
+        const sameWallet = user.wallet && post.wallet === user.wallet;
+        const sameX =
+          user.xUsername &&
+          normalizeHandle(post.xUsername) === normalizeHandle(user.xUsername);
+
+        return sameWallet || sameX;
+      }).length
     : 0;
 
   return (
