@@ -21,28 +21,29 @@ export const siteConfig = {
 
 export const navItems = [
   { label: "Home", href: "/" },
-  { label: "Play Game", href: "/play" },
+  { label: "Play Game", href: "/play/start" },
+  { label: "Too Tired To Quit", href: "/too-tired-to-quit" },
   { label: "Make Memes", href: "/meme-generator" },
-  { label: "Tired Together", href: "/tired-counter" },
   { label: "Everyone's Tired", href: "/raid-board" },
   { label: "NFTs", href: "/nft-collection" },
+  { label: "Tired Together", href: "/tired-counter" },
   { label: "Links", href: "/links" },
 ];
 
 export const officialLinks = [
   {
     label: "First Ledger",
-    url: "https://xrpscan.com/tx/YOUR_FIRST_LEDGER_TX_HASH",
+    url: "https://firstledger.net/token-v2/r9kzhatDuUyAxAYbbsZAbs8nLr3t7sa6Wk/LOX",
     description: "Where it started",
   },
   {
     label: "DEX / Chart",
-    url: "https://dexscreener.com/xrpl/YOUR_PAIR",
+    url: "https://dexscreener.com/xrpl/tow.rstxmyib49txtv69qiodhadxwxqsnrqrmv_xrp",
     description: "Watch the chart",
   },
   {
     label: "Telegram",
-    url: "https://t.me/YOUR_TELEGRAM",
+    url: "https://t.me/TOW_Tired_Of_Winning",
     description: "Still here",
   },
   {
@@ -52,14 +53,14 @@ export const officialLinks = [
   },
   {
     label: "X (Twitter)",
-    url: "https://x.com/YOUR_HANDLE",
+    url: "https://x.com/TiredTOW",
     description: "Still posting",
   },
   {
     label: "Coinmun",
-    url: "https://coinmun.com",
+    url: "https://coinmun.com/coins/tow",
     description: "View on Coinmun",
-}
+  }
 ];
 
 export const tiredResponses = [
