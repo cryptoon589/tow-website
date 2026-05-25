@@ -22,6 +22,7 @@ export type TiredStatus = {
   gameBestScore: number;
   gameRuns: number;
   raidPosts: number;
+  survivalScore: number;
   activityScore: number;
   lastSellAt?: string | null;
   positions: TiredPosition[];
@@ -42,7 +43,7 @@ export type TiredPosition = {
 };
 
 export const MIN_QUALIFYING_BUY_XRP = 50;
-export const MAX_REWARD_TOW_RATIO = 0.5;
+export const MAX_REWARD_TOW_RATIO = 0.25;
 
 export const TIRED_LEVELS: TiredLevel[] = [
   { label: "Barely Tired", emoji: "😴", minDays: 0 },
@@ -82,8 +83,10 @@ export function calculateMaxRewardTow(towAmount: number) {
 
 export function calculateUnlockedRewardTow(maxRewardTow: number, holdDays: number) {
   if (!Number.isFinite(maxRewardTow) || maxRewardTow <= 0) return 0;
-  const weeklyUnlocks = Math.min(4, Math.floor(holdDays / 7));
-  const unlockRatio = weeklyUnlocks * 0.25;
+
+  const weeksHeld = Math.floor(holdDays / 7);
+  const unlockRatio = Math.min(1, weeksHeld / 5);
+
   return Number((maxRewardTow * unlockRatio).toFixed(6));
 }
 
@@ -98,17 +101,22 @@ export function formatTow(amount: number) {
   );
 }
 
-export function calculateActivityScore(input: {
+export function calculateSurvivalScore(input: {
   holdDays: number;
   gameBestScore: number;
   gameRuns: number;
   raidPosts: number;
   alivePositions: number;
+  totalTowAmount: number;
 }) {
-  const holdScore = Math.min(280, input.holdDays * 10);
-  const gameScore = Math.min(250, Math.floor(input.gameBestScore / 10));
-  const runScore = Math.min(100, input.gameRuns * 10);
-  const raidScore = Math.min(200, input.raidPosts * 25);
-  const positionScore = Math.min(100, input.alivePositions * 25);
-  return holdScore + gameScore + runScore + raidScore + positionScore;
+  const holdScore = input.holdDays * 10;
+  const commitmentScore = input.alivePositions * 100;
+  const towScore = Math.sqrt(Math.max(0, input.totalTowAmount) / 1000);
+  const raidScore = input.raidPosts * 2;
+  const runScore = input.gameRuns;
+  const bestScore = Math.floor(input.gameBestScore / 20);
+
+  return Math.floor(holdScore + commitmentScore + towScore + raidScore + runScore + bestScore);
 }
+
+export const calculateActivityScore = calculateSurvivalScore;
