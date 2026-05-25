@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
-  calculateActivityScore,
   calculateMaxRewardTow,
+  calculateSurvivalScore,
   calculateUnlockedRewardTow,
   getHoldDays,
   getTiredLevel,
@@ -59,7 +59,14 @@ export async function GET(request: NextRequest) {
     const gameBestScore = Math.max(0, ...(scores?.map((entry) => entry.best_score ?? 0) ?? []));
     const gameRuns = (scores ?? []).reduce((sum, entry) => sum + (entry.runs ?? 0), 0);
     const raidPosts = raids?.length ?? 0;
-    const activityScore = calculateActivityScore({ holdDays, gameBestScore, gameRuns, raidPosts, alivePositions: alivePositions.length });
+    const survivalScore = calculateSurvivalScore({
+      holdDays,
+      gameBestScore,
+      gameRuns,
+      raidPosts,
+      alivePositions: alivePositions.length,
+      totalTowAmount,
+    });
 
     return NextResponse.json({
       walletAddress: wallet,
@@ -77,7 +84,8 @@ export async function GET(request: NextRequest) {
       gameBestScore,
       gameRuns,
       raidPosts,
-      activityScore,
+      survivalScore,
+      activityScore: survivalScore,
       positions: normalizedPositions,
     });
   } catch (error) {
