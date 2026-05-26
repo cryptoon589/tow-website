@@ -16,6 +16,23 @@ function Card({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function Milestone({ active, reached, title, reward }: { active?: boolean; reached?: boolean; title: string; reward: string }) {
+  return (
+    <div
+      className={`flex-1 rounded-3xl border-2 p-4 text-center transition ${
+        active
+          ? "border-[#5B2BE8] bg-[#EFE9FF]"
+          : reached
+          ? "border-black bg-black text-white"
+          : "border-black bg-white"
+      }`}
+    >
+      <p className="text-xs font-black uppercase tracking-[0.2em]">{title}</p>
+      <p className="mt-2 text-3xl font-black">{reward}</p>
+    </div>
+  );
+}
+
 export default function TooTiredToQuitPage() {
   const saved = getRewardProfile();
 
@@ -157,6 +174,52 @@ export default function TooTiredToQuitPage() {
                     {status.activityScore}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border-2 border-black bg-[#F8F8F8] p-5">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                Survival Progression
+              </p>
+
+              <div className="mt-4 flex flex-col gap-3 md:flex-row">
+                <Milestone title="4 Weeks" reward="2.5%" reached={status.holdDays >= 28} active={status.holdDays >= 28 && status.holdDays < 56} />
+                <Milestone title="8 Weeks" reward="7%" reached={status.holdDays >= 56} active={status.holdDays >= 56 && status.holdDays < 84} />
+                <Milestone title="12 Weeks" reward="15%" reached={status.holdDays >= 84} active={status.holdDays >= 84} />
+              </div>
+
+              <div className="mt-5 rounded-3xl border-2 border-black bg-white p-5">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                  Commitment Decision
+                </p>
+
+                <p className="mt-3 text-2xl font-black">
+                  {status.rewardBreakdown?.basePercent > 0
+                    ? `Current Unlock: ${status.rewardBreakdown.basePercent}%`
+                    : "No survival milestone reached yet"}
+                </p>
+
+                <p className="mt-3 text-sm font-bold text-[#555]">
+                  {status.holdDays >= 84
+                    ? "You reached the highest survival tier. Ending your streak now will reset this commitment."
+                    : status.holdDays >= 56
+                    ? "You can continue surviving toward the 12-week survivor tier."
+                    : status.holdDays >= 28
+                    ? "You can continue surviving toward the 8-week survivor tier."
+                    : "Keep surviving to reach your first milestone."}
+                </p>
+
+                {status.rewardBreakdown?.basePercent > 0 ? (
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white opacity-60">
+                      Claim & Reset Commitment (Soon)
+                    </button>
+
+                    <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+                      Continue Surviving
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
