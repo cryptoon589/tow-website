@@ -80,8 +80,10 @@ export default function PlayStartPage() {
             TOW
           </Link>
 
-          <p className="px-3 py-1 text-xs font-black">Too Tired To Quit</p>
-        </header>
+          <Link
+            href="/" 
+            className="px-3 py-1 text-xs font-black">Too Tired To Quit</p>
+        </Link>
 
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
           <div className="flex flex-col gap-4">
