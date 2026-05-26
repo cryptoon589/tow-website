@@ -38,7 +38,9 @@ export default function TooTiredToQuitPage() {
 
   const [wallet, setWallet] = useState(saved?.walletAddress ?? "");
   const [loading, setLoading] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [status, setStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function TooTiredToQuitPage() {
   }
 
   async function checkStatus() {
+    setSuccess("");
     setError("");
 
     if (!isValidXrplWallet(wallet)) {
@@ -83,6 +86,44 @@ export default function TooTiredToQuitPage() {
     }
 
     await loadStatus(wallet);
+  }
+
+  async function claimCommitment() {
+    if (!status || claiming) return;
+
+    const confirmed = window.confirm(
+      "Ending this survival streak will reset your active commitment progression. Continue?"
+    );
+
+    if (!confirmed) return;
+
+    setClaiming(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/tired-claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ wallet }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Could not claim commitment.");
+      }
+
+      setSuccess(`Claimed ${data.claimedCommitments} commitment(s). Survival streak reset.`);
+
+      await loadStatus(wallet);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error.");
+    } finally {
+      setClaiming(false);
+    }
   }
 
   return (
@@ -137,6 +178,7 @@ export default function TooTiredToQuitPage() {
           </div>
 
           {error ? <p className="mt-3 text-sm font-black text-[#B14A35]">{error}</p> : null}
+          {success ? <p className="mt-3 text-sm font-black text-[#2E8B57]">{success}</p> : null}
         </section>
 
         {status ? (
@@ -201,7 +243,7 @@ export default function TooTiredToQuitPage() {
 
                 <p className="mt-3 text-sm font-bold text-[#555]">
                   {status.holdDays >= 84
-                    ? "You reached the highest survival tier. Ending your streak now will reset this commitment."
+                    ? "You reached the highest survival tier. Ending this streak now will reset this commitment."
                     : status.holdDays >= 56
                     ? "You can continue surviving toward the 12-week survivor tier."
                     : status.holdDays >= 28
@@ -211,8 +253,12 @@ export default function TooTiredToQuitPage() {
 
                 {status.rewardBreakdown?.basePercent > 0 ? (
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <button className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white opacity-60">
-                      Claim & Reset Commitment (Soon)
+                    <button
+                      onClick={claimCommitment}
+                      disabled={claiming}
+                      className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+                    >
+                      {claiming ? "Ending Streak..." : "Claim & Reset Commitment"}
                     </button>
 
                     <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
