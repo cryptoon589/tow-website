@@ -95,7 +95,7 @@ export function calculateRewardBreakdown(input: {
   raidPosts: number;
   gameBestScore: number;
 }) {
-  const basePercent = input.holdDays >= 84 ? 10 : input.holdDays >= 56 ? 7.5 : input.holdDays >= 28 ? 5 : 0;
+  const basePercent = input.holdDays >= 84 ? 15 : input.holdDays >= 56 ? 7 : input.holdDays >= 28 ? 2.5 : 0;
 
   const recentGamePercent = Math.min(2.5, Math.floor(input.recentGameRuns / 10) * 0.5);
   const recentRaidPercent = Math.min(2.5, Math.floor(input.recentRaidPosts / 3) * 0.5);
@@ -106,7 +106,7 @@ export function calculateRewardBreakdown(input: {
   const lifetimeScorePercent = Math.min(0.25, Math.floor(input.gameBestScore / 1000) * 0.25);
   const historyPercent = Number((lifetimeRunPercent + lifetimeRaidPercent + lifetimeScorePercent).toFixed(2));
 
-  const totalPercent = Math.min(15, Number((basePercent + recentActivityPercent + historyPercent).toFixed(2)));
+  const totalPercent = Math.min(22, Number((basePercent + recentActivityPercent + historyPercent).toFixed(2)));
 
   return {
     basePercent,
