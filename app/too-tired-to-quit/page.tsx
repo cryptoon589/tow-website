@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getRewardProfile, isValidXrplWallet } from "@/lib/towLeaderboard";
-import { maskWallet } from "@/lib/towProof";
+import { formatTow, maskWallet } from "@/lib/towProof";
 
 function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -28,6 +29,7 @@ export default function TooTiredToQuitPage() {
   const [wallet, setWallet] = useState(saved?.walletAddress ?? "");
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
 
   const displayName = useMemo(() => {
@@ -101,6 +103,24 @@ export default function TooTiredToQuitPage() {
           <p className="mt-4 text-lg text-[#555]">
             Survive. Participate. Build your TOW history.
           </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/too-tired-to-quit/leaderboard" className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+              View Leaderboard
+            </Link>
+
+            <Link href="/too-tired-to-quit/how-it-works" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              FAQ / How It Works
+            </Link>
+
+            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              Play TOW Game
+            </Link>
+
+            <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              Everyone's Tired
+            </Link>
+          </div>
         </section>
 
         <section className="mt-8 rounded-[28px] border-2 border-black p-5">
@@ -187,10 +207,7 @@ export default function TooTiredToQuitPage() {
 
               <div className="mt-10 px-4">
                 <div className="relative h-4 rounded-full border-2 border-black bg-white">
-                  <div
-                    className="h-full rounded-full bg-black"
-                    style={{ width: `${progress}%` }}
-                  />
+                  <div className="h-full rounded-full bg-black" style={{ width: `${progress}%` }} />
 
                   {[0, 28, 56, 84].map((day) => (
                     <div
@@ -230,6 +247,24 @@ export default function TooTiredToQuitPage() {
               <MiniStat label="Highest Score" value={status.gameBestScore} />
               <MiniStat label="Active Commitments" value={status.alivePositions} />
             </div>
+
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black"
+            >
+              {showDetails ? "Hide Detailed Breakdown" : "View Detailed Breakdown"}
+            </button>
+
+            {showDetails ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
+                <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
+                <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
+                <MiniStat label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
+                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+                <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
+              </div>
+            ) : null}
           </section>
         ) : null}
       </main>
