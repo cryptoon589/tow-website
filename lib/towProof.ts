@@ -53,8 +53,9 @@ export type TiredPosition = {
 };
 
 export const MIN_QUALIFYING_BUY_XRP = 50;
-export const MAX_REWARD_TOW_RATIO = 0.22;
+export const MAX_REWARD_PERCENT = 22;
 export const RECENT_ACTIVITY_WINDOW_DAYS = 30;
+export const RECENT_GAME_RUN_CAP = 50;
 
 export const TIRED_LEVELS: TiredLevel[] = [
   { label: "Barely Tired", emoji: "😴", minDays: 0 },
@@ -96,8 +97,9 @@ export function calculateRewardBreakdown(input: {
   gameBestScore: number;
 }) {
   const basePercent = input.holdDays >= 84 ? 15 : input.holdDays >= 56 ? 7 : input.holdDays >= 28 ? 2.5 : 0;
+  const cappedRecentGameRuns = Math.min(RECENT_GAME_RUN_CAP, Math.max(0, input.recentGameRuns));
 
-  const recentGamePercent = Math.min(2.5, Math.floor(input.recentGameRuns / 10) * 0.5);
+  const recentGamePercent = Math.min(2.5, Math.floor(cappedRecentGameRuns / 10) * 0.5);
   const recentRaidPercent = Math.min(2.5, Math.floor(input.recentRaidPosts / 3) * 0.5);
   const recentActivityPercent = Number((recentGamePercent + recentRaidPercent).toFixed(2));
 
@@ -106,7 +108,7 @@ export function calculateRewardBreakdown(input: {
   const lifetimeScorePercent = Math.min(0.25, Math.floor(input.gameBestScore / 1000) * 0.25);
   const historyPercent = Number((lifetimeRunPercent + lifetimeRaidPercent + lifetimeScorePercent).toFixed(2));
 
-  const totalPercent = Math.min(22, Number((basePercent + recentActivityPercent + historyPercent).toFixed(2)));
+  const totalPercent = Math.min(MAX_REWARD_PERCENT, Number((basePercent + recentActivityPercent + historyPercent).toFixed(2)));
 
   return {
     basePercent,
@@ -118,25 +120,17 @@ export function calculateRewardBreakdown(input: {
 
 export function calculateMaxRewardTow(towAmount: number) {
   if (!Number.isFinite(towAmount) || towAmount <= 0) return 0;
-  return Number((towAmount * MAX_REWARD_TOW_RATIO).toFixed(6));
+  return Number((towAmount * (MAX_REWARD_PERCENT / 100)).toFixed(6));
 }
 
-export function calculateUnlockedRewardTow(input: number | { towAmount: number; rewardPercent: number }, holdDays?: number) {
-  if (typeof input === "number") {
-    const maxRewardTow = input;
-    if (!Number.isFinite(maxRewardTow) || maxRewardTow <= 0 || !holdDays) return 0;
-    const weeksHeld = Math.floor(holdDays / 7);
-    const legacyRatio = Math.min(1, weeksHeld / 5);
-    return Number((maxRewardTow * legacyRatio).toFixed(6));
-  }
-
+export function calculateUnlockedRewardTow(input: { towAmount: number; rewardPercent: number }) {
   const towAmount = input.towAmount;
   const rewardPercent = input.rewardPercent;
 
   if (!Number.isFinite(towAmount) || towAmount <= 0) return 0;
   if (!Number.isFinite(rewardPercent) || rewardPercent <= 0) return 0;
 
-  return Number((towAmount * (rewardPercent / 100)).toFixed(6));
+  return Number((towAmount * (Math.min(MAX_REWARD_PERCENT, rewardPercent) / 100)).toFixed(6));
 }
 
 export function maskWallet(wallet: string) {
