@@ -83,7 +83,7 @@ export default function TooTiredToQuitPage() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg text-[#555]">
-            Proof you endured. Hold through the exhaustion and build your tired history.
+            Survive. Participate. Build your TOW history.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -103,7 +103,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="rounded-[28px] border-2 border-black bg-white p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Link your wallet once and keep building your tired history.
+            Your wallet becomes your survivor identity across TOW.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
@@ -139,7 +139,11 @@ export default function TooTiredToQuitPage() {
                     STILL HERE: {status.holdDays} DAYS
                   </p>
 
-                  <p className="mt-2 text-white/70">
+                  <p className="mt-2 text-xl font-black text-white">
+                    {status.xUsername ? `@${status.xUsername}` : maskWallet(status.walletAddress)}
+                  </p>
+
+                  <p className="mt-1 text-white/60">
                     {maskWallet(status.walletAddress)}
                   </p>
                 </div>
@@ -158,19 +162,25 @@ export default function TooTiredToQuitPage() {
 
             <div className="grid gap-4 md:grid-cols-4">
               <Card label="Active Commitments" value={status.alivePositions} />
-              <Card label="Raid Posts" value={status.raidPosts} />
-              <Card label="Game Runs" value={status.gameRuns} />
-              <Card label="Best Score" value={status.gameBestScore} />
+              <Card label="Lifetime Raids" value={status.raidPosts} />
+              <Card label="Lifetime Runs" value={status.gameRuns} />
+              <Card label="Highest Score" value={status.gameBestScore} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <Card label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
-              <Card label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
-              <Card label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
+              <Card label="Survival Unlock" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
+              <Card label="Potential Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
+              <Card label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+              <Card label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
             </div>
 
             <div className="rounded-[24px] border-2 border-black bg-[#F8F8F8] p-5 text-sm font-bold text-[#555]">
-              Hold time and active commitments are permanent progression. Raids and game activity act as temporary weekly boosts and community participation signals.
+              Survival progression comes from enduring time, recent participation, and long-term history. Activity bonuses favor active survivors, while your permanent history still matters.
             </div>
           </section>
         ) : null}
