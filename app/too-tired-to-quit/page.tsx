@@ -1,36 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getRewardProfile, isValidXrplWallet } from "@/lib/towLeaderboard";
 import { formatTow, maskWallet } from "@/lib/towProof";
 
-function Card({ label, value }: { label: string; value: string | number }) {
+function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-[24px] border-2 border-black bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">{label}</p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+    <div className="rounded-[22px] border-2 border-black bg-white p-4">
+      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#666]">{label}</p>
+      <p className="mt-2 text-2xl font-black">{value}</p>
     </div>
   );
 }
 
-function Milestone({ active, reached, title, reward }: { active?: boolean; reached?: boolean; title: string; reward: string }) {
-  return (
-    <div
-      className={`flex-1 rounded-3xl border-2 p-4 text-center transition ${
-        active
-          ? "border-[#5B2BE8] bg-[#EFE9FF]"
-          : reached
-          ? "border-black bg-black text-white"
-          : "border-black bg-white"
-      }`}
-    >
-      <p className="text-xs font-black uppercase tracking-[0.2em]">{title}</p>
-      <p className="mt-2 text-3xl font-black">{reward}</p>
-    </div>
-  );
+function getNextMilestone(days: number) {
+  if (days < 28) return { label: "4 Week Survivor", days: 28, reward: "2.5%" };
+  if (days < 56) return { label: "8 Week Survivor", days: 56, reward: "7%" };
+  if (days < 84) return { label: "12 Week Survivor", days: 84, reward: "15%" };
+  return null;
+}
+
+function getProgressPercent(days: number) {
+  return Math.min(100, Math.max(0, (days / 84) * 100));
 }
 
 export default function TooTiredToQuitPage() {
@@ -39,9 +33,15 @@ export default function TooTiredToQuitPage() {
   const [wallet, setWallet] = useState(saved?.walletAddress ?? "");
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [status, setStatus] = useState<any>(null);
+
+  const displayName = useMemo(() => {
+    const username = status?.xUsername ?? saved?.xUsername;
+    return username ? `@${String(username).replace(/^@+/, "")}` : status?.walletAddress ? maskWallet(status.walletAddress) : "Survivor";
+  }, [status?.xUsername, status?.walletAddress, saved?.xUsername]);
 
   useEffect(() => {
     const storedWallet = localStorage.getItem("tow_saved_wallet");
@@ -92,7 +92,7 @@ export default function TooTiredToQuitPage() {
     if (!status || claiming) return;
 
     const confirmed = window.confirm(
-      "Ending this survival streak will reset your active commitment progression. Continue?"
+      "Ending this survival streak will submit your claim and reset active commitment progression. Continue?"
     );
 
     if (!confirmed) return;
@@ -113,11 +113,10 @@ export default function TooTiredToQuitPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error ?? "Could not claim commitment.");
+        throw new Error(data?.error ?? "Could not submit claim.");
       }
 
       setSuccess(`Claim submitted. ${data.claimedCommitments} commitment(s) awaiting distribution.`);
-
       await loadStatus(wallet);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error.");
@@ -125,6 +124,11 @@ export default function TooTiredToQuitPage() {
       setClaiming(false);
     }
   }
+
+  const holdDays = status?.holdDays ?? 0;
+  const progress = getProgressPercent(holdDays);
+  const nextMilestone = getNextMilestone(holdDays);
+  const daysLeft = nextMilestone ? Math.max(0, nextMilestone.days - holdDays) : 0;
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -165,7 +169,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="rounded-[28px] border-2 border-black bg-white p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Your wallet becomes your survivor identity across TOW.
+            Enter your wallet to load your survivor identity.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
@@ -187,23 +191,27 @@ export default function TooTiredToQuitPage() {
 
         {status ? (
           <section className="mt-8 space-y-5">
-            <div className="rounded-[28px] border-2 border-black bg-black p-6 text-white">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="rounded-[32px] border-2 border-black bg-black p-6 text-white">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.25em] text-[#A78BFA]">
-                    Current State
+                    Survivor Identity
                   </p>
 
-                  <h2 className="mt-2 text-4xl font-black">
+                  <h2 className="mt-3 text-5xl font-black leading-tight">
                     {status.tiredLevel?.emoji} {status.tiredLevel?.label}
                   </h2>
 
-                  <p className="mt-3 text-2xl font-black text-white">
-                    STILL HERE: {status.holdDays} DAYS
+                  <p className="mt-4 text-3xl font-black text-white">
+                    {displayName}
                   </p>
 
-                  <p className="mt-2 text-xl font-black text-white">
-                    {status.xUsername ? `@${status.xUsername}` : maskWallet(status.walletAddress)}
+                  <p className="mt-1 text-sm font-bold text-white/55">
+                    {maskWallet(status.walletAddress)}
+                  </p>
+
+                  <p className="mt-5 text-3xl font-black text-white">
+                    STILL HERE: {holdDays} DAYS
                   </p>
                 </div>
 
@@ -212,42 +220,72 @@ export default function TooTiredToQuitPage() {
                     Survival Score
                   </p>
 
-                  <p className="mt-2 text-5xl font-black">
+                  <p className="mt-2 text-6xl font-black">
                     {status.activityScore}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-[28px] border-2 border-black bg-[#F8F8F8] p-5">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-                Survival Progression
-              </p>
+            <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
+              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                    Survival Route
+                  </p>
 
-              <div className="mt-4 flex flex-col gap-3 md:flex-row">
-                <Milestone title="4 Weeks" reward="2.5%" reached={status.holdDays >= 28} active={status.holdDays >= 28 && status.holdDays < 56} />
-                <Milestone title="8 Weeks" reward="7%" reached={status.holdDays >= 56} active={status.holdDays >= 56 && status.holdDays < 84} />
-                <Milestone title="12 Weeks" reward="15%" reached={status.holdDays >= 84} active={status.holdDays >= 84} />
+                  <h3 className="mt-2 text-3xl font-black">
+                    {nextMilestone ? `${daysLeft} days until ${nextMilestone.label}` : "Full 12-week survivor route reached"}
+                  </h3>
+                </div>
+
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+                  Current Base: {status.rewardBreakdown?.basePercent ?? 0}%
+                </p>
               </div>
 
-              <div className="mt-5 rounded-3xl border-2 border-black bg-white p-5">
+              <div className="mt-8">
+                <div className="relative h-4 rounded-full border-2 border-black bg-white">
+                  <div
+                    className="h-full rounded-full bg-black transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+
+                  {[28, 56, 84].map((day) => (
+                    <div
+                      key={day}
+                      className={`absolute top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border-2 border-black ${holdDays >= day ? "bg-black" : "bg-white"}`}
+                      style={{ left: `calc(${(day / 84) * 100}% - 16px)` }}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-5 grid grid-cols-4 text-center text-xs font-black uppercase tracking-[0.16em] text-[#555]">
+                  <div>0d</div>
+                  <div>4w<br /><span className="text-black">2.5%</span></div>
+                  <div>8w<br /><span className="text-black">7%</span></div>
+                  <div>12w<br /><span className="text-black">15%</span></div>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
                   Commitment Decision
                 </p>
 
                 <p className="mt-3 text-2xl font-black">
                   {status.rewardBreakdown?.basePercent > 0
-                    ? `Current Unlock: ${status.rewardBreakdown.basePercent}%`
-                    : "No survival milestone reached yet"}
+                    ? `You can claim ${status.rewardBreakdown.basePercent}% base now, or keep surviving.`
+                    : "No survival milestone reached yet."}
                 </p>
 
                 <p className="mt-3 text-sm font-bold text-[#555]">
                   {status.holdDays >= 84
-                    ? "You reached the highest survival tier. Ending this streak now will reset this commitment."
+                    ? "You reached the highest survival tier. Claiming ends this active streak."
                     : status.holdDays >= 56
-                    ? "You can continue surviving toward the 12-week survivor tier."
+                    ? "You can continue toward the 12-week survivor tier."
                     : status.holdDays >= 28
-                    ? "You can continue surviving toward the 8-week survivor tier."
+                    ? "You can continue toward the 8-week survivor tier."
                     : "Keep surviving to reach your first milestone."}
                 </p>
 
@@ -270,23 +308,29 @@ export default function TooTiredToQuitPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
-              <Card label="Active Commitments" value={status.alivePositions} />
-              <Card label="Lifetime Raids" value={status.raidPosts} />
-              <Card label="Lifetime Runs" value={status.gameRuns} />
-              <Card label="Highest Score" value={status.gameBestScore} />
+              <MiniStat label="Lifetime Runs" value={status.gameRuns} />
+              <MiniStat label="Lifetime Raids" value={status.raidPosts} />
+              <MiniStat label="Highest Score" value={status.gameBestScore} />
+              <MiniStat label="Active Commitments" value={status.alivePositions} />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
-              <Card label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
-              <Card label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-            </div>
+            <button
+              onClick={() => setShowDetails((value) => !value)}
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5"
+            >
+              {showDetails ? "Hide Detailed Breakdown" : "View Detailed Breakdown"}
+            </button>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
-              <Card label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-              <Card label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
-            </div>
+            {showDetails ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
+                <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
+                <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
+                <MiniStat label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
+                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+                <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
+              </div>
+            ) : null}
           </section>
         ) : null}
       </main>
