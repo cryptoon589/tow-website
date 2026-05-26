@@ -242,10 +242,10 @@ export default function TooTiredToQuitPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
-              <MiniStat label="Lifetime Runs" value={status.gameRuns} />
-              <MiniStat label="Lifetime Raids" value={status.raidPosts} />
-              <MiniStat label="Highest Score" value={status.gameBestScore} />
               <MiniStat label="Active Commitments" value={status.alivePositions} />
+              <MiniStat label="Raid Posts" value={status.raidPosts} />
+              <MiniStat label="Game Runs" value={status.gameRuns} />
+              <MiniStat label="Game Highscore" value={status.gameBestScore} />
             </div>
 
             <button
