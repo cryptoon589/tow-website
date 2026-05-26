@@ -242,40 +242,45 @@ export default function TooTiredToQuitPage() {
             </div>
 
             <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
-  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-    Commitment Decision
-  </p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                Commitment Decision
+              </p>
 
-  <p className="mt-3 text-2xl font-black">
-    {status.rewardBreakdown?.basePercent > 0
-      ? `You can claim ${status.rewardBreakdown.basePercent}% base now, or keep surviving.`
-      : "No survival milestone reached yet."}
-  </p>
+              <p className="mt-3 text-2xl font-black">
+                {status.rewardBreakdown?.basePercent > 0
+                  ? `You can claim ${status.rewardBreakdown.basePercent}% base now, or keep surviving.`
+                  : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
+              </p>
 
-  <p className="mt-3 text-sm font-bold text-[#555]">
-    {status.holdDays >= 84
-      ? "You reached the highest survival tier. Claiming ends this active streak."
-      : status.holdDays >= 56
-      ? "You can continue toward the 12-week survivor tier."
-      : status.holdDays >= 28
-      ? "You can continue toward the 8-week survivor tier."
-      : "Keep surviving to reach your first milestone."}
-  </p>
+              <p className="mt-3 text-sm font-bold text-[#555]">
+                {status.holdDays >= 84
+                  ? "You reached the highest survival tier. Claiming ends this active streak."
+                  : status.holdDays >= 56
+                  ? "You can continue toward the 12-week survivor tier."
+                  : status.holdDays >= 28
+                  ? "You can continue toward the 8-week survivor tier."
+                  : "Keep surviving to reach your first milestone."}
+              </p>
 
-  {status.rewardBreakdown?.basePercent > 0 ? (
-    <div className="mt-5 flex flex-wrap gap-3">
-      <button
-        className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white"
-      >
-        Claim & End Streak
-      </button>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  disabled={status.rewardBreakdown?.basePercent <= 0}
+                  className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
+                    status.rewardBreakdown?.basePercent > 0
+                      ? "border-black bg-black text-white"
+                      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
+                  }`}
+                >
+                  {status.rewardBreakdown?.basePercent > 0
+                    ? "Claim & End Streak"
+                    : "Claim Locked"}
+                </button>
 
-      <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
-        Continue Surviving
-      </div>
-    </div>
-  ) : null}
-</div>
+                <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+                  Continue Surviving
+                </div>
+              </div>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-4">
               <MiniStat label="Active Commitments" value={status.alivePositions} />
