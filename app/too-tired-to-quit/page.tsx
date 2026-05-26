@@ -88,43 +88,6 @@ export default function TooTiredToQuitPage() {
     await loadStatus(wallet);
   }
 
-  async function claimCommitment() {
-    if (!status || claiming) return;
-
-    const confirmed = window.confirm(
-      "Ending this survival streak will submit your claim and reset active commitment progression. Continue?"
-    );
-
-    if (!confirmed) return;
-
-    setClaiming(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const response = await fetch("/api/tired-claim", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ wallet }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error ?? "Could not submit claim.");
-      }
-
-      setSuccess(`Claim submitted. ${data.claimedCommitments} commitment(s) awaiting distribution.`);
-      await loadStatus(wallet);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
-    } finally {
-      setClaiming(false);
-    }
-  }
-
   const holdDays = status?.holdDays ?? 0;
   const progress = getProgressPercent(holdDays);
   const nextMilestone = getNextMilestone(holdDays);
@@ -147,46 +110,6 @@ export default function TooTiredToQuitPage() {
           <p className="mt-4 max-w-2xl text-lg text-[#555]">
             Survive. Participate. Build your TOW history.
           </p>
-
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/too-tired-to-quit/leaderboard" className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5">
-              View Leaderboard
-            </Link>
-
-            <Link href="/too-tired-to-quit/how-it-works" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">
-              How It Works
-            </Link>
-
-            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">
-              Play TOW Game
-            </Link>
-
-            <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5">
-              Everyone’s Tired
-            </Link>
-          </div>
-        </section>
-
-        <section className="rounded-[28px] border-2 border-black bg-white p-5">
-          <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Enter your wallet to load your survivor identity.
-          </div>
-
-          <div className="flex flex-col gap-3 md:flex-row">
-            <input
-              value={wallet}
-              onChange={(event) => setWallet(event.target.value)}
-              placeholder="Enter XRPL wallet"
-              className="flex-1 rounded-2xl border-2 border-black px-4 py-3 font-bold outline-none focus:border-[#5B2BE8]"
-            />
-
-            <button onClick={checkStatus} disabled={loading} className="rounded-2xl border-2 border-black bg-black px-6 py-3 font-black text-white transition hover:-translate-y-0.5 disabled:opacity-50">
-              {loading ? "Checking..." : status ? "Refresh Status" : "Check Status"}
-            </button>
-          </div>
-
-          {error ? <p className="mt-3 text-sm font-black text-[#B14A35]">{error}</p> : null}
-          {success ? <p className="mt-3 text-sm font-black text-[#2E8B57]">{success}</p> : null}
         </section>
 
         {status ? (
@@ -239,32 +162,46 @@ export default function TooTiredToQuitPage() {
                   </h3>
                 </div>
 
-                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+                <p className="text-base font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
                   Current Base: {status.rewardBreakdown?.basePercent ?? 0}%
                 </p>
               </div>
 
-              <div className="mt-8">
+              <div className="mt-10 px-4">
                 <div className="relative h-4 rounded-full border-2 border-black bg-white">
                   <div
                     className="h-full rounded-full bg-black transition-all"
                     style={{ width: `${progress}%` }}
                   />
 
-                  {[28, 56, 84].map((day) => (
+                  {[0, 28, 56, 84].map((day) => (
                     <div
                       key={day}
-                      className={`absolute top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border-2 border-black ${holdDays >= day ? "bg-black" : "bg-white"}`}
-                      style={{ left: `calc(${(day / 84) * 100}% - 16px)` }}
+                      className={`absolute top-1/2 h-9 w-9 -translate-y-1/2 rounded-full border-2 border-black ${holdDays >= day ? "bg-black" : "bg-white"}`}
+                      style={{ left: `calc(${(day / 84) * 100}% - 18px)` }}
                     />
                   ))}
                 </div>
 
-                <div className="mt-5 grid grid-cols-4 text-center text-xs font-black uppercase tracking-[0.16em] text-[#555]">
-                  <div>0d</div>
-                  <div>4w<br /><span className="text-black">2.5%</span></div>
-                  <div>8w<br /><span className="text-black">7%</span></div>
-                  <div>12w<br /><span className="text-black">15%</span></div>
+                <div className="relative mt-8 h-20 text-center font-black uppercase tracking-[0.12em] text-[#444]">
+                  <div className="absolute left-0 -translate-x-1/2">
+                    <div className="text-lg">0D</div>
+                  </div>
+
+                  <div className="absolute left-[33.333%] -translate-x-1/2">
+                    <div className="text-xl">4W</div>
+                    <div className="mt-1 text-lg text-black">2.5%</div>
+                  </div>
+
+                  <div className="absolute left-[66.666%] -translate-x-1/2">
+                    <div className="text-xl">8W</div>
+                    <div className="mt-1 text-lg text-black">7%</div>
+                  </div>
+
+                  <div className="absolute right-0 translate-x-1/2">
+                    <div className="text-xl">12W</div>
+                    <div className="mt-1 text-lg text-black">15%</div>
+                  </div>
                 </div>
               </div>
 
@@ -288,22 +225,6 @@ export default function TooTiredToQuitPage() {
                     ? "You can continue toward the 8-week survivor tier."
                     : "Keep surviving to reach your first milestone."}
                 </p>
-
-                {status.rewardBreakdown?.basePercent > 0 ? (
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <button
-                      onClick={claimCommitment}
-                      disabled={claiming}
-                      className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:opacity-50"
-                    >
-                      {claiming ? "Submitting Claim..." : "Claim & End Streak"}
-                    </button>
-
-                    <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
-                      Continue Surviving
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </div>
 
@@ -313,24 +234,6 @@ export default function TooTiredToQuitPage() {
               <MiniStat label="Highest Score" value={status.gameBestScore} />
               <MiniStat label="Active Commitments" value={status.alivePositions} />
             </div>
-
-            <button
-              onClick={() => setShowDetails((value) => !value)}
-              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black transition hover:-translate-y-0.5"
-            >
-              {showDetails ? "Hide Detailed Breakdown" : "View Detailed Breakdown"}
-            </button>
-
-            {showDetails ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
-                <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
-                <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-                <MiniStat label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
-                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-                <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
-              </div>
-            ) : null}
           </section>
         ) : null}
       </main>
