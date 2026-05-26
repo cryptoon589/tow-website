@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 type WalletSummary = {
   walletAddress: string;
+  xUsername: string | null;
   holdDays: number;
   alivePositions: number;
   totalTowAmount: number;
@@ -35,7 +36,7 @@ export async function GET() {
     const supabase = getSupabase();
     const [{ data: positions }, { data: scores }, { data: raids }] = await Promise.all([
       supabase.from("tow_buy_positions").select("wallet_address,tow_amount,max_reward_tow,status,created_at").eq("status", "alive"),
-      supabase.from("tow_weekly_scores").select("wallet_address,best_score,runs"),
+      supabase.from("tow_weekly_scores").select("wallet_address,x_username,best_score,runs"),
       supabase.from("raid_posts").select("wallet"),
     ]);
 
@@ -45,6 +46,7 @@ export async function GET() {
       if (!walletMap.has(walletAddress)) {
         walletMap.set(walletAddress, {
           walletAddress,
+          xUsername: null,
           holdDays: 0,
           alivePositions: 0,
           totalTowAmount: 0,
@@ -78,6 +80,7 @@ export async function GET() {
       const walletAddress = String(score.wallet_address ?? "").trim();
       if (!walletAddress || !walletMap.has(walletAddress)) return;
       const summary = ensureWallet(walletAddress);
+      summary.xUsername = summary.xUsername ?? score.x_username ?? null;
       summary.gameBestScore = Math.max(summary.gameBestScore, Number(score.best_score ?? 0));
       summary.gameRuns += Number(score.runs ?? 0);
     });
