@@ -113,12 +113,12 @@ export default function TooTiredToQuitPage() {
               FAQ / How It Works
             </Link>
 
-            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
-              Play TOW Game
-            </Link>
-
             <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
               Everyone's Tired
+            </Link>
+
+            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              Play TOW Game
             </Link>
           </div>
         </section>
