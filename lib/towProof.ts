@@ -53,7 +53,7 @@ export type TiredPosition = {
 };
 
 export const MIN_QUALIFYING_BUY_XRP = 50;
-export const MAX_REWARD_TOW_RATIO = 0.15;
+export const MAX_REWARD_TOW_RATIO = 0.22;
 export const RECENT_ACTIVITY_WINDOW_DAYS = 30;
 
 export const TIRED_LEVELS: TiredLevel[] = [
