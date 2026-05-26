@@ -68,7 +68,10 @@ export async function GET() {
       const holdDays = getHoldDays(position.created_at);
       const towAmount = Number(position.tow_amount ?? 0);
       const maxRewardTow = Number(position.max_reward_tow ?? 0) || calculateMaxRewardTow(towAmount);
-      const unlockedRewardTow = calculateUnlockedRewardTow(maxRewardTow, holdDays);
+      const unlockedRewardTow = calculateUnlockedRewardTow({
+        towAmount,
+        rewardPercent: holdDays >= 84 ? 15 : holdDays >= 56 ? 7 : holdDays >= 28 ? 2.5 : 0,
+      });
       summary.holdDays = summary.holdDays === 0 ? holdDays : Math.min(summary.holdDays, holdDays);
       summary.alivePositions += 1;
       summary.totalTowAmount += towAmount;
