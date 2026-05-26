@@ -67,11 +67,11 @@ export default function TooTiredLeaderboardPage() {
                 <thead>
                   <tr className="border-b-2 border-black text-left">
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Rank</th>
-                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Wallet</th>
+                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Survivor</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">State</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Commitments</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Committed</th>
-                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Unlocked</th>
+                    <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Survival Unlock</th>
                     <th className="px-3 py-4 text-xs font-black uppercase tracking-[0.22em]">Survival Score</th>
                   </tr>
                 </thead>
@@ -80,7 +80,14 @@ export default function TooTiredLeaderboardPage() {
                   {entries.map((entry) => (
                     <tr key={entry.walletAddress} className="border-b border-black/10">
                       <td className="px-3 py-4 text-lg font-black">#{entry.rank}</td>
-                      <td className="px-3 py-4 font-bold">{maskWallet(entry.walletAddress)}</td>
+                      <td className="px-3 py-4 font-bold">
+                        <div className="font-black">
+                          {entry.xUsername ? `@${entry.xUsername}` : maskWallet(entry.walletAddress)}
+                        </div>
+                        <div className="text-xs font-bold text-[#777]">
+                          {maskWallet(entry.walletAddress)}
+                        </div>
+                      </td>
                       <td className="px-3 py-4 font-black">{entry.tiredLevel.emoji} {entry.tiredLevel.label}</td>
                       <td className="px-3 py-4 font-black">{entry.alivePositions}</td>
                       <td className="px-3 py-4 font-black">{formatTow(entry.totalTowAmount)} TOW</td>
