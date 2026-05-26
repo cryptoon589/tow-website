@@ -21,8 +21,8 @@ export const siteConfig = {
 
 export const navItems = [
   { label: "Home", href: "/" },
-  { label: "Play Game", href: "/play/start" },
   { label: "Too Tired To Quit", href: "/too-tired-to-quit" },
+  { label: "Play Game", href: "/play/start" },
   { label: "Make Memes", href: "/meme-generator" },
   { label: "Everyone's Tired", href: "/raid-board" },
   { label: "NFTs", href: "/nft-collection" },
