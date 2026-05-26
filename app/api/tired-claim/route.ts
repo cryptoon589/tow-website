@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from("tow_buy_positions")
       .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
+        status: "claimed",
+        claimed_at: new Date().toISOString(),
+        reward_status: "pending",
       })
       .in("id", eligibleIds);
 
