@@ -31,6 +31,8 @@ export default function TooTiredToQuitPage() {
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimRequest, setClaimRequest] = useState<any>(null);
 
   const displayName = useMemo(() => {
     const username = status?.xUsername ?? saved?.xUsername;
@@ -76,6 +78,37 @@ export default function TooTiredToQuitPage() {
     }
 
     await loadStatus(wallet.trim());
+  }
+
+  async function requestClaimAuthorization() {
+    if (!status?.walletAddress) return;
+
+    setClaimLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/tired-claim-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          wallet: status.walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not create claim request.");
+      }
+
+      setClaimRequest(data);
+    } catch (err: any) {
+      setError(err.message || "Unknown error");
+    } finally {
+      setClaimLoading(false);
+    }
   }
 
   const holdDays = status?.holdDays ?? 0;
@@ -231,13 +264,13 @@ export default function TooTiredToQuitPage() {
 
               <p className="mt-3 text-2xl font-black">
                 {hasUnlockedReward
-                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% base. Claims are admin-authorized until secure wallet-signature claiming is added.`
+                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% base. You can now request secure Telegram authorization to end your streak.`
                   : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
               </p>
 
               <p className="mt-3 text-sm font-bold text-[#555]">
                 {status.holdDays >= 84
-                  ? "You reached the highest survival tier. Claiming will end this active streak once authorized."
+                  ? "You reached the highest survival tier. Claiming will permanently end this active streak."
                   : status.holdDays >= 56
                   ? "You can continue toward the 12-week survivor tier."
                   : status.holdDays >= 28
@@ -246,14 +279,52 @@ export default function TooTiredToQuitPage() {
               </p>
 
               <div className="mt-5 flex flex-wrap gap-3">
-                <div className="rounded-2xl border-2 border-black bg-[#E5E5E5] px-5 py-3 text-sm font-black text-[#555]">
-                  Claim Authorization Locked
-                </div>
+                <button
+                  onClick={requestClaimAuthorization}
+                  disabled={!hasUnlockedReward || !isVerified || claimLoading}
+                  className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
+                    hasUnlockedReward && isVerified
+                      ? "border-black bg-black text-white"
+                      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
+                  }`}
+                >
+                  {claimLoading
+                    ? "Generating Claim Code..."
+                    : hasUnlockedReward && isVerified
+                    ? "Claim & End Streak"
+                    : "Claim Locked"}
+                </button>
 
                 <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
                   Continue Surviving
                 </div>
               </div>
+
+              {claimRequest ? (
+                <div className="mt-5 rounded-2xl border-2 border-dashed border-black bg-[#F8F8F8] p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                    Claim Authorization Code
+                  </p>
+
+                  <p className="mt-3 text-3xl font-black tracking-[0.12em]">
+                    {claimRequest.claimCode}
+                  </p>
+
+                  <p className="mt-3 text-sm font-bold text-[#555]">
+                    {claimRequest.instructions}
+                  </p>
+
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+                    Expires: {new Date(claimRequest.expiresAt).toLocaleString()}
+                  </p>
+
+                  {claimRequest.reused ? (
+                    <p className="mt-2 text-xs font-black text-[#8A5A00]">
+                      Existing pending authorization reused.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
