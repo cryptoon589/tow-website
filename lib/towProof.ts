@@ -6,7 +6,11 @@ export type TiredLevel = {
 
 export type RewardBreakdown = {
   basePercent: number;
+  survivalUnlockPercent: number;
+  raidBonusPercent: number;
+  gameBonusPercent: number;
   recentActivityPercent: number;
+  loyaltyBonusPercent: number;
   historyPercent: number;
   totalPercent: number;
 };
@@ -46,8 +50,10 @@ export type TiredPosition = {
   towAmount: number;
   maxRewardTow: number;
   unlockedRewardTow: number;
-  status: "alive" | "disqualified";
+  status: "alive" | "claimed" | "disqualified" | "paid";
+  rewardStatus?: string | null;
   createdAt: string;
+  claimedAt?: string | null;
   disqualifiedAt?: string | null;
   sellTxHash?: string | null;
 };
@@ -66,7 +72,7 @@ export const TIRED_LEVELS: TiredLevel[] = [
 ];
 
 export function normalizeXUsername(value: string) {
-  return value.trim().replace(/^@+/, "");
+  return value.trim().replace(/^@+/, "").toLowerCase();
 }
 
 export function isValidXUsername(value: string) {
@@ -96,24 +102,32 @@ export function calculateRewardBreakdown(input: {
   raidPosts: number;
   gameBestScore: number;
 }) {
-  const basePercent = input.holdDays >= 84 ? 15 : input.holdDays >= 56 ? 7 : input.holdDays >= 28 ? 2.5 : 0;
+  const survivalUnlockPercent = input.holdDays >= 84 ? 15 : input.holdDays >= 56 ? 7 : input.holdDays >= 28 ? 2.5 : 0;
+
+  // Raids are the primary ecosystem activity bonus. Game runs are secondary support.
+  const raidBonusPercent = Math.min(3, Math.floor(Math.max(0, input.recentRaidPosts) / 2) * 0.5);
   const cappedRecentGameRuns = Math.min(RECENT_GAME_RUN_CAP, Math.max(0, input.recentGameRuns));
+  const gameBonusPercent = Math.min(1.5, Math.floor(cappedRecentGameRuns / 10) * 0.5);
+  const recentActivityPercent = Number((raidBonusPercent + gameBonusPercent).toFixed(2));
 
-  const recentGamePercent = Math.min(2.5, Math.floor(cappedRecentGameRuns / 10) * 0.5);
-  const recentRaidPercent = Math.min(2.5, Math.floor(input.recentRaidPosts / 3) * 0.5);
-  const recentActivityPercent = Number((recentGamePercent + recentRaidPercent).toFixed(2));
-
-  const lifetimeRunPercent = Math.min(1, Math.floor(input.gameRuns / 100) * 0.25);
-  const lifetimeRaidPercent = Math.min(0.75, Math.floor(input.raidPosts / 25) * 0.25);
+  const lifetimeRaidPercent = Math.min(1, Math.floor(input.raidPosts / 20) * 0.25);
+  const lifetimeRunPercent = Math.min(0.75, Math.floor(input.gameRuns / 100) * 0.25);
   const lifetimeScorePercent = Math.min(0.25, Math.floor(input.gameBestScore / 1000) * 0.25);
-  const historyPercent = Number((lifetimeRunPercent + lifetimeRaidPercent + lifetimeScorePercent).toFixed(2));
+  const loyaltyBonusPercent = Number((lifetimeRaidPercent + lifetimeRunPercent + lifetimeScorePercent).toFixed(2));
 
-  const totalPercent = Math.min(MAX_REWARD_PERCENT, Number((basePercent + recentActivityPercent + historyPercent).toFixed(2)));
+  const totalPercent = Math.min(
+    MAX_REWARD_PERCENT,
+    Number((survivalUnlockPercent + recentActivityPercent + loyaltyBonusPercent).toFixed(2))
+  );
 
   return {
-    basePercent,
+    basePercent: survivalUnlockPercent,
+    survivalUnlockPercent,
+    raidBonusPercent,
+    gameBonusPercent,
     recentActivityPercent,
-    historyPercent,
+    loyaltyBonusPercent,
+    historyPercent: loyaltyBonusPercent,
     totalPercent,
   };
 }
@@ -155,9 +169,9 @@ export function calculateSurvivalScore(input: {
   const holdScore = input.holdDays * 10;
   const commitmentScore = input.alivePositions * 100;
   const towScore = Math.sqrt(Math.max(0, input.totalTowAmount) / 1000);
-  const raidScore = input.raidPosts * 2;
-  const runScore = input.gameRuns;
-  const bestScore = Math.floor(input.gameBestScore / 20);
+  const raidScore = input.raidPosts * 5;
+  const runScore = Math.floor(input.gameRuns * 0.75);
+  const bestScore = Math.floor(input.gameBestScore / 25);
 
   return Math.floor(holdScore + commitmentScore + towScore + raidScore + runScore + bestScore);
 }
