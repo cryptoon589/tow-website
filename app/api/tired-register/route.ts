@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const walletAddress = String(body.walletAddress ?? "").trim();
+
     const telegramUsername = String(body.telegramUsername ?? "")
       .trim()
       .replace(/^@+/, "");
@@ -50,12 +51,36 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    // Preserve existing verification state if player already exists.
     const { data: existingPlayer } = await supabase
       .from("tow_players")
-      .select("verified,verified_at")
+      .select(
+        "verified,verified_at,x_username,telegram_username,wallet_address"
+      )
       .eq("wallet_address", walletAddress)
       .maybeSingle();
+
+    // Once verified, survivor identity becomes locked.
+    // Prevent farming through rotating X or Telegram accounts.
+    if (existingPlayer?.verified) {
+      const existingX = String(existingPlayer.x_username ?? "").trim();
+      const existingTelegram = String(
+        existingPlayer.telegram_username ?? ""
+      ).trim();
+
+      const xChanged = existingX !== (xUsername || "");
+      const telegramChanged =
+        existingTelegram !== (telegramUsername || "");
+
+      if (xChanged || telegramChanged) {
+        return NextResponse.json(
+          {
+            error:
+              "Verified survivor identities are locked. Contact admin support to change linked social accounts.",
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     const verificationCode = createVerificationCode();
 
