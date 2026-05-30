@@ -40,30 +40,43 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    const [{ data: player }, { data: positions }, { data: scores }, { data: raids }] =
-      await Promise.all([
-        supabase
-          .from("tow_players")
-          .select("x_username,telegram_username,verified")
-          .eq("wallet_address", wallet)
-          .maybeSingle(),
+    const [
+      { data: player },
+      { data: positions },
+      { data: scores },
+      { data: raids },
+      { data: archives },
+    ] = await Promise.all([
+      supabase
+        .from("tow_players")
+        .select("x_username,telegram_username,verified")
+        .eq("wallet_address", wallet)
+        .maybeSingle(),
 
-        supabase
-          .from("tow_buy_positions")
-          .select("*")
-          .eq("wallet_address", wallet)
-          .order("created_at", { ascending: true }),
+      supabase
+        .from("tow_buy_positions")
+        .select("*")
+        .eq("wallet_address", wallet)
+        .order("created_at", { ascending: true }),
 
-        supabase
-          .from("tow_weekly_scores")
-          .select("best_score,runs,updated_at")
-          .eq("wallet_address", wallet),
+      supabase
+        .from("tow_weekly_scores")
+        .select("best_score,runs,updated_at")
+        .eq("wallet_address", wallet),
 
-        supabase
-          .from("raid_posts")
-          .select("id,created_at")
-          .eq("wallet", wallet),
-      ]);
+      supabase
+        .from("raid_posts")
+        .select("id,created_at")
+        .eq("wallet", wallet),
+
+      supabase
+        .from("tow_survivor_archives")
+        .select(
+          "season_label,survived_days,total_tow_committed,total_unlocked_tow,reward_status,archived_at,paid_at"
+        )
+        .eq("wallet_address", wallet)
+        .order("archived_at", { ascending: false }),
+    ]);
 
     const verified = Boolean(player?.verified);
 
@@ -119,7 +132,9 @@ export async function GET(request: NextRequest) {
           maxRewardTow,
           unlockedRewardTow,
           status: position.status,
+          rewardStatus: position.reward_status,
           createdAt: position.created_at,
+          claimedAt: position.claimed_at,
           disqualifiedAt: position.disqualified_at,
           sellTxHash: position.sell_tx_hash,
         };
@@ -202,6 +217,7 @@ export async function GET(request: NextRequest) {
       survivalScore,
       activityScore: survivalScore,
       positions: normalizedPositions,
+      archives: archives ?? [],
     });
   } catch (error) {
     return NextResponse.json(
