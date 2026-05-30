@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 type WalletSummary = {
   walletAddress: string;
   xUsername: string | null;
+  verified: boolean;
   holdDays: number;
   alivePositions: number;
   totalTowAmount: number;
@@ -34,19 +35,53 @@ function getSupabase() {
 export async function GET() {
   try {
     const supabase = getSupabase();
-    const [{ data: positions }, { data: scores }, { data: raids }] = await Promise.all([
-      supabase.from("tow_buy_positions").select("wallet_address,tow_amount,max_reward_tow,status,created_at").eq("status", "alive"),
-      supabase.from("tow_weekly_scores").select("wallet_address,x_username,best_score,runs"),
-      supabase.from("raid_posts").select("wallet"),
-    ]);
+
+    const [{ data: positions }, { data: scores }, { data: raids }, { data: players }] =
+      await Promise.all([
+        supabase
+          .from("tow_buy_positions")
+          .select(
+            "wallet_address,tow_amount,max_reward_tow,status,created_at"
+          )
+          .eq("status", "alive"),
+
+        supabase
+          .from("tow_weekly_scores")
+          .select("wallet_address,x_username,best_score,runs"),
+
+        supabase.from("raid_posts").select("wallet"),
+
+        supabase
+          .from("tow_players")
+          .select("wallet_address,verified,x_username"),
+      ]);
+
+    const verifiedWallets = new Map<
+      string,
+      { verified: boolean; xUsername: string | null }
+    >();
+
+    players?.forEach((player) => {
+      const walletAddress = String(player.wallet_address ?? "").trim();
+
+      if (!walletAddress) return;
+
+      verifiedWallets.set(walletAddress, {
+        verified: Boolean(player.verified),
+        xUsername: player.x_username ?? null,
+      });
+    });
 
     const walletMap = new Map<string, WalletSummary>();
 
     function ensureWallet(walletAddress: string) {
       if (!walletMap.has(walletAddress)) {
+        const player = verifiedWallets.get(walletAddress);
+
         walletMap.set(walletAddress, {
           walletAddress,
-          xUsername: null,
+          xUsername: player?.xUsername ?? null,
+          verified: Boolean(player?.verified),
           holdDays: 0,
           alivePositions: 0,
           totalTowAmount: 0,
@@ -58,14 +93,20 @@ export async function GET() {
           survivalScore: 0,
         });
       }
+
       return walletMap.get(walletAddress)!;
     }
 
     positions?.forEach((position) => {
       const walletAddress = String(position.wallet_address ?? "").trim();
+
       if (!walletAddress) return;
 
       const summary = ensureWallet(walletAddress);
+
+      // Public leaderboard only includes verified survivor identities.
+      if (!summary.verified) return;
+
       const holdDays = getHoldDays(position.created_at);
       const towAmount = Number(position.tow_amount ?? 0);
 
@@ -101,7 +142,10 @@ export async function GET() {
 
       const summary = ensureWallet(walletAddress);
 
+      if (!summary.verified) return;
+
       summary.xUsername = summary.xUsername ?? score.x_username ?? null;
+
       summary.gameBestScore = Math.max(
         summary.gameBestScore,
         Number(score.best_score ?? 0)
@@ -115,10 +159,16 @@ export async function GET() {
 
       if (!walletAddress || !walletMap.has(walletAddress)) return;
 
-      ensureWallet(walletAddress).raidPosts += 1;
+      const summary = ensureWallet(walletAddress);
+
+      if (!summary.verified) return;
+
+      summary.raidPosts += 1;
     });
 
     const entries = Array.from(walletMap.values())
+      .filter((summary) => summary.verified)
+      .filter((summary) => summary.alivePositions > 0)
       .map((summary) => {
         const survivalScore = calculateSurvivalScore({
           holdDays: summary.holdDays,
