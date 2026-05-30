@@ -30,63 +30,121 @@ function isRecent(value?: string | null) {
 export async function GET(request: NextRequest) {
   try {
     const wallet = String(request.nextUrl.searchParams.get("wallet") ?? "").trim();
-    if (!isValidXrplWallet(wallet)) return NextResponse.json({ error: "Invalid XRPL wallet." }, { status: 400 });
+
+    if (!isValidXrplWallet(wallet)) {
+      return NextResponse.json(
+        { error: "Invalid XRPL wallet." },
+        { status: 400 }
+      );
+    }
 
     const supabase = getSupabase();
-    const [{ data: player }, { data: positions }, { data: scores }, { data: raids }] = await Promise.all([
-      supabase.from("tow_players").select("x_username,telegram_username").eq("wallet_address", wallet).maybeSingle(),
-      supabase.from("tow_buy_positions").select("*").eq("wallet_address", wallet).order("created_at", { ascending: true }),
-      supabase.from("tow_weekly_scores").select("best_score,runs,updated_at").eq("wallet_address", wallet),
-      supabase.from("raid_posts").select("id,created_at").eq("wallet", wallet),
-    ]);
+
+    const [{ data: player }, { data: positions }, { data: scores }, { data: raids }] =
+      await Promise.all([
+        supabase
+          .from("tow_players")
+          .select("x_username,telegram_username,verified")
+          .eq("wallet_address", wallet)
+          .maybeSingle(),
+
+        supabase
+          .from("tow_buy_positions")
+          .select("*")
+          .eq("wallet_address", wallet)
+          .order("created_at", { ascending: true }),
+
+        supabase
+          .from("tow_weekly_scores")
+          .select("best_score,runs,updated_at")
+          .eq("wallet_address", wallet),
+
+        supabase
+          .from("raid_posts")
+          .select("id,created_at")
+          .eq("wallet", wallet),
+      ]);
+
+    const verified = Boolean(player?.verified);
 
     const raidPosts = raids?.length ?? 0;
-    const recentRaidPosts = raids?.filter((raid) => isRecent(raid.created_at)).length ?? 0;
 
-    const gameBestScore = Math.max(0, ...(scores?.map((entry) => entry.best_score ?? 0) ?? []));
-    const gameRuns = (scores ?? []).reduce((sum, entry) => sum + (entry.runs ?? 0), 0);
+    const recentRaidPosts =
+      raids?.filter((raid) => isRecent(raid.created_at)).length ?? 0;
+
+    const gameBestScore = Math.max(
+      0,
+      ...(scores?.map((entry) => entry.best_score ?? 0) ?? [])
+    );
+
+    const gameRuns = (scores ?? []).reduce(
+      (sum, entry) => sum + (entry.runs ?? 0),
+      0
+    );
+
     const recentGameRuns = (scores ?? [])
       .filter((entry) => isRecent(entry.updated_at))
       .reduce((sum, entry) => sum + (entry.runs ?? 0), 0);
 
-    const normalizedPositions = positions?.map((position) => {
-      const positionHoldDays = getHoldDays(position.created_at);
-      const towAmount = Number(position.tow_amount ?? 0);
-      const rewardBreakdown = calculateRewardBreakdown({
-        holdDays: positionHoldDays,
-        recentGameRuns,
-        recentRaidPosts,
-        gameRuns,
-        raidPosts,
-        gameBestScore,
-      });
-      const maxRewardTow = calculateMaxRewardTow(towAmount);
-      const unlockedRewardTow =
-        position.status === "alive"
-          ? calculateUnlockedRewardTow({ towAmount, rewardPercent: rewardBreakdown.totalPercent })
-          : 0;
+    const normalizedPositions =
+      positions?.map((position) => {
+        const positionHoldDays = getHoldDays(position.created_at);
+        const towAmount = Number(position.tow_amount ?? 0);
 
-      return {
-        id: position.id,
-        walletAddress: position.wallet_address,
-        buyTxHash: position.buy_tx_hash,
-        buyValueXrp: Number(position.buy_value_xrp ?? 0),
-        towAmount,
-        maxRewardTow,
-        unlockedRewardTow,
-        status: position.status,
-        createdAt: position.created_at,
-        disqualifiedAt: position.disqualified_at,
-        sellTxHash: position.sell_tx_hash,
-      };
-    }) ?? [];
+        const rewardBreakdown = calculateRewardBreakdown({
+          holdDays: positionHoldDays,
+          recentGameRuns,
+          recentRaidPosts,
+          gameRuns,
+          raidPosts,
+          gameBestScore,
+        });
 
-    const alivePositions = normalizedPositions.filter((position) => position.status === "alive");
+        const maxRewardTow = calculateMaxRewardTow(towAmount);
+
+        const unlockedRewardTow =
+          position.status === "alive"
+            ? calculateUnlockedRewardTow({
+                towAmount,
+                rewardPercent: rewardBreakdown.totalPercent,
+              })
+            : 0;
+
+        return {
+          id: position.id,
+          walletAddress: position.wallet_address,
+          buyTxHash: position.buy_tx_hash,
+          buyValueXrp: Number(position.buy_value_xrp ?? 0),
+          towAmount,
+          maxRewardTow,
+          unlockedRewardTow,
+          status: position.status,
+          createdAt: position.created_at,
+          disqualifiedAt: position.disqualified_at,
+          sellTxHash: position.sell_tx_hash,
+        };
+      }) ?? [];
+
+    const alivePositions = normalizedPositions.filter(
+      (position) => position.status === "alive"
+    );
+
     const oldestAlivePosition = alivePositions[0];
+
     const stillHereSince = oldestAlivePosition?.createdAt ?? null;
+
     const holdDays = getHoldDays(stillHereSince);
-    const totalQualifyingXrp = alivePositions.reduce((sum, position) => sum + position.buyValueXrp, 0);
-    const totalTowAmount = alivePositions.reduce((sum, position) => sum + position.towAmount, 0);
+
+    const totalQualifyingXrp = alivePositions.reduce(
+      (sum, position) => sum + position.buyValueXrp,
+      0
+    );
+
+    const totalTowAmount = alivePositions.reduce(
+      (sum, position) => sum + position.towAmount,
+      0
+    );
+
     const rewardBreakdown = calculateRewardBreakdown({
       holdDays,
       recentGameRuns,
@@ -95,36 +153,46 @@ export async function GET(request: NextRequest) {
       raidPosts,
       gameBestScore,
     });
+
     const maxRewardTow = calculateMaxRewardTow(totalTowAmount);
+
     const unlockedRewardTow = calculateUnlockedRewardTow({
       towAmount: totalTowAmount,
       rewardPercent: rewardBreakdown.totalPercent,
     });
-    const survivalScore = calculateSurvivalScore({
-      holdDays,
-      gameBestScore,
-      gameRuns,
-      raidPosts,
-      alivePositions: alivePositions.length,
-      totalTowAmount,
-    });
+
+    const survivalScore = verified
+      ? calculateSurvivalScore({
+          holdDays,
+          gameBestScore,
+          gameRuns,
+          raidPosts,
+          alivePositions: alivePositions.length,
+          totalTowAmount,
+        })
+      : 0;
 
     return NextResponse.json({
       walletAddress: wallet,
+      verified,
       xUsername: player?.x_username ?? null,
-      telegram: player?.telegram_username ?? null,
-      eligible: alivePositions.length > 0,
-      disqualified: normalizedPositions.length > 0 && alivePositions.length === 0,
+      eligible: verified && alivePositions.length > 0,
+      disqualified:
+        normalizedPositions.length > 0 && alivePositions.length === 0,
       tiredLevel: getTiredLevel(holdDays),
       holdDays,
       stillHereSince,
       alivePositions: alivePositions.length,
-      disqualifiedPositions: normalizedPositions.length - alivePositions.length,
+      disqualifiedPositions:
+        normalizedPositions.length - alivePositions.length,
       totalQualifyingXrp,
       totalTowAmount,
       maxRewardTow,
       unlockedRewardTow,
-      remainingRewardTow: Math.max(0, maxRewardTow - unlockedRewardTow),
+      remainingRewardTow: Math.max(
+        0,
+        maxRewardTow - unlockedRewardTow
+      ),
       rewardBreakdown,
       gameBestScore,
       gameRuns,
@@ -136,6 +204,13 @@ export async function GET(request: NextRequest) {
       positions: normalizedPositions,
     });
   } catch (error) {
-    return NextResponse.json({ error: "Could not load tired status.", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Could not load tired status.",
+        details:
+          error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
