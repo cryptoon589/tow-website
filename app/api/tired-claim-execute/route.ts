@@ -21,6 +21,12 @@ function requireExecutionAdmin(request: NextRequest) {
   return request.headers.get("x-tow-claim-secret") === expected;
 }
 
+function getSeasonLabel(days: number) {
+  if (days >= 84) return "Season 3 Survivor";
+  if (days >= 56) return "Season 2 Survivor";
+  return "Season 1 Survivor";
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!requireExecutionAdmin(request)) {
@@ -46,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const { data: requestRow, error: requestError } = await supabase
       .from("tow_claim_requests")
-      .select("id,wallet_address,telegram_username,eligible_position_ids,status,expires_at")
+      .select("id,wallet_address,x_username,telegram_username,eligible_position_ids,status,expires_at")
       .eq("claim_code", claimCode)
       .maybeSingle();
 
@@ -107,16 +113,17 @@ export async function POST(request: NextRequest) {
 
     const { data: positions, error: positionsError } = await supabase
       .from("tow_buy_positions")
-      .select("id,created_at,status")
+      .select("id,created_at,status,tow_amount,unlocked_reward_tow")
       .eq("wallet_address", requestRow.wallet_address)
       .in("id", eligiblePositionIds);
 
     if (positionsError) throw positionsError;
 
-    const stillEligibleIds = (positions ?? [])
+    const aliveEligiblePositions = (positions ?? [])
       .filter((position) => position.status === "alive")
-      .filter((position) => getHoldDays(position.created_at) >= 28)
-      .map((position) => position.id);
+      .filter((position) => getHoldDays(position.created_at) >= 28);
+
+    const stillEligibleIds = aliveEligiblePositions.map((position) => position.id);
 
     if (stillEligibleIds.length === 0) {
       await supabase
@@ -129,6 +136,23 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const oldestPosition = aliveEligiblePositions.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )[0];
+
+    const survivedDays = getHoldDays(oldestPosition.created_at);
+
+    const totalTowCommitted = aliveEligiblePositions.reduce(
+      (sum, position) => sum + Number(position.tow_amount ?? 0),
+      0
+    );
+
+    const totalUnlockedTow = aliveEligiblePositions.reduce(
+      (sum, position) => sum + Number(position.unlocked_reward_tow ?? 0),
+      0
+    );
 
     const now = new Date().toISOString();
 
@@ -144,6 +168,25 @@ export async function POST(request: NextRequest) {
 
     if (updatePositionsError) throw updatePositionsError;
 
+    const { error: archiveError } = await supabase
+      .from("tow_survivor_archives")
+      .insert({
+        wallet_address: requestRow.wallet_address,
+        x_username: requestRow.x_username ?? null,
+        telegram_username: requestRow.telegram_username,
+        claim_request_id: requestRow.id,
+        claim_code: claimCode,
+        position_ids: stillEligibleIds,
+        season_label: getSeasonLabel(survivedDays),
+        survived_days: survivedDays,
+        total_tow_committed: totalTowCommitted,
+        total_unlocked_tow: totalUnlockedTow,
+        reward_status: "pending_manual_payout",
+        archived_at: now,
+      });
+
+    if (archiveError) throw archiveError;
+
     const { error: updateRequestError } = await supabase
       .from("tow_claim_requests")
       .update({ status: "executed", processed_at: now })
@@ -155,8 +198,10 @@ export async function POST(request: NextRequest) {
       ok: true,
       walletAddress: requestRow.wallet_address,
       claimedCommitments: stillEligibleIds.length,
+      survivedDays,
       rewardStatus: "pending_manual_payout",
-      message: "Claim executed. Reward is now pending manual payout.",
+      seasonLabel: getSeasonLabel(survivedDays),
+      message: "Claim executed. Survivor streak archived and reward pending manual payout.",
     });
   } catch (error) {
     return NextResponse.json(
