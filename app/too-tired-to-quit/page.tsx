@@ -351,9 +351,67 @@ export default function TooTiredToQuitPage() {
                 <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
               </div>
             ) : null}
-          </section>
-        ) : null}
-      </main>
+
+      {status.archives?.length ? (
+  <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
+    <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+      Survivor Archive
+    </p>
+
+    <h3 className="mt-2 text-3xl font-black">
+      Previous Survivor Seasons
+    </h3>
+
+    <div className="mt-5 space-y-4">
+      {status.archives.map((archive: any, index: number) => (
+        <div
+          key={`${archive.archived_at}-${index}`}
+          className="rounded-2xl border-2 border-black bg-white p-5"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xl font-black">
+                {archive.season_label}
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-[#555]">
+                Survived {archive.survived_days} days before ending streak.
+              </p>
+            </div>
+
+            <div className="rounded-xl border-2 border-black px-4 py-2 text-sm font-black uppercase tracking-[0.14em]">
+              {archive.reward_status === "paid"
+                ? "Reward Paid"
+                : archive.reward_status === "pending_manual_payout"
+                ? "Pending Payout"
+                : archive.reward_status}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <MiniStat
+              label="Committed"
+              value={`${formatTow(archive.total_tow_committed)} TOW`}
+            />
+
+            <MiniStat
+              label="Unlocked"
+              value={`${formatTow(archive.total_unlocked_tow)} TOW`}
+            />
+
+            <MiniStat
+              label="Archived"
+              value={new Date(archive.archived_at).toLocaleDateString()}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+) : null}
+</section>
+) : null}
+</main>
 
       <Footer />
     </div>
