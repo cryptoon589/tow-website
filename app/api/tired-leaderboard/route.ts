@@ -64,15 +64,30 @@ export async function GET() {
     positions?.forEach((position) => {
       const walletAddress = String(position.wallet_address ?? "").trim();
       if (!walletAddress) return;
+
       const summary = ensureWallet(walletAddress);
       const holdDays = getHoldDays(position.created_at);
       const towAmount = Number(position.tow_amount ?? 0);
-      const maxRewardTow = Number(position.max_reward_tow ?? 0) || calculateMaxRewardTow(towAmount);
+
+      const maxRewardTow =
+        Number(position.max_reward_tow ?? 0) ||
+        calculateMaxRewardTow(towAmount);
+
       const unlockedRewardTow = calculateUnlockedRewardTow({
         towAmount,
-        rewardPercent: holdDays >= 84 ? 15 : holdDays >= 56 ? 7 : holdDays >= 28 ? 2.5 : 0,
+        rewardPercent:
+          holdDays >= 84
+            ? 15
+            : holdDays >= 56
+            ? 7
+            : holdDays >= 28
+            ? 2.5
+            : 0,
       });
-      summary.holdDays = summary.holdDays === 0 ? holdDays : Math.min(summary.holdDays, holdDays);
+
+      // Use the OLDEST active commitment as the wallet's real survivor streak.
+      summary.holdDays = Math.max(summary.holdDays, holdDays);
+
       summary.alivePositions += 1;
       summary.totalTowAmount += towAmount;
       summary.maxRewardTow += maxRewardTow;
@@ -81,16 +96,25 @@ export async function GET() {
 
     scores?.forEach((score) => {
       const walletAddress = String(score.wallet_address ?? "").trim();
+
       if (!walletAddress || !walletMap.has(walletAddress)) return;
+
       const summary = ensureWallet(walletAddress);
+
       summary.xUsername = summary.xUsername ?? score.x_username ?? null;
-      summary.gameBestScore = Math.max(summary.gameBestScore, Number(score.best_score ?? 0));
+      summary.gameBestScore = Math.max(
+        summary.gameBestScore,
+        Number(score.best_score ?? 0)
+      );
+
       summary.gameRuns += Number(score.runs ?? 0);
     });
 
     raids?.forEach((raid) => {
       const walletAddress = String(raid.wallet ?? "").trim();
+
       if (!walletAddress || !walletMap.has(walletAddress)) return;
+
       ensureWallet(walletAddress).raidPosts += 1;
     });
 
@@ -109,7 +133,10 @@ export async function GET() {
           ...summary,
           survivalScore,
           activityScore: survivalScore,
-          remainingRewardTow: Math.max(0, summary.maxRewardTow - summary.unlockedRewardTow),
+          remainingRewardTow: Math.max(
+            0,
+            summary.maxRewardTow - summary.unlockedRewardTow
+          ),
           tiredLevel: getTiredLevel(summary.holdDays),
         };
       })
@@ -119,6 +146,13 @@ export async function GET() {
 
     return NextResponse.json({ entries });
   } catch (error) {
-    return NextResponse.json({ error: "Could not load tired leaderboard.", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Could not load tired leaderboard.",
+        details:
+          error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
