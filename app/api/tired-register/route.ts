@@ -59,6 +59,66 @@ export async function POST(request: NextRequest) {
       .eq("wallet_address", walletAddress)
       .maybeSingle();
 
+    // One X identity can only belong to one survivor wallet.
+    if (xUsername) {
+      const { data: xOwner, error: xOwnerError } = await supabase
+        .from("tow_players")
+        .select("wallet_address")
+        .eq("x_username", xUsername)
+        .neq("wallet_address", walletAddress)
+        .maybeSingle();
+
+      if (xOwnerError) {
+        return NextResponse.json(
+          {
+            error: "Could not validate X identity.",
+            details: xOwnerError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (xOwner) {
+        return NextResponse.json(
+          {
+            error:
+              "This X username is already linked to another survivor wallet.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // One Telegram identity can only belong to one survivor wallet.
+    if (telegramUsername) {
+      const { data: telegramOwner, error: telegramOwnerError } = await supabase
+        .from("tow_players")
+        .select("wallet_address")
+        .eq("telegram_username", telegramUsername)
+        .neq("wallet_address", walletAddress)
+        .maybeSingle();
+
+      if (telegramOwnerError) {
+        return NextResponse.json(
+          {
+            error: "Could not validate Telegram identity.",
+            details: telegramOwnerError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (telegramOwner) {
+        return NextResponse.json(
+          {
+            error:
+              "This Telegram username is already linked to another survivor wallet.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     // Once verified, survivor identity becomes locked.
     // Prevent farming through rotating X or Telegram accounts.
     if (existingPlayer?.verified) {
