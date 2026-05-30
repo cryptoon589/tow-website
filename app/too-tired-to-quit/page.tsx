@@ -45,11 +45,9 @@ export default function TooTiredToQuitPage() {
   }, [status, saved]);
 
   useEffect(() => {
-    const storedWallet = localStorage.getItem("tow_saved_wallet");
-
-    if (storedWallet && isValidXrplWallet(storedWallet)) {
-      setWallet(storedWallet);
-      loadStatus(storedWallet);
+    if (saved?.walletAddress && isValidXrplWallet(saved.walletAddress)) {
+      setWallet(saved.walletAddress);
+      loadStatus(saved.walletAddress);
     }
   }, []);
 
@@ -66,7 +64,6 @@ export default function TooTiredToQuitPage() {
       }
 
       setStatus(data);
-      localStorage.setItem("tow_saved_wallet", targetWallet);
     } catch (err: any) {
       setError(err.message || "Unknown error");
     } finally {
@@ -80,7 +77,7 @@ export default function TooTiredToQuitPage() {
       return;
     }
 
-    await loadStatus(wallet);
+    await loadStatus(wallet.trim());
   }
 
   async function handleClaim() {
@@ -120,7 +117,6 @@ export default function TooTiredToQuitPage() {
   const holdDays = status?.holdDays ?? 0;
   const nextMilestone = getNextMilestone(holdDays);
   const daysLeft = nextMilestone ? nextMilestone.days - holdDays : 0;
-  const progress = Math.min(100, (holdDays / 84) * 100);
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -161,7 +157,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="mt-8 rounded-[28px] border-2 border-black p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Your wallet becomes your survivor identity across TOW.
+            Your saved TOW reward profile becomes your survivor identity across TOW. Use Play TOW to save or change your profile.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
