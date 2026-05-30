@@ -37,7 +37,9 @@ create table if not exists tow_buy_positions (
   tow_amount numeric not null,
   max_reward_tow numeric not null,
   unlocked_reward_tow numeric not null default 0,
-  status text not null default 'alive' check (status in ('alive', 'disqualified', 'paid')),
+  status text not null default 'alive' check (status in ('alive', 'claimed', 'disqualified', 'paid')),
+  reward_status text,
+  claimed_at timestamptz,
   disqualified_at timestamptz,
   sell_tx_hash text,
   created_at timestamptz not null default now(),
@@ -71,6 +73,8 @@ for each row execute function update_updated_at_column();
 
 -- Rule notes:
 -- 1. Minimum qualifying buy should be checked by the sync/admin route: buy_value_xrp >= 50.
--- 2. max_reward_tow must equal tow_amount * 0.5.
+-- 2. max_reward_tow represents the maximum possible unlocked TOW reward.
 -- 3. Any sell event should mark alive commitments for that wallet as disqualified.
 -- 4. Rewards are displayed in TOW amount, not XRP value.
+-- 5. Claiming closes a commitment streak and moves status to 'claimed'.
+-- 6. Paid commitments can later be finalized with status 'paid'.
