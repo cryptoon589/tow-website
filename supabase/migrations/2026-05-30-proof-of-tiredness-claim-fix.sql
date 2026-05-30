@@ -20,6 +20,15 @@ add column if not exists claimed_at timestamptz;
 alter table tow_buy_positions
 add column if not exists unlocked_reward_tow numeric not null default 0;
 
+-- Normalize existing survivor identities.
+update tow_players
+set x_username = lower(trim(x_username))
+where x_username is not null;
+
+update tow_players
+set telegram_username = lower(trim(telegram_username))
+where telegram_username is not null;
+
 -- Helpful indexes.
 create index if not exists tow_buy_positions_claimed_idx
 on tow_buy_positions(claimed_at desc);
@@ -43,3 +52,4 @@ where telegram_username is not null;
 -- paid = reward distribution completed manually or automatically later.
 -- reward_status intentionally remains flexible for future payout pipeline.
 -- Verified survivor identities should remain socially unique.
+-- Identity usernames are normalized to prevent casing/spacing exploits.
