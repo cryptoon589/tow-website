@@ -15,8 +15,28 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+function requireClaimAdmin(request: NextRequest) {
+  const expected = process.env.TOW_CLAIM_SECRET ?? process.env.TOW_SYNC_SECRET;
+
+  if (!expected) {
+    throw new Error("Missing TOW_CLAIM_SECRET or TOW_SYNC_SECRET env var");
+  }
+
+  return request.headers.get("x-tow-claim-secret") === expected;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    if (!requireClaimAdmin(request)) {
+      return NextResponse.json(
+        {
+          error:
+            "Claim requests are locked until verified claim authorization is enabled.",
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const wallet = String(body?.wallet ?? "").trim();
 
@@ -25,6 +45,23 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabase();
+
+    const { data: player, error: playerError } = await supabase
+      .from("tow_players")
+      .select("verified")
+      .eq("wallet_address", wallet)
+      .maybeSingle();
+
+    if (playerError) {
+      throw playerError;
+    }
+
+    if (!player?.verified) {
+      return NextResponse.json(
+        { error: "Wallet must be registered and verified before claiming." },
+        { status: 403 }
+      );
+    }
 
     const { data: positions, error: fetchError } = await supabase
       .from("tow_buy_positions")
@@ -41,7 +78,10 @@ export async function POST(request: NextRequest) {
       .map((position) => position.id);
 
     if (eligibleIds.length === 0) {
-      return NextResponse.json({ error: "No claimable commitments found." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No claimable commitments found." },
+        { status: 400 }
+      );
     }
 
     const { error: updateError } = await supabase
@@ -51,7 +91,8 @@ export async function POST(request: NextRequest) {
         claimed_at: new Date().toISOString(),
         reward_status: "pending",
       })
-      .in("id", eligibleIds);
+      .in("id", eligibleIds)
+      .eq("status", "alive");
 
     if (updateError) {
       throw updateError;
