@@ -29,10 +29,8 @@ export default function TooTiredToQuitPage() {
   const [wallet, setWallet] = useState(saved?.walletAddress ?? "");
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [claiming, setClaiming] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
-  const [claimMessage, setClaimMessage] = useState("");
 
   const displayName = useMemo(() => {
     const username = status?.xUsername ?? saved?.xUsername;
@@ -80,43 +78,11 @@ export default function TooTiredToQuitPage() {
     await loadStatus(wallet.trim());
   }
 
-  async function handleClaim() {
-    if (!status?.walletAddress) return;
-
-    setClaiming(true);
-    setClaimMessage("");
-    setError("");
-
-    try {
-      const response = await fetch("/api/tired-claim", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          wallet: status.walletAddress,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Could not claim reward.");
-      }
-
-      setClaimMessage(`Claim submitted. ${data.claimedCommitments} commitment(s) ended.`);
-
-      await loadStatus(status.walletAddress);
-    } catch (err: any) {
-      setError(err.message || "Unknown error");
-    } finally {
-      setClaiming(false);
-    }
-  }
-
   const holdDays = status?.holdDays ?? 0;
   const nextMilestone = getNextMilestone(holdDays);
   const daysLeft = nextMilestone ? nextMilestone.days - holdDays : 0;
+  const isVerified = Boolean(status?.verified);
+  const hasUnlockedReward = (status?.rewardBreakdown?.basePercent ?? 0) > 0;
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -178,7 +144,6 @@ export default function TooTiredToQuitPage() {
           </div>
 
           {error ? <p className="mt-3 text-sm font-black text-red-600">{error}</p> : null}
-          {claimMessage ? <p className="mt-3 text-sm font-black text-green-700">{claimMessage}</p> : null}
         </section>
 
         {status ? (
@@ -202,6 +167,10 @@ export default function TooTiredToQuitPage() {
                     {maskWallet(status.walletAddress)}
                   </p>
 
+                  <p className="mt-4 inline-flex rounded-full border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em]">
+                    {isVerified ? "Verified Survivor" : "Unverified Survivor"}
+                  </p>
+
                   <p className="mt-5 text-3xl font-black">
                     STILL HERE: {holdDays} DAYS
                   </p>
@@ -218,6 +187,22 @@ export default function TooTiredToQuitPage() {
                 </div>
               </div>
             </div>
+
+            {!isVerified ? (
+              <div className="rounded-[28px] border-2 border-black bg-[#FFF4CC] p-5">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#8A5A00]">
+                  Verification Required
+                </p>
+
+                <p className="mt-3 text-xl font-black">
+                  This wallet can be viewed, but it will not rank or become claim-eligible until the survivor identity is verified.
+                </p>
+
+                <Link href="/register" className="mt-4 inline-flex rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+                  Register / Verify Identity
+                </Link>
+              </div>
+            ) : null}
 
             <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
               <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -245,14 +230,14 @@ export default function TooTiredToQuitPage() {
               </p>
 
               <p className="mt-3 text-2xl font-black">
-                {status.rewardBreakdown?.basePercent > 0
-                  ? `You can claim ${status.rewardBreakdown.basePercent}% base now, or keep surviving.`
+                {hasUnlockedReward
+                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% base. Claims are admin-authorized until secure wallet-signature claiming is added.`
                   : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
               </p>
 
               <p className="mt-3 text-sm font-bold text-[#555]">
                 {status.holdDays >= 84
-                  ? "You reached the highest survival tier. Claiming ends this active streak."
+                  ? "You reached the highest survival tier. Claiming will end this active streak once authorized."
                   : status.holdDays >= 56
                   ? "You can continue toward the 12-week survivor tier."
                   : status.holdDays >= 28
@@ -261,21 +246,9 @@ export default function TooTiredToQuitPage() {
               </p>
 
               <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  onClick={handleClaim}
-                  disabled={status.rewardBreakdown?.basePercent <= 0 || claiming}
-                  className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
-                    status.rewardBreakdown?.basePercent > 0
-                      ? "border-black bg-black text-white"
-                      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
-                  }`}
-                >
-                  {claiming
-                    ? "Claiming..."
-                    : status.rewardBreakdown?.basePercent > 0
-                    ? "Claim & End Streak"
-                    : "Claim Locked"}
-                </button>
+                <div className="rounded-2xl border-2 border-black bg-[#E5E5E5] px-5 py-3 text-sm font-black text-[#555]">
+                  Claim Authorization Locked
+                </div>
 
                 <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
                   Continue Surviving
