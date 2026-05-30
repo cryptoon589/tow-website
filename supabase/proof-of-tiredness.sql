@@ -59,6 +59,23 @@ create table if not exists tow_claim_requests (
   processed_at timestamptz
 );
 
+create table if not exists tow_survivor_archives (
+  id uuid primary key default gen_random_uuid(),
+  wallet_address text not null,
+  x_username text,
+  telegram_username text,
+  claim_request_id uuid,
+  claim_code text,
+  position_ids uuid[] not null default '{}',
+  season_label text not null default 'Season 1',
+  survived_days integer not null default 0,
+  total_tow_committed numeric not null default 0,
+  total_unlocked_tow numeric not null default 0,
+  reward_status text not null default 'pending_manual_payout',
+  archived_at timestamptz not null default now(),
+  paid_at timestamptz
+);
+
 create index if not exists tow_players_wallet_idx on tow_players(wallet_address);
 create index if not exists tow_wallet_events_wallet_idx on tow_wallet_events(wallet_address);
 create index if not exists tow_wallet_events_type_idx on tow_wallet_events(event_type);
@@ -68,6 +85,9 @@ create index if not exists tow_buy_positions_status_idx on tow_buy_positions(sta
 create index if not exists tow_claim_requests_wallet_idx on tow_claim_requests(wallet_address);
 create index if not exists tow_claim_requests_code_idx on tow_claim_requests(claim_code);
 create index if not exists tow_claim_requests_status_idx on tow_claim_requests(status);
+create index if not exists tow_survivor_archives_wallet_idx on tow_survivor_archives(wallet_address);
+create index if not exists tow_survivor_archives_status_idx on tow_survivor_archives(reward_status);
+create index if not exists tow_survivor_archives_archived_idx on tow_survivor_archives(archived_at desc);
 
 create or replace function update_updated_at_column()
 returns trigger as $$
@@ -95,3 +115,4 @@ for each row execute function update_updated_at_column();
 -- 5. Claiming closes a commitment streak and moves status to 'claimed'.
 -- 6. Paid commitments can later be finalized with status 'paid'.
 -- 7. Claim requests are authorization tickets for Telegram/TiredBuddy confirmation.
+-- 8. Survivor archives preserve completed streak history forever.
