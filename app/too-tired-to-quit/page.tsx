@@ -29,8 +29,10 @@ export default function TooTiredToQuitPage() {
   const [wallet, setWallet] = useState(saved?.walletAddress ?? "");
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
+  const [claimMessage, setClaimMessage] = useState("");
 
   const displayName = useMemo(() => {
     const username = status?.xUsername ?? saved?.xUsername;
@@ -79,6 +81,40 @@ export default function TooTiredToQuitPage() {
     }
 
     await loadStatus(wallet);
+  }
+
+  async function handleClaim() {
+    if (!status?.walletAddress) return;
+
+    setClaiming(true);
+    setClaimMessage("");
+    setError("");
+
+    try {
+      const response = await fetch("/api/tired-claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          wallet: status.walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not claim reward.");
+      }
+
+      setClaimMessage(`Claim submitted. ${data.claimedCommitments} commitment(s) ended.`);
+
+      await loadStatus(status.walletAddress);
+    } catch (err: any) {
+      setError(err.message || "Unknown error");
+    } finally {
+      setClaiming(false);
+    }
   }
 
   const holdDays = status?.holdDays ?? 0;
@@ -146,6 +182,7 @@ export default function TooTiredToQuitPage() {
           </div>
 
           {error ? <p className="mt-3 text-sm font-black text-red-600">{error}</p> : null}
+          {claimMessage ? <p className="mt-3 text-sm font-black text-green-700">{claimMessage}</p> : null}
         </section>
 
         {status ? (
@@ -204,41 +241,6 @@ export default function TooTiredToQuitPage() {
                   Current Base: {status.rewardBreakdown?.basePercent ?? 0}%
                 </p>
               </div>
-
-              <div className="mt-10 px-4">
-                <div className="relative h-4 rounded-full border-2 border-black bg-white">
-                  <div className="h-full rounded-full bg-black" style={{ width: `${progress}%` }} />
-
-                  {[0, 28, 56, 84].map((day) => (
-                    <div
-                      key={day}
-                      className={`absolute top-1/2 h-9 w-9 -translate-y-1/2 rounded-full border-2 border-black ${holdDays >= day ? "bg-black" : "bg-white"}`}
-                      style={{ left: `calc(${(day / 84) * 100}% - 18px)` }}
-                    />
-                  ))}
-                </div>
-
-                <div className="relative mt-8 h-20 font-black uppercase tracking-[0.12em] text-[#444]">
-                  <div className="absolute left-0 -translate-x-1/2 text-center">
-                    <div className="text-lg">0D</div>
-                  </div>
-
-                  <div className="absolute left-[33.333%] -translate-x-1/2 text-center">
-                    <div className="text-xl">4W</div>
-                    <div className="mt-1 text-lg text-black">2.5%</div>
-                  </div>
-
-                  <div className="absolute left-[66.666%] -translate-x-1/2 text-center">
-                    <div className="text-xl">8W</div>
-                    <div className="mt-1 text-lg text-black">7%</div>
-                  </div>
-
-                  <div className="absolute right-0 translate-x-1/2 text-center">
-                    <div className="text-xl">12W</div>
-                    <div className="mt-1 text-lg text-black">15%</div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
@@ -264,14 +266,17 @@ export default function TooTiredToQuitPage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
-                  disabled={status.rewardBreakdown?.basePercent <= 0}
+                  onClick={handleClaim}
+                  disabled={status.rewardBreakdown?.basePercent <= 0 || claiming}
                   className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
                     status.rewardBreakdown?.basePercent > 0
                       ? "border-black bg-black text-white"
                       : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
                   }`}
                 >
-                  {status.rewardBreakdown?.basePercent > 0
+                  {claiming
+                    ? "Claiming..."
+                    : status.rewardBreakdown?.basePercent > 0
                     ? "Claim & End Streak"
                     : "Claim Locked"}
                 </button>
