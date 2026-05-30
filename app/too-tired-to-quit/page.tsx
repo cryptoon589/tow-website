@@ -120,11 +120,213 @@ export default function TooTiredToQuitPage() {
   return (
     <div className="min-h-screen bg-white text-black">
       <Header />
+
       <main className="mx-auto max-w-5xl px-4 py-10">
-        {/* existing content preserved */}
+        <section>
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-[#5B2BE8]">
+            Proof Of Tiredness
+          </p>
+
+          <h1 className="mt-2 text-5xl font-black md:text-7xl">
+            Too Tired To Quit
+          </h1>
+
+          <p className="mt-4 text-lg text-[#555]">
+            Survive. Participate. Build your TOW history.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/too-tired-to-quit/leaderboard" className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+              View Leaderboard
+            </Link>
+
+            <Link href="/too-tired-to-quit/how-it-works" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              FAQ / How It Works
+            </Link>
+
+            <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              Everyone's Tired
+            </Link>
+
+            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+              Play TOW Game
+            </Link>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-[28px] border-2 border-black p-5">
+          <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
+            Your saved TOW reward profile becomes your survivor identity across TOW. Use Play TOW to save or change your profile.
+          </div>
+
+          <div className="flex flex-col gap-3 md:flex-row">
+            <input
+              value={wallet}
+              onChange={(e) => setWallet(e.target.value)}
+              placeholder="Enter XRPL wallet"
+              className="flex-1 rounded-2xl border-2 border-black px-4 py-3 font-bold outline-none"
+            />
+
+            <button
+              onClick={checkStatus}
+              disabled={loading}
+              className="rounded-2xl border-2 border-black bg-black px-6 py-3 font-black text-white"
+            >
+              {loading ? "Checking..." : "Refresh Status"}
+            </button>
+          </div>
+
+          {error ? <p className="mt-3 text-sm font-black text-red-600">{error}</p> : null}
+        </section>
 
         {status ? (
           <section className="mt-8 space-y-5">
+            <div className="rounded-[32px] border-2 border-black bg-black p-6 text-white">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.25em] text-[#A78BFA]">
+                    Survivor Identity
+                  </p>
+
+                  <h2 className="mt-3 text-5xl font-black">
+                    {status.tiredLevel?.emoji} {status.tiredLevel?.label}
+                  </h2>
+
+                  <p className="mt-4 text-3xl font-black">
+                    {displayName}
+                  </p>
+
+                  <p className="mt-1 text-sm font-bold text-white/55">
+                    {maskWallet(status.walletAddress)}
+                  </p>
+
+                  <p className="mt-4 inline-flex rounded-full border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em]">
+                    {isVerified ? "Verified Survivor" : "Unverified Survivor"}
+                  </p>
+
+                  <p className="mt-5 text-3xl font-black">
+                    STILL HERE: {holdDays} DAYS
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border-2 border-white px-6 py-5 text-center">
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-white/60">
+                    Survival Score
+                  </p>
+
+                  <p className="mt-2 text-6xl font-black">
+                    {status.activityScore}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {!isVerified ? (
+              <div className="rounded-[28px] border-2 border-black bg-[#FFF4CC] p-5">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#8A5A00]">
+                  Verification Required
+                </p>
+
+                <p className="mt-3 text-xl font-black">
+                  This wallet can be viewed, but it will not rank or become claim-eligible until the survivor identity is verified.
+                </p>
+
+                <Link href="/register" className="mt-4 inline-flex rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+                  Register / Verify Identity
+                </Link>
+              </div>
+            ) : null}
+
+            <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
+              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                    Survival Route
+                  </p>
+
+                  <h3 className="mt-2 text-3xl font-black">
+                    {nextMilestone
+                      ? `${daysLeft} days until ${nextMilestone.label}`
+                      : "Full 12-week survivor route reached"}
+                  </h3>
+                </div>
+
+                <p className="text-base font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+                  Current Base: {status.rewardBreakdown?.basePercent ?? 0}%
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                Commitment Decision
+              </p>
+
+              <p className="mt-3 text-2xl font-black">
+                {hasUnlockedReward
+                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% base. You can now request secure Telegram authorization to end your streak.`
+                  : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
+              </p>
+
+              <p className="mt-3 text-sm font-bold text-[#555]">
+                {status.holdDays >= 84
+                  ? "You reached the highest survival tier. Claiming will permanently end this active streak."
+                  : status.holdDays >= 56
+                  ? "You can continue toward the 12-week survivor tier."
+                  : status.holdDays >= 28
+                  ? "You can continue toward the 8-week survivor tier."
+                  : "Keep surviving to reach your first milestone."}
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  onClick={requestClaimAuthorization}
+                  disabled={!hasUnlockedReward || !isVerified || claimLoading}
+                  className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
+                    hasUnlockedReward && isVerified
+                      ? "border-black bg-black text-white"
+                      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
+                  }`}
+                >
+                  {claimLoading
+                    ? "Generating Claim Code..."
+                    : hasUnlockedReward && isVerified
+                    ? "Claim & End Streak"
+                    : "Claim Locked"}
+                </button>
+
+                <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+                  Continue Surviving
+                </div>
+              </div>
+
+              {claimRequest ? (
+                <div className="mt-5 rounded-2xl border-2 border-dashed border-black bg-[#F8F8F8] p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                    Claim Authorization Code
+                  </p>
+
+                  <p className="mt-3 text-3xl font-black tracking-[0.12em]">
+                    {claimRequest.claimCode}
+                  </p>
+
+                  <p className="mt-3 text-sm font-bold text-[#555]">
+                    {claimRequest.instructions}
+                  </p>
+
+                  <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+                    Expires: {new Date(claimRequest.expiresAt).toLocaleString()}
+                  </p>
+
+                  {claimRequest.reused ? (
+                    <p className="mt-2 text-xs font-black text-[#8A5A00]">
+                      Existing pending authorization reused.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
             <div className="grid gap-4 md:grid-cols-4">
               <MiniStat label="Active Commitments" value={status.alivePositions} />
               <MiniStat label="Raid Posts" value={status.raidPosts} />
@@ -149,67 +351,10 @@ export default function TooTiredToQuitPage() {
                 <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
               </div>
             ) : null}
-
-            {status.archives?.length ? (
-              <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-                  Survivor Archive
-                </p>
-
-                <h3 className="mt-2 text-3xl font-black">
-                  Previous Survivor Seasons
-                </h3>
-
-                <div className="mt-5 space-y-4">
-                  {status.archives.map((archive: any, index: number) => (
-                    <div
-                      key={`${archive.archived_at}-${index}`}
-                      className="rounded-2xl border-2 border-black bg-white p-5"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="text-xl font-black">
-                            {archive.season_label}
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-[#555]">
-                            Survived {archive.survived_days} days before ending streak.
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border-2 border-black px-4 py-2 text-sm font-black uppercase tracking-[0.14em]">
-                          {archive.reward_status === "paid"
-                            ? "Reward Paid"
-                            : archive.reward_status === "pending_manual_payout"
-                            ? "Pending Payout"
-                            : archive.reward_status}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <MiniStat
-                          label="Committed"
-                          value={`${formatTow(archive.total_tow_committed)} TOW`}
-                        />
-
-                        <MiniStat
-                          label="Unlocked"
-                          value={`${formatTow(archive.total_unlocked_tow)} TOW`}
-                        />
-
-                        <MiniStat
-                          label="Archived"
-                          value={new Date(archive.archived_at).toLocaleDateString()}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </section>
         ) : null}
       </main>
+
       <Footer />
     </div>
   );
