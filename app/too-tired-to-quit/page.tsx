@@ -436,15 +436,12 @@ export default function TooTiredToQuitPage() {
                   value={`${formatTow(status.remainingRewardTow)} TOW`}
                 />
 
-                <MiniStat
-                  label="Recent Activity"
-                  value={`+${
-                    (
-                      (status.rewardBreakdown?.raidBonusPercent ?? 0) +
-                      (status.rewardBreakdown?.gameBonusPercent ?? 0)
-                    ).toFixed(1)
-                  }%`}
-                />
+               <MiniStat
+                 label="Recent Activity"
+                 value={`+${
+                 status.rewardBreakdown?.recentActivityPercent ?? 0
+               }%`}
+               />
 
                 <MiniStat
                   label="Raid Bonus"
