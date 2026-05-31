@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const { data: requestRow, error: requestError } = await supabase
       .from("tow_claim_requests")
-      .select("id,wallet_address,x_username,telegram_username,eligible_position_ids,status,expires_at")
+      .select("id,wallet_address,x_username,telegram_username,position_id,eligible_position_ids,status,expires_at")
       .eq("claim_code", claimCode)
       .maybeSingle();
 
@@ -102,57 +102,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const eligiblePositionIds = requestRow.eligible_position_ids ?? [];
+    const positionId = requestRow.position_id;
 
-    if (!Array.isArray(eligiblePositionIds) || eligiblePositionIds.length === 0) {
-      return NextResponse.json(
-        { error: "Claim request has no eligible commitments." },
-        { status: 400 }
-      );
-    }
+if (!positionId) {
+  return NextResponse.json(
+    { error: "Claim request missing commitment position." },
+    { status: 400 }
+  );
+}
 
-    const { data: positions, error: positionsError } = await supabase
-      .from("tow_buy_positions")
-      .select("id,created_at,status,tow_amount,unlocked_reward_tow")
-      .eq("wallet_address", requestRow.wallet_address)
-      .in("id", eligiblePositionIds);
+    const { data: position, error: positionsError } = await supabase
+  .from("tow_buy_positions")
+  .select("id,created_at,status,tow_amount,unlocked_reward_tow")
+  .eq("wallet_address", requestRow.wallet_address)
+  .eq("id", positionId)
+  .maybeSingle();
 
     if (positionsError) throw positionsError;
 
-    const aliveEligiblePositions = (positions ?? [])
-      .filter((position) => position.status === "alive")
-      .filter((position) => getHoldDays(position.created_at) >= 28);
+   if (
+  !position ||
+  position.status !== "alive" ||
+  getHoldDays(position.created_at) < 28
+) {
+  await supabase
+    .from("tow_claim_requests")
+    .update({
+      status: "rejected",
+      processed_at: new Date().toISOString(),
+    })
+    .eq("id", requestRow.id);
 
-    const stillEligibleIds = aliveEligiblePositions.map((position) => position.id);
+  return NextResponse.json(
+    { error: "Commitment is no longer claimable." },
+    { status: 400 }
+  );
+}
 
-    if (stillEligibleIds.length === 0) {
-      await supabase
-        .from("tow_claim_requests")
-        .update({ status: "rejected", processed_at: new Date().toISOString() })
-        .eq("id", requestRow.id);
+    const survivedDays = getHoldDays(position.created_at);
 
-      return NextResponse.json(
-        { error: "No commitments are still claimable." },
-        { status: 400 }
-      );
-    }
+const totalTowCommitted =
+  Number(position.tow_amount ?? 0);
 
-    const oldestPosition = aliveEligiblePositions.sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )[0];
-
-    const survivedDays = getHoldDays(oldestPosition.created_at);
-
-    const totalTowCommitted = aliveEligiblePositions.reduce(
-      (sum, position) => sum + Number(position.tow_amount ?? 0),
-      0
-    );
-
-    const totalUnlockedTow = aliveEligiblePositions.reduce(
-      (sum, position) => sum + Number(position.unlocked_reward_tow ?? 0),
-      0
-    );
+const totalUnlockedTow =
+  Number(position.unlocked_reward_tow ?? 0);
 
     const now = new Date().toISOString();
 
@@ -163,7 +156,7 @@ export async function POST(request: NextRequest) {
         claimed_at: now,
         reward_status: "pending_manual_payout",
       })
-      .in("id", stillEligibleIds)
+      .eq("id", positionId)
       .eq("status", "alive");
 
     if (updatePositionsError) throw updatePositionsError;
@@ -176,7 +169,7 @@ export async function POST(request: NextRequest) {
         telegram_username: requestRow.telegram_username,
         claim_request_id: requestRow.id,
         claim_code: claimCode,
-        position_ids: stillEligibleIds,
+        position_ids: [positionId],
         season_label: getSeasonLabel(survivedDays),
         survived_days: survivedDays,
         total_tow_committed: totalTowCommitted,
@@ -197,7 +190,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       walletAddress: requestRow.wallet_address,
-      claimedCommitments: stillEligibleIds.length,
+      claimedCommitments: 1,
       survivedDays,
       rewardStatus: "pending_manual_payout",
       seasonLabel: getSeasonLabel(survivedDays),
