@@ -94,7 +94,6 @@ export function getTiredLevel(days: number) {
   return [...TIRED_LEVELS].reverse().find((level) => days >= level.minDays) ?? TIRED_LEVELS[0];
 }
 
-```ts
 export function calculateRewardBreakdown(input: {
   holdDays: number;
   recentGameRuns: number;
