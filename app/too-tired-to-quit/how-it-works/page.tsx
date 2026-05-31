@@ -86,7 +86,7 @@ export default function HowItWorksPage() {
 
             <Step
               title="3. Participate"
-              description="Play the game, raid, and build your permanent TOW history."
+              description="Make memes, Share TOW posts on X, Play the game, and build your permanent TOW history."
             />
 
             <Step
@@ -148,7 +148,7 @@ export default function HowItWorksPage() {
           </p>
 
           <p>
-            Playing the TOW game, participating in raids, and maintaining consistent activity contribute toward your identity and progression.
+            Posting TOW content on X, Playing the game, and maintaining consistent activity contribute toward your identity and progression.
           </p>
 
           <p>
@@ -196,9 +196,9 @@ export default function HowItWorksPage() {
           </div>
 
           <p>
-            TOW is not trying to build the fastest community.
+            TOW is not just another meme. 
             <br />
-            It is trying to build the hardest one to kill.
+            TOW is bringing those who are too tired to quit... together.
           </p>
         </Section>
       </main>
