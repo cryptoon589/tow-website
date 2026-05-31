@@ -126,12 +126,6 @@ Send this to TiredBuddy:
     : "Survivor identity saved."
 );
 
-/*
- * Give user time to see verification code
- */
-setTimeout(() => {
-  router.push("/too-tired-to-quit");
-}, 8000);
     } catch (err: any) {
       setError(
         err.message ||
@@ -270,8 +264,7 @@ setTimeout(() => {
           />
 
           <p className="mt-1 text-xs text-gray-500">
-            Required later for
-            survivor claims.
+            Required.
           </p>
         </div>
 
@@ -282,10 +275,21 @@ setTimeout(() => {
         ) : null}
 
         {message ? (
-          <p className="text-sm font-bold text-green-700">
-            {message}
-          </p>
-        ) : null}
+  <div className="rounded-2xl border-2 border-black bg-[#F8F8F8] p-4">
+    <p className="whitespace-pre-line text-sm font-bold text-green-700">
+      {message}
+    </p>
+
+    <button
+      onClick={() =>
+        router.push("/too-tired-to-quit")
+      }
+      className="mt-4 rounded-xl border-2 border-black bg-black px-4 py-2 text-sm font-black text-white"
+    >
+      Continue To Proof Of Tiredness
+    </button>
+  </div>
+) : null}
 
         <button
           onClick={handleSubmit}
