@@ -103,6 +103,8 @@ export async function GET(request: NextRequest) {
       positions?.map((position) => {
         const positionHoldDays = getHoldDays(position.created_at);
         const towAmount = Number(position.tow_amount ?? 0);
+        const positionTiredLevel =
+          getTiredLevel(positionHoldDays);
 
         const rewardBreakdown = calculateRewardBreakdown({
           holdDays: positionHoldDays,
@@ -125,6 +127,8 @@ export async function GET(request: NextRequest) {
 
         return {
           id: position.id,
+          holdDays: positionHoldDays,
+          tiredLevel: positionTiredLevel,
           walletAddress: position.wallet_address,
           buyTxHash: position.buy_tx_hash,
           buyValueXrp: Number(position.buy_value_xrp ?? 0),
@@ -143,6 +147,20 @@ export async function GET(request: NextRequest) {
     const alivePositions = normalizedPositions.filter(
       (position) => position.status === "alive"
     );
+
+    const activeCommitments =
+  alivePositions.map((position) => ({
+    id: position.id,
+    holdDays: position.holdDays,
+    tiredLevel: position.tiredLevel,
+    towAmount: position.towAmount,
+    buyValueXrp: position.buyValueXrp,
+    unlockedRewardTow:
+      position.unlockedRewardTow,
+    maxRewardTow:
+      position.maxRewardTow,
+    createdAt: position.createdAt,
+  }));
 
     const oldestAlivePosition = alivePositions[0];
 
@@ -217,6 +235,7 @@ export async function GET(request: NextRequest) {
       survivalScore,
       activityScore: survivalScore,
       positions: normalizedPositions,
+      activeCommitments,
       archives: archives ?? [],
     });
   } catch (error) {
