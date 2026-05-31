@@ -16,6 +16,95 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+const MILESTONES = [
+  {
+    label: "4W",
+    title: "Still Here",
+    days: 28,
+  },
+  {
+    label: "8W",
+    title: "Burnt Out",
+    days: 56,
+  },
+  {
+    label: "12W",
+    title: "Fully Exhausted",
+    days: 84,
+  },
+  {
+    label: "120D",
+    title: "Too Tired To Quit",
+    days: 120,
+  },
+];
+
+function MilestoneTracker({
+  days,
+}: {
+  days: number;
+}) {
+  const progress = Math.min(
+    100,
+    Math.round(
+      (Math.min(days, 120) / 120) * 100
+    )
+  );
+
+  return (
+    <div className="mt-5">
+      <div className="h-3 overflow-hidden rounded-full border-2 border-black bg-white">
+        <div
+          className="h-full bg-black transition-all duration-500"
+          style={{
+            width: `${progress}%`,
+          }}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        {MILESTONES.map((milestone) => {
+          const reached =
+            days >= milestone.days;
+
+          const next =
+            !reached &&
+            days < milestone.days;
+
+          return (
+            <div
+              key={milestone.days}
+              className={`rounded-2xl border-2 border-black p-4 ${
+                reached
+                  ? "bg-black text-white"
+                  : next
+                  ? "bg-[#FFF4CC]"
+                  : "bg-white"
+              }`}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.2em]">
+                {reached
+                  ? "Unlocked"
+                  : next
+                  ? "Next"
+                  : "Locked"}
+              </p>
+
+              <p className="mt-2 text-2xl font-black">
+                {milestone.label}
+              </p>
+
+              <p className="mt-1 text-sm font-bold opacity-75">
+                {milestone.title}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function getNextMilestone(days: number) {
   if (days < 28) return { label: "4 Week Survivor", days: 28 };
   if (days < 56) return { label: "8 Week Survivor", days: 56 };
@@ -44,12 +133,27 @@ export default function TooTiredToQuitPage() {
       : "Survivor";
   }, [status, saved]);
 
-  useEffect(() => {
-    if (saved?.walletAddress && isValidXrplWallet(saved.walletAddress)) {
-      setWallet(saved.walletAddress);
-      loadStatus(saved.walletAddress);
+ useEffect(() => {
+  const stored =
+    localStorage.getItem(
+      "tow_reward_profile"
+    );
+
+  if (!stored) return;
+
+  try {
+    const parsed = JSON.parse(stored);
+
+    if (
+      parsed?.walletAddress &&
+      isValidXrplWallet(parsed.walletAddress)
+    ) {
+      setWallet(parsed.walletAddress);
+
+      loadStatus(parsed.walletAddress);
     }
-  }, []);
+  } catch {}
+}, []);
 
   async function loadStatus(targetWallet: string) {
     setLoading(true);
@@ -156,7 +260,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="mt-8 rounded-[28px] border-2 border-black p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Your saved TOW reward profile becomes your survivor identity across TOW. Use Play TOW to save or change your profile.
+            Your saved TOW Proof Of Tiredness becomes your survivor identity across TOW.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
@@ -238,24 +342,28 @@ export default function TooTiredToQuitPage() {
             ) : null}
 
             <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
-              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-                    Survival Route
-                  </p>
+  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+        Survival Route
+      </p>
 
-                  <h3 className="mt-2 text-3xl font-black">
-                    {nextMilestone
-                      ? `${daysLeft} days until ${nextMilestone.label}`
-                      : "Full 12-week survivor route reached"}
-                  </h3>
-                </div>
+      <h3 className="mt-2 text-3xl font-black">
+        {nextMilestone
+          ? `${daysLeft} days until ${nextMilestone.label}`
+          : "Full 12-week survivor route reached"}
+      </h3>
+    </div>
 
-                <p className="text-base font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
-                  Current Base: {status.rewardBreakdown?.basePercent ?? 0}%
-                </p>
-              </div>
-            </div>
+    <p className="text-base font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
+      Survival Unlock: {status.rewardBreakdown?.basePercent ?? 0}%
+    </p>
+  </div>
+
+  <MilestoneTracker
+    days={status?.holdDays ?? 0}
+  />
+</div>
 
             <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
@@ -264,7 +372,7 @@ export default function TooTiredToQuitPage() {
 
               <p className="mt-3 text-2xl font-black">
                 {hasUnlockedReward
-                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% base. You can now request secure Telegram authorization to end your streak.`
+                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% survival. You can now request secure Telegram authorization to end your streak.`
                   : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
               </p>
 
@@ -346,9 +454,9 @@ export default function TooTiredToQuitPage() {
                 <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
                 <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
                 <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-                <MiniStat label="Base Survival" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
-                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-                <MiniStat label="History Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
+                <MiniStat label="Survival Unlock" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
+                <MiniStat label="Raid Bonus" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+                <MiniStat label="Loyalty Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
               </div>
             ) : null}
 
