@@ -44,7 +44,7 @@ function MilestoneTracker({ days }: { days: number }) {
         <div
           className="absolute left-[5%] top-4 h-[6px] rounded-full bg-black transition-all duration-700"
           style={{
-            width: `${progress * 0.9}%`,
+            width: `calc(${progress}% * 0.9)`,
           }}
         />
 
@@ -96,7 +96,7 @@ export default function TooTiredToQuitPage() {
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
-  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimingId, setClaimingId] = useState(false);
   const [claimRequest, setClaimRequest] = useState<any>(null);
 
   const displayName = useMemo(() => {
@@ -155,7 +155,9 @@ export default function TooTiredToQuitPage() {
     await loadStatus(wallet.trim());
   }
 
-  async function requestClaimAuthorization() {
+  async function requestClaimAuthorization(
+  positionId: string
+) {
     if (!status?.walletAddress) return;
 
     setClaimLoading(true);
@@ -168,8 +170,9 @@ export default function TooTiredToQuitPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          wallet: status.walletAddress,
-        }),
+  wallet: status.walletAddress,
+  positionId,
+}),
       });
 
       const data = await response.json();
@@ -190,7 +193,6 @@ export default function TooTiredToQuitPage() {
   const nextMilestone = getNextMilestone(holdDays);
   const daysLeft = nextMilestone ? nextMilestone.days - holdDays : 0;
   const isVerified = Boolean(status?.verified);
-  const hasUnlockedReward = (status?.rewardBreakdown?.basePercent ?? 0) > 0;
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -343,51 +345,55 @@ export default function TooTiredToQuitPage() {
               <MilestoneTracker days={status?.holdDays ?? 0} />
             </div>
 
-            <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-                Commitment Decision
-              </p>
+            <div className="space-y-4">
+ {status.activeCommitments?.map(
+  (commitment: any, index: number) => {
+    const claimable = commitment.holdDays >= 28;
 
-              <p className="mt-3 text-2xl font-black">
-                {hasUnlockedReward
-                  ? "Your commitment milestone is unlocked. You can now request secure Telegram authorization to end your streak."
-                  : `First milestone unlocks at 4 weeks. ${Math.max(
-                      0,
-                      28 - status.holdDays
-                    )} days remaining.`}
-              </p>
+    return (
+      <div
+        key={commitment.id}
+        className="rounded-3xl border-2 border-black bg-white p-5"
+      >
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+          Commitment #{index + 1}
+        </p>
 
-              <p className="mt-3 text-sm font-bold text-[#555]">
-                {status.holdDays >= 84
-                  ? "You reached the highest survival tier. Claiming will permanently end this active streak."
-                  : status.holdDays >= 56
-                  ? "You can continue toward the 12-week survivor tier."
-                  : status.holdDays >= 28
-                  ? "You can continue toward the 8-week survivor tier."
-                  : "Keep surviving to reach your first milestone."}
-              </p>
+        <h3 className="mt-2 text-3xl font-black">
+          {commitment.tiredLevel?.emoji}
+          {" "}
+          {commitment.tiredLevel?.label}
+        </h3>
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  onClick={requestClaimAuthorization}
-                  disabled={!hasUnlockedReward || !isVerified || claimLoading}
-                  className={`rounded-2xl border-2 px-5 py-3 text-sm font-black transition ${
-                    hasUnlockedReward && isVerified
-                      ? "border-black bg-black text-white"
-                      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
-                  }`}
-                >
-                  {claimLoading
-                    ? "Generating Claim Code..."
-                    : hasUnlockedReward && isVerified
-                    ? "Claim & End Streak"
-                    : "Claim Locked"}
-                </button>
+        <p className="mt-2 text-xl font-black">
+          {commitment.holdDays} Days
+        </p>
 
-                <div className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
-                  Continue Surviving
-                </div>
-              </div>
+        <p className="mt-2 text-sm font-bold text-[#555]">
+          {formatTow(commitment.towAmount)} TOW
+        </p>
+
+        <button
+  onClick={() =>
+    requestClaimAuthorization(
+      commitment.id
+    )
+  }
+  disabled={!claimable}
+  className={`mt-4 rounded-2xl border-2 px-5 py-3 text-sm font-black ${
+    claimable
+      ? "border-black bg-black text-white"
+      : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
+  }`}
+>
+  {claimable
+    ? "Claim This Commitment"
+    : "Locked Until 4 Weeks"}
+</button>
+      </div>
+      );
+  })}
+</div>
 
               {claimRequest ? (
                 <div className="mt-5 rounded-2xl border-2 border-dashed border-black bg-[#F8F8F8] p-5">
@@ -395,13 +401,17 @@ export default function TooTiredToQuitPage() {
                     Claim Authorization Code
                   </p>
 
-                  <p className="mt-3 text-3xl font-black tracking-[0.12em]">
-                    {claimRequest.claimCode}
-                  </p>
+<p className="mt-3 text-3xl font-black tracking-[0.12em]">
+  {claimRequest.claimCode}
+</p>
 
-                  <p className="mt-3 text-sm font-bold text-[#555]">
-                    {claimRequest.instructions}
-                  </p>
+<p className="mt-3 text-sm font-bold text-[#555]">
+  {claimRequest.instructions}
+</p>
+
+<p className="mt-4 text-xs font-bold text-[#555]">
+  Each commitment can be claimed independently after reaching 4 weeks. Continuing beyond each milestone increases the unlocked reward.
+</p>
 
                   <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
                     Expires: {new Date(claimRequest.expiresAt).toLocaleString()}
