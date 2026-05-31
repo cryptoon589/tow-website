@@ -25,6 +25,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const wallet = String(body?.wallet ?? "").trim();
 
+const positionId = String(
+  body?.positionId ?? ""
+).trim();
+
+    if (!positionId) {
+  return NextResponse.json(
+    { error: "Missing commitment position." },
+    { status: 400 }
+  );
+}
+
     if (!isValidXrplWallet(wallet)) {
       return NextResponse.json({ error: "Invalid wallet." }, { status: 400 });
     }
@@ -55,7 +66,8 @@ export async function POST(request: NextRequest) {
 
     const { data: activeRequest, error: activeRequestError } = await supabase
       .from("tow_claim_requests")
-      .select("claim_code,status,expires_at")
+      .select("claim_code,status,expires_at,position_id")
+      .eq("position_id", positionId)
       .eq("wallet_address", wallet)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
@@ -83,16 +95,21 @@ export async function POST(request: NextRequest) {
 
     if (positionError) throw positionError;
 
-    const eligibleIds = (positions ?? [])
-      .filter((position) => getHoldDays(position.created_at) >= 28)
-      .map((position) => position.id);
+const selectedPosition = (positions ?? []).find(
+  (position) =>
+    String(position.id) === positionId &&
+    getHoldDays(position.created_at) >= 28
+);
 
-    if (eligibleIds.length === 0) {
-      return NextResponse.json(
-        { error: "No claimable commitments found yet." },
-        { status: 400 }
-      );
-    }
+if (!selectedPosition) {
+  return NextResponse.json(
+    {
+      error:
+        "Selected commitment is not claimable."
+    },
+    { status: 400 }
+  );
+}
 
     const claimCode = createClaimCode();
     const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString();
@@ -103,7 +120,8 @@ export async function POST(request: NextRequest) {
       telegram_username: player.telegram_username,
       claim_code: claimCode,
       status: "pending",
-      eligible_position_ids: eligibleIds,
+      position_id: positionId,
+      eligible_position_ids: [positionId],
       expires_at: expiresAt,
     });
 
@@ -114,7 +132,7 @@ export async function POST(request: NextRequest) {
       reused: false,
       claimCode,
       expiresAt,
-      claimableCommitments: eligibleIds.length,
+      claimableCommitments: 1,
       instructions: `Send /claim ${claimCode} to TiredBuddy from @${player.telegram_username}.`,
     });
   } catch (error) {
