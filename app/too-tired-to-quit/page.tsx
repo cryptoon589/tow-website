@@ -425,8 +425,6 @@ export default function TooTiredToQuitPage() {
                     </p>
                   ) : null}
                 </div>
-              ) : null}
-            </div>
 
             <div className="grid gap-4 md:grid-cols-4">
               <MiniStat label="Active Commitments" value={status.alivePositions} />
