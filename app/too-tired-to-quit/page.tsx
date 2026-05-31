@@ -419,14 +419,15 @@ export default function TooTiredToQuitPage() {
                     Expires: {new Date(claimRequest.expiresAt).toLocaleString()}
                   </p>
 
-                  {claimRequest.reused ? (
-                    <p className="mt-2 text-xs font-black text-[#8A5A00]">
-                      Existing pending authorization reused.
-                    </p>
-                  ) : null}
-                </div>
+                 {claimRequest.reused ? (
+  <p className="mt-2 text-xs font-black text-[#8A5A00]">
+    Existing pending authorization reused.
+  </p>
+) : null}
+</div>
+) : null}
 
-            <div className="grid gap-4 md:grid-cols-4">
+<div className="grid gap-4 md:grid-cols-4">
               <MiniStat label="Active Commitments" value={status.alivePositions} />
               <MiniStat label="Raid Posts" value={status.raidPosts} />
               <MiniStat label="Game Runs" value={status.gameRuns} />
