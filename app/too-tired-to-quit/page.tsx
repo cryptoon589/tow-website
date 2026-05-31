@@ -96,7 +96,7 @@ export default function TooTiredToQuitPage() {
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState("");
-  const [claimingId, setClaimingId] = useState(false);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimRequest, setClaimRequest] = useState<any>(null);
 
   const displayName = useMemo(() => {
@@ -160,7 +160,7 @@ export default function TooTiredToQuitPage() {
 ) {
     if (!status?.walletAddress) return;
 
-    setClaimLoading(true);
+    setClaimingId(positionId);
     setError("");
 
     try {
@@ -185,7 +185,7 @@ export default function TooTiredToQuitPage() {
     } catch (err: any) {
       setError(err.message || "Unknown error");
     } finally {
-      setClaimLoading(false);
+      setClaimingId(null);
     }
   }
 
@@ -379,16 +379,18 @@ export default function TooTiredToQuitPage() {
       commitment.id
     )
   }
-  disabled={!claimable}
+  disabled={!claimable || claimingId === commitment.id}
   className={`mt-4 rounded-2xl border-2 px-5 py-3 text-sm font-black ${
     claimable
       ? "border-black bg-black text-white"
       : "cursor-not-allowed border-black bg-[#E5E5E5] text-[#777]"
   }`}
 >
-  {claimable
-    ? "Claim This Commitment"
-    : "Locked Until 4 Weeks"}
+  {claimingId === commitment.id
+  ? "Generating Claim..."
+  : claimable
+  ? "Claim This Commitment"
+  : "Locked Until 4 Weeks"}
 </button>
       </div>
       );
