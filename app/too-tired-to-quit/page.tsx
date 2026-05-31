@@ -19,6 +19,7 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
 }
 
 const MILESTONES = [
+  { label: "START", title: "Day 0", days: 0 },
   { label: "4W", title: "Still Here", days: 28 },
   { label: "8W", title: "Burnt Out", days: 56 },
   { label: "12W", title: "Fully Exhausted", days: 84 },
@@ -26,6 +27,7 @@ const MILESTONES = [
 
 function MilestoneTracker({ days }: { days: number }) {
   const maxDays = 84;
+
   const progress = Math.min(
     100,
     (Math.max(0, days) / maxDays) * 100
@@ -33,30 +35,22 @@ function MilestoneTracker({ days }: { days: number }) {
 
   return (
     <div className="mt-8">
-      <div className="relative px-2 pb-2">
-        {/* TRACK */}
-        <div className="absolute left-[10%] right-[10%] top-4 h-[6px] rounded-full border-2 border-black bg-white" />
+      <div className="relative px-[5%] pb-2">
 
-        {/* FILLED PROGRESS */}
+        {/* TRACK */}
+        <div className="absolute left-[5%] right-[5%] top-4 h-[6px] rounded-full border-2 border-black bg-white" />
+
+        {/* FILLED */}
         <div
-          className="absolute left-[10%] top-4 h-[6px] rounded-full bg-black transition-all duration-700"
+          className="absolute left-[5%] top-4 h-[6px] rounded-full bg-black transition-all duration-700"
           style={{
-            width: `${progress * 0.8}%`,
+            width: `${progress * 0.9}%`,
           }}
         />
 
-        {/* CHECKPOINTS */}
-        <div className="relative flex justify-between px-[10%]">
-          {MILESTONES.map((milestone, index) => {
+        <div className="relative flex justify-between">
+          {MILESTONES.map((milestone) => {
             const reached = days >= milestone.days;
-
-            const current =
-              !reached &&
-              days < milestone.days &&
-              (
-                index === 0 ||
-                days >= MILESTONES[index - 1].days
-              );
 
             return (
               <div
@@ -64,20 +58,18 @@ function MilestoneTracker({ days }: { days: number }) {
                 className="flex flex-col items-center"
               >
                 <div
-                  className={`h-8 w-8 rounded-full border-4 transition-all duration-500 ${
+                  className={`h-8 w-8 rounded-full border-4 ${
                     reached
                       ? "border-black bg-black"
-                      : current
-                      ? "border-black bg-[#FFF4CC]"
                       : "border-black bg-white"
                   }`}
                 />
 
-                <p className="mt-4 text-2xl font-black">
+                <p className="mt-4 text-xl font-black">
                   {milestone.label}
                 </p>
 
-                <p className="mt-1 text-sm font-bold text-[#555]">
+                <p className="mt-1 text-sm font-bold text-[#555] text-center">
                   {milestone.title}
                 </p>
               </div>
