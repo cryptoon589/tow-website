@@ -59,7 +59,7 @@ export type TiredPosition = {
 };
 
 export const MIN_QUALIFYING_BUY_XRP = 50;
-export const MAX_REWARD_PERCENT = 22;
+export const MAX_REWARD_PERCENT = 20;
 export const RECENT_ACTIVITY_WINDOW_DAYS = 30;
 export const RECENT_GAME_RUN_CAP = 50;
 
@@ -117,16 +117,11 @@ export function calculateRewardBreakdown(input: {
    * Primary ecosystem activity.
    */
   const raidBonusPercent = Math.min(
-    5,
-    Number(
-      (
-        Math.min(
-          input.recentRaidPosts * 0.25,
-          5
-        )
-      ).toFixed(2)
-    )
-  );
+  3,
+  Number(
+    (input.recentRaidPosts * 0.5).toFixed(2)
+  )
+);
 
   /**
    * GAME BONUS
@@ -138,18 +133,13 @@ export function calculateRewardBreakdown(input: {
   );
 
   const gameBonusPercent = Math.min(
-    3,
-    Number(
-      (
-        Math.floor(cappedRecentGameRuns / 5) *
-          0.25 +
-        Math.min(
-          1,
-          input.gameBestScore / 5000
-        )
-      ).toFixed(2)
-    )
-  );
+  1,
+  Number(
+    (
+      cappedRecentGameRuns * 0.1
+    ).toFixed(2)
+  )
+);
 
   /**
    * RECENT ACTIVITY BONUS
@@ -157,37 +147,42 @@ export function calculateRewardBreakdown(input: {
    * Represents current ecosystem presence.
    */
   const recentActivityPercent =
-    input.recentRaidPosts > 0 ||
-    input.recentGameRuns > 0
-      ? 2
-      : 0;
+  input.recentRaidPosts > 0 ||
+  input.recentGameRuns > 0
+    ? 1
+    : 0;
 
   /**
    * LOYALTY BONUS
    * Long-term veteran consistency.
    */
   const loyaltyBonusPercent = Math.min(
-    10,
-    Number(
-      (
-        Math.floor(input.holdDays / 28) *
-          2.5
-      ).toFixed(2)
-    )
-  );
+  1,
+  Number(
+    (
+      Math.floor(input.holdDays / 28) *
+      0.25
+    ).toFixed(2)
+  )
+);
 
-  const totalPercent = Math.min(
-    MAX_REWARD_PERCENT,
-    Number(
-      (
-        survivalUnlockPercent +
-        raidBonusPercent +
-        gameBonusPercent +
-        recentActivityPercent +
-        loyaltyBonusPercent
-      ).toFixed(2)
-    )
-  );
+  const activityBonusPercent = Math.min(
+  5,
+  raidBonusPercent +
+  gameBonusPercent +
+  recentActivityPercent +
+  loyaltyBonusPercent
+);
+
+const totalPercent = Math.min(
+  MAX_REWARD_PERCENT,
+  Number(
+    (
+      survivalUnlockPercent +
+      activityBonusPercent
+    ).toFixed(2)
+  )
+);
 
   return {
     basePercent: survivalUnlockPercent,
