@@ -10,96 +10,65 @@ import { formatTow, maskWallet } from "@/lib/towProof";
 function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-[22px] border-2 border-black bg-white p-4">
-      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#666]">{label}</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#666]">
+        {label}
+      </p>
       <p className="mt-2 text-2xl font-black">{value}</p>
     </div>
   );
 }
 
 const MILESTONES = [
-  {
-    label: "4W",
-    title: "Still Here",
-    days: 28,
-  },
-  {
-    label: "8W",
-    title: "Burnt Out",
-    days: 56,
-  },
-  {
-    label: "12W",
-    title: "Fully Exhausted",
-    days: 84,
-  },
-  {
-    label: "120D",
-    title: "Too Tired To Quit",
-    days: 120,
-  },
+  { label: "4W", title: "Still Here", days: 28 },
+  { label: "8W", title: "Burnt Out", days: 56 },
+  { label: "12W", title: "Fully Exhausted", days: 84 },
 ];
 
-function MilestoneTracker({
-  days,
-}: {
-  days: number;
-}) {
-  const progress = Math.min(
-    100,
-    Math.round(
-      (Math.min(days, 120) / 120) * 100
-    )
-  );
+function MilestoneTracker({ days }: { days: number }) {
+  const maxDays = 84;
+  const progress = Math.min(100, Math.round((Math.min(days, maxDays) / maxDays) * 100));
 
   return (
-    <div className="mt-5">
-      <div className="h-3 overflow-hidden rounded-full border-2 border-black bg-white">
-        <div
-          className="h-full bg-black transition-all duration-500"
-          style={{
-            width: `${progress}%`,
-          }}
-        />
-      </div>
+    <div className="mt-6">
+      <div className="relative">
+        <div className="h-4 overflow-hidden rounded-full border-2 border-black bg-white">
+          <div
+            className="h-full bg-black transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
-        {MILESTONES.map((milestone) => {
-          const reached =
-            days >= milestone.days;
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          {MILESTONES.map((milestone) => {
+            const reached = days >= milestone.days;
+            const next = !reached && days < milestone.days;
 
-          const next =
-            !reached &&
-            days < milestone.days;
+            return (
+              <div
+                key={milestone.days}
+                className={`rounded-2xl border-2 border-black p-4 text-center ${
+                  reached ? "bg-black text-white" : next ? "bg-[#FFF4CC]" : "bg-white"
+                }`}
+              >
+                <div
+                  className={`mx-auto mb-3 h-5 w-5 rounded-full border-2 ${
+                    reached ? "border-white bg-white" : "border-black bg-white"
+                  }`}
+                />
 
-          return (
-            <div
-              key={milestone.days}
-              className={`rounded-2xl border-2 border-black p-4 ${
-                reached
-                  ? "bg-black text-white"
-                  : next
-                  ? "bg-[#FFF4CC]"
-                  : "bg-white"
-              }`}
-            >
-              <p className="text-xs font-black uppercase tracking-[0.2em]">
-                {reached
-                  ? "Unlocked"
-                  : next
-                  ? "Next"
-                  : "Locked"}
-              </p>
+                <p className="text-xs font-black uppercase tracking-[0.18em]">
+                  {reached ? "Unlocked" : next ? "Next" : "Locked"}
+                </p>
 
-              <p className="mt-2 text-2xl font-black">
-                {milestone.label}
-              </p>
+                <p className="mt-2 text-2xl font-black">{milestone.label}</p>
 
-              <p className="mt-1 text-sm font-bold opacity-75">
-                {milestone.title}
-              </p>
-            </div>
-          );
-        })}
+                <p className="mt-1 text-sm font-bold opacity-75">
+                  {milestone.title}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -133,34 +102,29 @@ export default function TooTiredToQuitPage() {
       : "Survivor";
   }, [status, saved]);
 
- useEffect(() => {
-  const stored =
-    localStorage.getItem(
-      "tow_reward_profile"
-    );
+  useEffect(() => {
+    const stored = localStorage.getItem("tow_reward_profile");
 
-  if (!stored) return;
+    if (!stored) return;
 
-  try {
-    const parsed = JSON.parse(stored);
+    try {
+      const parsed = JSON.parse(stored);
 
-    if (
-      parsed?.walletAddress &&
-      isValidXrplWallet(parsed.walletAddress)
-    ) {
-      setWallet(parsed.walletAddress);
-
-      loadStatus(parsed.walletAddress);
-    }
-  } catch {}
-}, []);
+      if (parsed?.walletAddress && isValidXrplWallet(parsed.walletAddress)) {
+        setWallet(parsed.walletAddress);
+        loadStatus(parsed.walletAddress);
+      }
+    } catch {}
+  }, []);
 
   async function loadStatus(targetWallet: string) {
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(`/api/tired-status?wallet=${encodeURIComponent(targetWallet)}`);
+      const response = await fetch(
+        `/api/tired-status?wallet=${encodeURIComponent(targetWallet)}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -249,7 +213,7 @@ export default function TooTiredToQuitPage() {
             </Link>
 
             <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
-              Everyone's Tired
+              Everyone&apos;s Tired
             </Link>
 
             <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
@@ -260,7 +224,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="mt-8 rounded-[28px] border-2 border-black p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Your saved TOW Proof Of Tiredness becomes your survivor identity across TOW.
+            Your survivor identity follows you across raids, rewards, the TOW game, and Proof Of Tiredness.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
@@ -280,7 +244,9 @@ export default function TooTiredToQuitPage() {
             </button>
           </div>
 
-          {error ? <p className="mt-3 text-sm font-black text-red-600">{error}</p> : null}
+          {error ? (
+            <p className="mt-3 text-sm font-black text-red-600">{error}</p>
+          ) : null}
         </section>
 
         {status ? (
@@ -296,9 +262,7 @@ export default function TooTiredToQuitPage() {
                     {status.tiredLevel?.emoji} {status.tiredLevel?.label}
                   </h2>
 
-                  <p className="mt-4 text-3xl font-black">
-                    {displayName}
-                  </p>
+                  <p className="mt-4 text-3xl font-black">{displayName}</p>
 
                   <p className="mt-1 text-sm font-bold text-white/55">
                     {maskWallet(status.walletAddress)}
@@ -342,28 +306,22 @@ export default function TooTiredToQuitPage() {
             ) : null}
 
             <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
-  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-    <div>
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-        Survival Route
-      </p>
+              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                    Survival Route
+                  </p>
 
-      <h3 className="mt-2 text-3xl font-black">
-        {nextMilestone
-          ? `${daysLeft} days until ${nextMilestone.label}`
-          : "Full 12-week survivor route reached"}
-      </h3>
-    </div>
+                  <h3 className="mt-2 text-3xl font-black">
+                    {nextMilestone
+                      ? `${daysLeft} days until ${nextMilestone.label}`
+                      : "Full 12-week survivor route reached"}
+                  </h3>
+                </div>
+              </div>
 
-    <p className="text-base font-black uppercase tracking-[0.18em] text-[#5B2BE8]">
-      Survival Unlock: {status.rewardBreakdown?.basePercent ?? 0}%
-    </p>
-  </div>
-
-  <MilestoneTracker
-    days={status?.holdDays ?? 0}
-  />
-</div>
+              <MilestoneTracker days={status?.holdDays ?? 0} />
+            </div>
 
             <div className="mt-6 rounded-3xl border-2 border-black bg-white p-5">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
@@ -454,72 +412,73 @@ export default function TooTiredToQuitPage() {
                 <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
                 <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
                 <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-                <MiniStat label="Survival Unlock" value={`${status.rewardBreakdown?.basePercent ?? 0}%`} />
-                <MiniStat label="Raid Bonus" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-                <MiniStat label="Loyalty Bonus" value={`+${status.rewardBreakdown?.historyPercent ?? 0}%`} />
+                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+                <MiniStat label="Raid Bonus" value={`+${status.rewardBreakdown?.raidBonusPercent ?? status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
+                <MiniStat label="Game Bonus" value={`+${status.rewardBreakdown?.gameBonusPercent ?? 0}%`} />
+                <MiniStat label="Loyalty Bonus" value={`+${status.rewardBreakdown?.loyaltyBonusPercent ?? status.rewardBreakdown?.historyPercent ?? 0}%`} />
               </div>
             ) : null}
 
-      {status.archives?.length ? (
-  <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
-    <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-      Survivor Archive
-    </p>
+            {status.archives?.length ? (
+              <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                  Survivor Archive
+                </p>
 
-    <h3 className="mt-2 text-3xl font-black">
-      Previous Survivor Seasons
-    </h3>
+                <h3 className="mt-2 text-3xl font-black">
+                  Previous Survivor Seasons
+                </h3>
 
-    <div className="mt-5 space-y-4">
-      {status.archives.map((archive: any, index: number) => (
-        <div
-          key={`${archive.archived_at}-${index}`}
-          className="rounded-2xl border-2 border-black bg-white p-5"
-        >
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xl font-black">
-                {archive.season_label}
-              </p>
+                <div className="mt-5 space-y-4">
+                  {status.archives.map((archive: any, index: number) => (
+                    <div
+                      key={`${archive.archived_at}-${index}`}
+                      className="rounded-2xl border-2 border-black bg-white p-5"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-xl font-black">
+                            {archive.season_label}
+                          </p>
 
-              <p className="mt-1 text-sm font-bold text-[#555]">
-                Survived {archive.survived_days} days before ending streak.
-              </p>
-            </div>
+                          <p className="mt-1 text-sm font-bold text-[#555]">
+                            Survived {archive.survived_days} days before ending streak.
+                          </p>
+                        </div>
 
-            <div className="rounded-xl border-2 border-black px-4 py-2 text-sm font-black uppercase tracking-[0.14em]">
-              {archive.reward_status === "paid"
-                ? "Reward Paid"
-                : archive.reward_status === "pending_manual_payout"
-                ? "Pending Payout"
-                : archive.reward_status}
-            </div>
-          </div>
+                        <div className="rounded-xl border-2 border-black px-4 py-2 text-sm font-black uppercase tracking-[0.14em]">
+                          {archive.reward_status === "paid"
+                            ? "Reward Paid"
+                            : archive.reward_status === "pending_manual_payout"
+                            ? "Pending Payout"
+                            : archive.reward_status}
+                        </div>
+                      </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <MiniStat
-              label="Committed"
-              value={`${formatTow(archive.total_tow_committed)} TOW`}
-            />
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <MiniStat
+                          label="Committed"
+                          value={`${formatTow(archive.total_tow_committed)} TOW`}
+                        />
 
-            <MiniStat
-              label="Unlocked"
-              value={`${formatTow(archive.total_unlocked_tow)} TOW`}
-            />
+                        <MiniStat
+                          label="Unlocked"
+                          value={`${formatTow(archive.total_unlocked_tow)} TOW`}
+                        />
 
-            <MiniStat
-              label="Archived"
-              value={new Date(archive.archived_at).toLocaleDateString()}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-) : null}
-</section>
-) : null}
-</main>
+                        <MiniStat
+                          label="Archived"
+                          value={new Date(archive.archived_at).toLocaleDateString()}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+      </main>
 
       <Footer />
     </div>
