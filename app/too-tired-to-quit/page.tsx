@@ -24,72 +24,30 @@ const MILESTONES = [
   { label: "12W", title: "Fully Exhausted", days: 84 },
 ];
 
-```tsx
-function MilestoneTracker({
-  days,
-}: {
-  days: number;
-}) {
-  const milestones = [
-    {
-      label: "4W",
-      title: "Still Here",
-      days: 28,
-    },
-    {
-      label: "8W",
-      title: "Burnt Out",
-      days: 56,
-    },
-    {
-      label: "12W",
-      title: "Fully Exhausted",
-      days: 84,
-    },
-  ];
-
+function MilestoneTracker({ days }: { days: number }) {
   const maxDays = 84;
-
-  const progress = Math.min(
-    100,
-    (days / maxDays) * 100
-  );
+  const progress = Math.min(100, (Math.max(0, days) / maxDays) * 100);
 
   return (
     <div className="mt-8">
       <div className="relative px-2 pb-2">
-        {/* TRACK */}
         <div className="absolute left-0 right-0 top-4 h-[6px] rounded-full border-2 border-black bg-white" />
 
-        {/* FILLED PROGRESS */}
         <div
           className="absolute left-0 top-4 h-[6px] rounded-full bg-black transition-all duration-700"
-          style={{
-            width: `${progress}%`,
-          }}
+          style={{ width: `${progress}%` }}
         />
 
-        {/* CHECKPOINTS */}
         <div className="relative flex justify-between">
-          {milestones.map((milestone, index) => {
-            const reached =
-              days >= milestone.days;
-
+          {MILESTONES.map((milestone, index) => {
+            const reached = days >= milestone.days;
             const current =
               !reached &&
               days < milestone.days &&
-              (
-                index === 0 ||
-                days >=
-                  milestones[index - 1]
-                    .days
-              );
+              (index === 0 || days >= MILESTONES[index - 1].days);
 
             return (
-              <div
-                key={milestone.days}
-                className="flex flex-col items-center"
-              >
+              <div key={milestone.days} className="flex flex-col items-center">
                 <div
                   className={`h-8 w-8 rounded-full border-4 transition-all duration-500 ${
                     reached
@@ -100,9 +58,7 @@ function MilestoneTracker({
                   }`}
                 />
 
-                <p className="mt-4 text-2xl font-black">
-                  {milestone.label}
-                </p>
+                <p className="mt-4 text-2xl font-black">{milestone.label}</p>
 
                 <p className="mt-1 text-sm font-bold text-[#555]">
                   {milestone.title}
@@ -246,19 +202,31 @@ export default function TooTiredToQuitPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/too-tired-to-quit/leaderboard" className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+            <Link
+              href="/too-tired-to-quit/leaderboard"
+              className="rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white"
+            >
               View Leaderboard
             </Link>
 
-            <Link href="/too-tired-to-quit/how-it-works" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+            <Link
+              href="/too-tired-to-quit/how-it-works"
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black"
+            >
               FAQ / How It Works
             </Link>
 
-            <Link href="/raid-board" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+            <Link
+              href="/raid-board"
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black"
+            >
               Everyone&apos;s Tired
             </Link>
 
-            <Link href="/play/start" className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black">
+            <Link
+              href="/play/start"
+              className="rounded-2xl border-2 border-black px-5 py-3 text-sm font-black"
+            >
               Play TOW Game
             </Link>
           </div>
@@ -341,26 +309,25 @@ export default function TooTiredToQuitPage() {
                   This wallet can be viewed, but it will not rank or become claim-eligible until the survivor identity is verified.
                 </p>
 
-                <Link href="/register" className="mt-4 inline-flex rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white">
+                <Link
+                  href="/register"
+                  className="mt-4 inline-flex rounded-2xl border-2 border-black bg-black px-5 py-3 text-sm font-black text-white"
+                >
                   Register / Verify Identity
                 </Link>
               </div>
             ) : null}
 
             <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
-              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
-                    Survival Route
-                  </p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#666]">
+                Survival Route
+              </p>
 
-                  <h3 className="mt-2 text-3xl font-black">
-                    {nextMilestone
-                      ? `${daysLeft} days until ${nextMilestone.label}`
-                      : "Full 12-week survivor route reached"}
-                  </h3>
-                </div>
-              </div>
+              <h3 className="mt-2 text-3xl font-black">
+                {nextMilestone
+                  ? `${daysLeft} days until ${nextMilestone.label}`
+                  : "Full 12-week survivor route reached"}
+              </h3>
 
               <MilestoneTracker days={status?.holdDays ?? 0} />
             </div>
@@ -372,8 +339,11 @@ export default function TooTiredToQuitPage() {
 
               <p className="mt-3 text-2xl font-black">
                 {hasUnlockedReward
-                  ? `Your commitment milestone is unlocked. You can now request secure Telegram authorization to end your streak.`
-                  : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
+                  ? "Your commitment milestone is unlocked. You can now request secure Telegram authorization to end your streak."
+                  : `First milestone unlocks at 4 weeks. ${Math.max(
+                      0,
+                      28 - status.holdDays
+                    )} days remaining.`}
               </p>
 
               <p className="mt-3 text-sm font-bold text-[#555]">
@@ -449,54 +419,53 @@ export default function TooTiredToQuitPage() {
               {showDetails ? "Hide Detailed Breakdown" : "View Detailed Breakdown"}
             </button>
 
-            ```tsx
-{showDetails ? (
-  <div className="grid gap-4 md:grid-cols-3">
-    <MiniStat
-      label="Committed"
-      value={`${formatTow(status.totalTowAmount)} TOW`}
-    />
+            {showDetails ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                <MiniStat
+                  label="Committed"
+                  value={`${formatTow(status.totalTowAmount)} TOW`}
+                />
 
-    <MiniStat
-      label="Unlocked"
-      value={`${formatTow(status.unlockedRewardTow)} TOW`}
-    />
+                <MiniStat
+                  label="Unlocked"
+                  value={`${formatTow(status.unlockedRewardTow)} TOW`}
+                />
 
-    <MiniStat
-      label="Remaining"
-      value={`${formatTow(status.remainingRewardTow)} TOW`}
-    />
+                <MiniStat
+                  label="Remaining"
+                  value={`${formatTow(status.remainingRewardTow)} TOW`}
+                />
 
-    <MiniStat
-      label="Recent Activity"
-      value={`+${
-        (
-          (status.rewardBreakdown?.raidBonusPercent ?? 0) +
-          (status.rewardBreakdown?.gameBonusPercent ?? 0)
-        ).toFixed(1)
-      }%`}
-    />
+                <MiniStat
+                  label="Recent Activity"
+                  value={`+${
+                    (
+                      (status.rewardBreakdown?.raidBonusPercent ?? 0) +
+                      (status.rewardBreakdown?.gameBonusPercent ?? 0)
+                    ).toFixed(1)
+                  }%`}
+                />
 
-    <MiniStat
-      label="Raid Bonus"
-      value={`+${status.rewardBreakdown?.raidBonusPercent ?? 0}%`}
-    />
+                <MiniStat
+                  label="Raid Bonus"
+                  value={`+${status.rewardBreakdown?.raidBonusPercent ?? 0}%`}
+                />
 
-    <MiniStat
-      label="Game Bonus"
-      value={`+${status.rewardBreakdown?.gameBonusPercent ?? 0}%`}
-    />
+                <MiniStat
+                  label="Game Bonus"
+                  value={`+${status.rewardBreakdown?.gameBonusPercent ?? 0}%`}
+                />
 
-    <MiniStat
-      label="Loyalty Bonus"
-      value={`+${
-        status.rewardBreakdown?.loyaltyBonusPercent ??
-        status.rewardBreakdown?.historyPercent ??
-        0
-      }%`}
-    />
-  </div>
-) : null}
+                <MiniStat
+                  label="Loyalty Bonus"
+                  value={`+${
+                    status.rewardBreakdown?.loyaltyBonusPercent ??
+                    status.rewardBreakdown?.historyPercent ??
+                    0
+                  }%`}
+                />
+              </div>
+            ) : null}
 
             {status.archives?.length ? (
               <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
