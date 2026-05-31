@@ -24,45 +24,87 @@ const MILESTONES = [
   { label: "12W", title: "Fully Exhausted", days: 84 },
 ];
 
-function MilestoneTracker({ days }: { days: number }) {
+```tsx
+function MilestoneTracker({
+  days,
+}: {
+  days: number;
+}) {
+  const milestones = [
+    {
+      label: "4W",
+      title: "Still Here",
+      days: 28,
+    },
+    {
+      label: "8W",
+      title: "Burnt Out",
+      days: 56,
+    },
+    {
+      label: "12W",
+      title: "Fully Exhausted",
+      days: 84,
+    },
+  ];
+
   const maxDays = 84;
-  const progress = Math.min(100, Math.round((Math.min(days, maxDays) / maxDays) * 100));
+
+  const progress = Math.min(
+    100,
+    (days / maxDays) * 100
+  );
 
   return (
-    <div className="mt-6">
-      <div className="relative">
-        <div className="h-4 overflow-hidden rounded-full border-2 border-black bg-white">
-          <div
-            className="h-full bg-black transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+    <div className="mt-8">
+      <div className="relative px-2 pb-2">
+        {/* TRACK */}
+        <div className="absolute left-0 right-0 top-4 h-[6px] rounded-full border-2 border-black bg-white" />
 
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          {MILESTONES.map((milestone) => {
-            const reached = days >= milestone.days;
-            const next = !reached && days < milestone.days;
+        {/* FILLED PROGRESS */}
+        <div
+          className="absolute left-0 top-4 h-[6px] rounded-full bg-black transition-all duration-700"
+          style={{
+            width: `${progress}%`,
+          }}
+        />
+
+        {/* CHECKPOINTS */}
+        <div className="relative flex justify-between">
+          {milestones.map((milestone, index) => {
+            const reached =
+              days >= milestone.days;
+
+            const current =
+              !reached &&
+              days < milestone.days &&
+              (
+                index === 0 ||
+                days >=
+                  milestones[index - 1]
+                    .days
+              );
 
             return (
               <div
                 key={milestone.days}
-                className={`rounded-2xl border-2 border-black p-4 text-center ${
-                  reached ? "bg-black text-white" : next ? "bg-[#FFF4CC]" : "bg-white"
-                }`}
+                className="flex flex-col items-center"
               >
                 <div
-                  className={`mx-auto mb-3 h-5 w-5 rounded-full border-2 ${
-                    reached ? "border-white bg-white" : "border-black bg-white"
+                  className={`h-8 w-8 rounded-full border-4 transition-all duration-500 ${
+                    reached
+                      ? "border-black bg-black"
+                      : current
+                      ? "border-black bg-[#FFF4CC]"
+                      : "border-black bg-white"
                   }`}
                 />
 
-                <p className="text-xs font-black uppercase tracking-[0.18em]">
-                  {reached ? "Unlocked" : next ? "Next" : "Locked"}
+                <p className="mt-4 text-2xl font-black">
+                  {milestone.label}
                 </p>
 
-                <p className="mt-2 text-2xl font-black">{milestone.label}</p>
-
-                <p className="mt-1 text-sm font-bold opacity-75">
+                <p className="mt-1 text-sm font-bold text-[#555]">
                   {milestone.title}
                 </p>
               </div>
@@ -224,7 +266,7 @@ export default function TooTiredToQuitPage() {
 
         <section className="mt-8 rounded-[28px] border-2 border-black p-5">
           <div className="mb-4 rounded-2xl border-2 border-dashed border-black p-4 text-sm font-bold text-[#555]">
-            Your survivor identity follows you across raids, rewards, the TOW game, and Proof Of Tiredness.
+            Your survivor identity follows you across raid posts, TOW game, and Proof Of Tiredness.
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row">
@@ -330,7 +372,7 @@ export default function TooTiredToQuitPage() {
 
               <p className="mt-3 text-2xl font-black">
                 {hasUnlockedReward
-                  ? `You have unlocked ${status.rewardBreakdown.basePercent}% survival. You can now request secure Telegram authorization to end your streak.`
+                  ? `Your commitment milestone is unlocked. You can now request secure Telegram authorization to end your streak.`
                   : `First milestone unlocks at 4 weeks. ${Math.max(0, 28 - status.holdDays)} days remaining.`}
               </p>
 
@@ -407,17 +449,54 @@ export default function TooTiredToQuitPage() {
               {showDetails ? "Hide Detailed Breakdown" : "View Detailed Breakdown"}
             </button>
 
-            {showDetails ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                <MiniStat label="Committed" value={`${formatTow(status.totalTowAmount)} TOW`} />
-                <MiniStat label="Unlocked" value={`${formatTow(status.unlockedRewardTow)} TOW`} />
-                <MiniStat label="Remaining" value={`${formatTow(status.remainingRewardTow)} TOW`} />
-                <MiniStat label="Recent Activity" value={`+${status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-                <MiniStat label="Raid Bonus" value={`+${status.rewardBreakdown?.raidBonusPercent ?? status.rewardBreakdown?.recentActivityPercent ?? 0}%`} />
-                <MiniStat label="Game Bonus" value={`+${status.rewardBreakdown?.gameBonusPercent ?? 0}%`} />
-                <MiniStat label="Loyalty Bonus" value={`+${status.rewardBreakdown?.loyaltyBonusPercent ?? status.rewardBreakdown?.historyPercent ?? 0}%`} />
-              </div>
-            ) : null}
+            ```tsx
+{showDetails ? (
+  <div className="grid gap-4 md:grid-cols-3">
+    <MiniStat
+      label="Committed"
+      value={`${formatTow(status.totalTowAmount)} TOW`}
+    />
+
+    <MiniStat
+      label="Unlocked"
+      value={`${formatTow(status.unlockedRewardTow)} TOW`}
+    />
+
+    <MiniStat
+      label="Remaining"
+      value={`${formatTow(status.remainingRewardTow)} TOW`}
+    />
+
+    <MiniStat
+      label="Recent Activity"
+      value={`+${
+        (
+          (status.rewardBreakdown?.raidBonusPercent ?? 0) +
+          (status.rewardBreakdown?.gameBonusPercent ?? 0)
+        ).toFixed(1)
+      }%`}
+    />
+
+    <MiniStat
+      label="Raid Bonus"
+      value={`+${status.rewardBreakdown?.raidBonusPercent ?? 0}%`}
+    />
+
+    <MiniStat
+      label="Game Bonus"
+      value={`+${status.rewardBreakdown?.gameBonusPercent ?? 0}%`}
+    />
+
+    <MiniStat
+      label="Loyalty Bonus"
+      value={`+${
+        status.rewardBreakdown?.loyaltyBonusPercent ??
+        status.rewardBreakdown?.historyPercent ??
+        0
+      }%`}
+    />
+  </div>
+) : null}
 
             {status.archives?.length ? (
               <div className="rounded-[32px] border-2 border-black bg-[#F8F8F8] p-6">
