@@ -94,6 +94,7 @@ export function getTiredLevel(days: number) {
   return [...TIRED_LEVELS].reverse().find((level) => days >= level.minDays) ?? TIRED_LEVELS[0];
 }
 
+```ts
 export function calculateRewardBreakdown(input: {
   holdDays: number;
   recentGameRuns: number;
@@ -102,32 +103,105 @@ export function calculateRewardBreakdown(input: {
   raidPosts: number;
   gameBestScore: number;
 }) {
-  const survivalUnlockPercent = input.holdDays >= 84 ? 15 : input.holdDays >= 56 ? 7 : input.holdDays >= 28 ? 2.5 : 0;
+  // Core commitment unlock progression
+  const survivalUnlockPercent =
+    input.holdDays >= 84
+      ? 15
+      : input.holdDays >= 56
+      ? 7
+      : input.holdDays >= 28
+      ? 2.5
+      : 0;
 
-  // Raids are the primary ecosystem activity bonus. Game runs are secondary support.
-  const raidBonusPercent = Math.min(3, Math.floor(Math.max(0, input.recentRaidPosts) / 2) * 0.5);
-  const cappedRecentGameRuns = Math.min(RECENT_GAME_RUN_CAP, Math.max(0, input.recentGameRuns));
-  const gameBonusPercent = Math.min(1.5, Math.floor(cappedRecentGameRuns / 10) * 0.5);
-  const recentActivityPercent = Number((raidBonusPercent + gameBonusPercent).toFixed(2));
+  /**
+   * RAID BONUS
+   * Primary ecosystem activity.
+   */
+  const raidBonusPercent = Math.min(
+    5,
+    Number(
+      (
+        Math.min(
+          input.recentRaidPosts * 0.25,
+          5
+        )
+      ).toFixed(2)
+    )
+  );
 
-  const lifetimeRaidPercent = Math.min(1, Math.floor(input.raidPosts / 20) * 0.25);
-  const lifetimeRunPercent = Math.min(0.75, Math.floor(input.gameRuns / 100) * 0.25);
-  const lifetimeScorePercent = Math.min(0.25, Math.floor(input.gameBestScore / 1000) * 0.25);
-  const loyaltyBonusPercent = Number((lifetimeRaidPercent + lifetimeRunPercent + lifetimeScorePercent).toFixed(2));
+  /**
+   * GAME BONUS
+   * Secondary ecosystem participation.
+   */
+  const cappedRecentGameRuns = Math.min(
+    RECENT_GAME_RUN_CAP,
+    Math.max(0, input.recentGameRuns)
+  );
+
+  const gameBonusPercent = Math.min(
+    3,
+    Number(
+      (
+        Math.floor(cappedRecentGameRuns / 5) *
+          0.25 +
+        Math.min(
+          1,
+          input.gameBestScore / 5000
+        )
+      ).toFixed(2)
+    )
+  );
+
+  /**
+   * RECENT ACTIVITY BONUS
+   * Separate from raid/game totals.
+   * Represents current ecosystem presence.
+   */
+  const recentActivityPercent =
+    input.recentRaidPosts > 0 ||
+    input.recentGameRuns > 0
+      ? 2
+      : 0;
+
+  /**
+   * LOYALTY BONUS
+   * Long-term veteran consistency.
+   */
+  const loyaltyBonusPercent = Math.min(
+    10,
+    Number(
+      (
+        Math.floor(input.holdDays / 28) *
+          2.5
+      ).toFixed(2)
+    )
+  );
 
   const totalPercent = Math.min(
     MAX_REWARD_PERCENT,
-    Number((survivalUnlockPercent + recentActivityPercent + loyaltyBonusPercent).toFixed(2))
+    Number(
+      (
+        survivalUnlockPercent +
+        raidBonusPercent +
+        gameBonusPercent +
+        recentActivityPercent +
+        loyaltyBonusPercent
+      ).toFixed(2)
+    )
   );
 
   return {
     basePercent: survivalUnlockPercent,
     survivalUnlockPercent,
+
     raidBonusPercent,
     gameBonusPercent,
+
     recentActivityPercent,
+
     loyaltyBonusPercent,
     historyPercent: loyaltyBonusPercent,
+
     totalPercent,
   };
 }
