@@ -26,28 +26,43 @@ const MILESTONES = [
 
 function MilestoneTracker({ days }: { days: number }) {
   const maxDays = 84;
-  const progress = Math.min(100, (Math.max(0, days) / maxDays) * 100);
+  const progress = Math.min(
+    100,
+    (Math.max(0, days) / maxDays) * 100
+  );
 
   return (
     <div className="mt-8">
       <div className="relative px-2 pb-2">
-        <div className="absolute left-0 right-0 top-4 h-[6px] rounded-full border-2 border-black bg-white" />
+        {/* TRACK */}
+        <div className="absolute left-[10%] right-[10%] top-4 h-[6px] rounded-full border-2 border-black bg-white" />
 
+        {/* FILLED PROGRESS */}
         <div
-          className="absolute left-0 top-4 h-[6px] rounded-full bg-black transition-all duration-700"
-          style={{ width: `${progress}%` }}
+          className="absolute left-[10%] top-4 h-[6px] rounded-full bg-black transition-all duration-700"
+          style={{
+            width: `${progress * 0.8}%`,
+          }}
         />
 
-        <div className="relative flex justify-between">
+        {/* CHECKPOINTS */}
+        <div className="relative flex justify-between px-[10%]">
           {MILESTONES.map((milestone, index) => {
             const reached = days >= milestone.days;
+
             const current =
               !reached &&
               days < milestone.days &&
-              (index === 0 || days >= MILESTONES[index - 1].days);
+              (
+                index === 0 ||
+                days >= MILESTONES[index - 1].days
+              );
 
             return (
-              <div key={milestone.days} className="flex flex-col items-center">
+              <div
+                key={milestone.days}
+                className="flex flex-col items-center"
+              >
                 <div
                   className={`h-8 w-8 rounded-full border-4 transition-all duration-500 ${
                     reached
@@ -58,7 +73,9 @@ function MilestoneTracker({ days }: { days: number }) {
                   }`}
                 />
 
-                <p className="mt-4 text-2xl font-black">{milestone.label}</p>
+                <p className="mt-4 text-2xl font-black">
+                  {milestone.label}
+                </p>
 
                 <p className="mt-1 text-sm font-bold text-[#555]">
                   {milestone.title}
@@ -324,10 +341,12 @@ export default function TooTiredToQuitPage() {
               </p>
 
               <h3 className="mt-2 text-3xl font-black">
-                {nextMilestone
-                  ? `${daysLeft} days until ${nextMilestone.label}`
-                  : "Full 12-week survivor route reached"}
-              </h3>
+  {holdDays === 0
+    ? "Begin your survivor route"
+    : nextMilestone
+    ? `${daysLeft} days until ${nextMilestone.label}`
+    : "Full 12-week survivor route reached"}
+</h3>
 
               <MilestoneTracker days={status?.holdDays ?? 0} />
             </div>
