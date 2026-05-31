@@ -114,12 +114,24 @@ export default function RegisterForm() {
       }
 
       setMessage(
-        data?.verificationCode
-          ? `Verification Code: ${data.verificationCode}`
-          : "Survivor identity saved."
-      );
+  data?.verificationCode
+    ? `✅ Survivor identity saved.
 
-      router.push("/too-tired-to-quit");
+Verification Code:
+${data.verificationCode}
+
+Send this to TiredBuddy:
+
+/verify ${data.verificationCode}`
+    : "Survivor identity saved."
+);
+
+/*
+ * Give user time to see verification code
+ */
+setTimeout(() => {
+  router.push("/too-tired-to-quit");
+}, 8000);
     } catch (err: any) {
       setError(
         err.message ||
