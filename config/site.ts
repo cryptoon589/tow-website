@@ -21,6 +21,7 @@ export const siteConfig = {
 
 export const navItems = [
   { label: "Home", href: "/" },
+  { label: "Too Tired To Quit", href: "/too-tired-to-quit" },
   { label: "Play Game", href: "/play/start" },
   { label: "Make Memes", href: "/meme-generator" },
   { label: "Everyone's Tired", href: "/raid-board" },
@@ -59,7 +60,7 @@ export const officialLinks = [
     label: "Coinmun",
     url: "https://coinmun.com/coins/tow",
     description: "View on Coinmun",
-}
+  }
 ];
 
 export const tiredResponses = [

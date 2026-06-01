@@ -22,20 +22,14 @@ export default function PlayStartPage() {
 
   useEffect(() => {
     const profile = getRewardProfile();
-
     if (!profile) return;
-
     setXUsername(profile.xUsername ?? "");
     setWalletAddress(profile.walletAddress ?? "");
     setHasSavedProfile(true);
   }, []);
 
   const canContinue = useMemo(() => {
-    return (
-      hasSavedProfile &&
-      isValidXUsername(xUsername) &&
-      isValidXrplWallet(walletAddress)
-    );
+    return hasSavedProfile && isValidXUsername(xUsername) && isValidXrplWallet(walletAddress);
   }, [hasSavedProfile, walletAddress, xUsername]);
 
   function startRewardRun(event: FormEvent<HTMLFormElement>) {
@@ -86,7 +80,12 @@ export default function PlayStartPage() {
             TOW
           </Link>
 
-          <p className="px-3 py-1 text-xs font-black">Too Tired To Quit</p>
+          <Link
+            href="/too-tired-to-quit"
+            className="px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-[#555] transition hover:text-black"
+          >
+            Too Tired To Quit
+          </Link>
         </header>
 
         <section className="grid min-h-[calc(100vh-72px)] gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
@@ -116,7 +115,7 @@ export default function PlayStartPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-2xl font-black tracking-tight">
-                        Play & Earn Rewards
+                        Play & Build History
                       </h2>
 
                       {hasSavedProfile ? (
@@ -127,7 +126,7 @@ export default function PlayStartPage() {
                     </div>
 
                     <p className="mt-1 text-sm font-bold text-[#555]">
-                      Submit your run to the weekly leaderboard.
+                      Submit your run to the all-time leaderboard.
                     </p>
                   </div>
                 </div>
@@ -195,12 +194,11 @@ export default function PlayStartPage() {
                   type="submit"
                   className="mt-4 w-full cursor-pointer rounded-2xl border-2 border-black bg-[#6D3BFF] px-4 py-3 text-sm font-black text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5B2BE8] hover:shadow-[0_0_32px_rgba(109,59,255,0.6)] active:translate-y-0"
                 >
-                  {canContinue ? "🎮 Continue Reward Run" : "🎮 Start Reward Run"}
+                  {canContinue ? "🎮 Continue TOW Run" : "🎮 Start TOW Run"}
                 </button>
 
                 <p className="mt-3 text-center text-xs font-bold text-[#555]">
-                  Wallet is only used for reward tracking. No signing. No
-                  connection.
+                  Wallet is only used for reward tracking. No signing. No connection.
                 </p>
               </div>
             </form>

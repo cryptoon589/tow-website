@@ -57,10 +57,10 @@ export default function TowLeaderboard() {
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#5B2BE8]">
-            Weekly Leaderboard
+            All-Time Leaderboard
           </p>
           <h2 className="text-2xl font-black tracking-tight text-black">
-            🏆 Top 10 Reward Boost
+            🏆 Top Tired Survivors
           </h2>
         </div>
 
@@ -73,12 +73,12 @@ export default function TowLeaderboard() {
       {loading ? (
         <div className="rounded-2xl border-2 border-dashed border-black bg-white p-5 text-center">
           <p className="animate-pulse text-sm font-black text-black">
-            Loading trenches...
+            Loading tired survivors...
           </p>
         </div>
       ) : topTen.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-black bg-white p-5 text-center">
-          <p className="text-sm font-black text-black">No reward runs yet.</p>
+          <p className="text-sm font-black text-black">No survival runs yet.</p>
           <p className="mt-1 text-sm font-bold text-[#555]">
             Be first on the board before the trenches wake up.
           </p>
@@ -125,14 +125,13 @@ export default function TowLeaderboard() {
 
                     {rank <= 10 ? (
                       <span className="rounded-full border border-black px-2 py-0.5 text-[10px] font-black uppercase text-black">
-                        Boost
+                        Survivor
                       </span>
                     ) : null}
                   </div>
 
                   <p className="mt-0.5 text-xs font-bold text-[#555]">
-                    {entry.runs} run{entry.runs === 1 ? "" : "s"} •{" "}
-                    {maskWallet(entry.walletAddress)}
+                    {entry.runs} lifetime run{entry.runs === 1 ? "" : "s"} • {maskWallet(entry.walletAddress)}
                   </p>
                 </div>
 
@@ -141,7 +140,7 @@ export default function TowLeaderboard() {
                     {entry.bestScore}
                   </p>
                   <p className="text-[10px] font-black uppercase tracking-wide text-[#555]">
-                    Best
+                    Highest
                   </p>
                 </div>
               </div>
@@ -151,7 +150,7 @@ export default function TowLeaderboard() {
       )}
 
       <div className="mt-3 rounded-2xl border-2 border-black bg-black px-3 py-2 text-center text-xs font-black text-white">
-        Weekly Top 10 get reward boost eligibility.
+        Every run becomes part of your permanent TOW history.
       </div>
     </section>
   );
