@@ -665,23 +665,38 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      ok: true,
-      walletAddress,
-      lastScannedLedger,
-      highestLedgerSeen:
-        highestLedgerSeen || lastScannedLedger,
-      scanned: txs.length,
-      detected: events.length,
-      events: events.map((event) => ({
-        txHash: event.txHash,
-        eventType: event.eventType,
-        xrpValue: event.xrpValue,
-        towAmount: event.towAmount,
-        ledgerIndex: event.ledgerIndex,
-        eventAt: event.eventAt,
-      })),
-      sync: syncResult,
-    });
+  ok: true,
+  walletAddress,
+  lastScannedLedger,
+  highestLedgerSeen:
+    highestLedgerSeen || lastScannedLedger,
+
+  scanned: txs.length,
+  detected: events.length,
+
+  positionsCreated:
+    syncResult?.positionsCreated ?? 0,
+
+  disqualified:
+    syncResult?.disqualified ?? 0,
+
+  newCommitments:
+    syncResult?.newCommitments ?? [],
+
+  disqualifiedCommitments:
+    syncResult?.disqualifiedCommitments ?? [],
+
+  events: events.map((event) => ({
+    txHash: event.txHash,
+    eventType: event.eventType,
+    xrpValue: event.xrpValue,
+    towAmount: event.towAmount,
+    ledgerIndex: event.ledgerIndex,
+    eventAt: event.eventAt,
+  })),
+
+  sync: syncResult,
+});
   } catch (error) {
     return NextResponse.json(
       {
