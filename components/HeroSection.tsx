@@ -47,10 +47,10 @@ export default function HeroSection() {
 
             <div className="mt-0 flex flex-wrap justify-center gap-3 md:justify-start">
               <Link
-                href="/meme-generator"
+                href="/too-tired-to-quit"
                 className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
               >
-                Make Memes
+                😴 Too Tired To Quit
               </Link>
 
               <Link
@@ -59,12 +59,12 @@ export default function HeroSection() {
               >
                 Everyone&apos;s Tired
               </Link>
-
+              
               <Link
-                href="/too-tired-to-quit"
+                href="/meme-generator"
                 className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
               >
-                😴 Too Tired To Quit
+                Make Memes
               </Link>
 
              <Link
