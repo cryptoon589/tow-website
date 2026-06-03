@@ -207,7 +207,8 @@ export function calculateMaxRewardTow(towAmount: number) {
 
 export function calculateUnlockedRewardTow(input: {
   towAmount: number;
-  holdDays: number;
+  holdDays?: number;
+  rewardPercent?: number;
   recentGameRuns?: number;
   recentRaidPosts?: number;
   gameRuns?: number;
@@ -220,30 +221,29 @@ export function calculateUnlockedRewardTow(input: {
     return 0;
   }
 
-  const breakdown =
-    calculateRewardBreakdown({
-      holdDays: input.holdDays,
+  let rewardPercent = Number(input.rewardPercent ?? NaN);
 
-      recentGameRuns:
-        input.recentGameRuns ?? 0,
-
-      recentRaidPosts:
-        input.recentRaidPosts ?? 0,
-
-      gameRuns:
-        input.gameRuns ?? 0,
-
-      raidPosts:
-        input.raidPosts ?? 0,
-
-      gameBestScore:
-        input.gameBestScore ?? 0,
+  if (!Number.isFinite(rewardPercent)) {
+    const breakdown = calculateRewardBreakdown({
+      holdDays: input.holdDays ?? 0,
+      recentGameRuns: input.recentGameRuns ?? 0,
+      recentRaidPosts: input.recentRaidPosts ?? 0,
+      gameRuns: input.gameRuns ?? 0,
+      raidPosts: input.raidPosts ?? 0,
+      gameBestScore: input.gameBestScore ?? 0,
     });
+
+    rewardPercent = breakdown.totalPercent;
+  }
+
+  if (!Number.isFinite(rewardPercent) || rewardPercent <= 0) {
+    return 0;
+  }
 
   return Number(
     (
       towAmount *
-      (breakdown.totalPercent / 100)
+      (Math.min(MAX_REWARD_PERCENT, rewardPercent) / 100)
     ).toFixed(6)
   );
 }
