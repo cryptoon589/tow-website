@@ -205,14 +205,47 @@ export function calculateMaxRewardTow(towAmount: number) {
   return Number((towAmount * (MAX_REWARD_PERCENT / 100)).toFixed(6));
 }
 
-export function calculateUnlockedRewardTow(input: { towAmount: number; rewardPercent: number }) {
-  const towAmount = input.towAmount;
-  const rewardPercent = input.rewardPercent;
+export function calculateUnlockedRewardTow(input: {
+  towAmount: number;
+  holdDays: number;
+  recentGameRuns?: number;
+  recentRaidPosts?: number;
+  gameRuns?: number;
+  raidPosts?: number;
+  gameBestScore?: number;
+}) {
+  const towAmount = Number(input.towAmount ?? 0);
 
-  if (!Number.isFinite(towAmount) || towAmount <= 0) return 0;
-  if (!Number.isFinite(rewardPercent) || rewardPercent <= 0) return 0;
+  if (!Number.isFinite(towAmount) || towAmount <= 0) {
+    return 0;
+  }
 
-  return Number((towAmount * (Math.min(MAX_REWARD_PERCENT, rewardPercent) / 100)).toFixed(6));
+  const breakdown =
+    calculateRewardBreakdown({
+      holdDays: input.holdDays,
+
+      recentGameRuns:
+        input.recentGameRuns ?? 0,
+
+      recentRaidPosts:
+        input.recentRaidPosts ?? 0,
+
+      gameRuns:
+        input.gameRuns ?? 0,
+
+      raidPosts:
+        input.raidPosts ?? 0,
+
+      gameBestScore:
+        input.gameBestScore ?? 0,
+    });
+
+  return Number(
+    (
+      towAmount *
+      (breakdown.totalPercent / 100)
+    ).toFixed(6)
+  );
 }
 
 export function maskWallet(wallet: string) {
