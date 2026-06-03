@@ -114,19 +114,13 @@ export async function GET() {
         Number(position.max_reward_tow ?? 0) ||
         calculateMaxRewardTow(towAmount);
 
-      const unlockedRewardTow = calculateUnlockedRewardTow({
-        towAmount,
-        rewardPercent:
-          holdDays >= 84
-            ? 15
-            : holdDays >= 56
-            ? 7
-            : holdDays >= 28
-            ? 2.5
-            : 0,
-      });
+      const unlockedRewardTow =
+      calculateUnlockedRewardTow({
+      towAmount,
+      holdDays,
+  });
 
-      // Use the OLDEST active commitment as the wallet's real survivor streak.
+      // Use the LONGEST active commitment as the survivor streak.
       summary.holdDays = Math.max(summary.holdDays, holdDays);
 
       summary.alivePositions += 1;
