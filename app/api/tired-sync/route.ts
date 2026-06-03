@@ -70,6 +70,12 @@ export async function POST(request: Request) {
     const supabase = getSupabase();
     const results = [];
 
+    let positionsCreated = 0;
+    let disqualified = 0;
+
+    const newCommitments = [];
+    const disqualifiedCommitments = [];
+
     for (const event of events) {
       const walletAddress = String(event.walletAddress ?? "").trim();
       const txHash = String(event.txHash ?? "").trim();
@@ -177,12 +183,29 @@ export async function POST(request: Request) {
             continue;
           }
 
-          results.push({
-            walletAddress,
-            txHash,
-            ok: true,
-            action: "position_created",
-          });
+          positionsCreated++;
+
+const { data: player } = await supabase
+  .from("tow_players")
+  .select("x_username,telegram_username")
+  .eq("wallet_address", walletAddress)
+  .maybeSingle();
+
+newCommitments.push({
+  walletAddress,
+  xUsername: player?.x_username ?? null,
+  telegramUsername: player?.telegram_username ?? null,
+  xrpAmount: xrpValue,
+  towAmount,
+  txHash,
+});
+
+results.push({
+  walletAddress,
+  txHash,
+  ok: true,
+  action: "position_created",
+});
         } else {
           results.push({
             walletAddress,
@@ -198,7 +221,8 @@ export async function POST(request: Request) {
       if (eventType === "sell") {
         const { data: alivePositions, error: findError } = await supabase
           .from("tow_buy_positions")
-          .select("id")
+          .select("id,created_at")
+          .order("created_at", { ascending: true })
           .eq("wallet_address", walletAddress)
           .eq("status", "alive");
 
@@ -232,13 +256,49 @@ export async function POST(request: Request) {
           continue;
         }
 
-        results.push({
-          walletAddress,
-          txHash,
-          ok: true,
-          action: "wallet_disqualified",
-          disqualifiedPositions: alivePositions?.length ?? 0,
-        });
+        const disqualifiedCount =
+  alivePositions?.length ?? 0;
+
+if (disqualifiedCount > 0) {
+  disqualified += disqualifiedCount;
+
+  const { data: player } = await supabase
+    .from("tow_players")
+    .select("x_username,telegram_username")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  const oldestPosition =
+  alivePositions?.[0];
+
+const holdDays = oldestPosition?.created_at
+  ? Math.floor(
+      (Date.now() -
+        new Date(
+          oldestPosition.created_at
+        ).getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+  : 0;
+
+  disqualifiedCommitments.push({
+    holdDays,
+    walletAddress,
+    xUsername: player?.x_username ?? null,
+    telegramUsername:
+      player?.telegram_username ?? null,
+    txHash,
+    count: disqualifiedCount,
+  });
+}
+
+results.push({
+  walletAddress,
+  txHash,
+  ok: true,
+  action: "wallet_disqualified",
+  disqualifiedPositions: disqualifiedCount,
+});
 
         continue;
       }
@@ -251,15 +311,11 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true, results });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: "Could not sync tired events.",
-        details:
-          error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  }
-}
+   return NextResponse.json({
+  ok: true,
+  positionsCreated,
+  disqualified,
+  newCommitments,
+  disqualifiedCommitments,
+  results,
+});
