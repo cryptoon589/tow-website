@@ -61,11 +61,18 @@ export default function HeroSection() {
               </Link>
 
               <Link
-                href="/play/start"
-                className="rounded bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
+                href="/too-tired-to-quit"
+                className="rounded bg-black px-6 py-3 font-bold text-white transition hover:bg-gray-800"
               >
-                🎮 Play TOW Game
+                😴 Too Tired To Quit
               </Link>
+
+             <Link
+               href="/play/start"
+               className="rounded bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700"
+             >
+                🎮 Play TOW Game
+             </Link>
             </div>
           </div>
         </div>
