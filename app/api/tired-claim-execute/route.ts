@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getHoldDays } from "@/lib/towProof";
+import {
+  getHoldDays,
+  calculateUnlockedRewardTow,
+} from "@/lib/towProof";
 
 export const dynamic = "force-dynamic";
 
@@ -145,7 +148,10 @@ const totalTowCommitted =
   Number(position.tow_amount ?? 0);
 
 const totalUnlockedTow =
-  Number(position.unlocked_reward_tow ?? 0);
+  calculateUnlockedRewardTow({
+    towAmount: totalTowCommitted,
+    holdDays: survivedDays,
+  });
 
     const now = new Date().toISOString();
 
