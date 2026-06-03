@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
 
     const results: any[] = [];
 
+    let positionsCreated = 0;
+    let disqualified = 0;
+
+    const newCommitments: any[] = [];
+    const disqualifiedCommitments: any[] = [];
+
     for (const player of players ?? []) {
       const walletAddress = String(
         player.wallet_address ?? ""
@@ -119,19 +125,61 @@ export async function POST(request: NextRequest) {
           .json()
           .catch(() => null);
 
-        results.push({
-          walletAddress,
-          ok: response.ok,
-          status: response.status,
-          scanned: Number(
-            data?.scanned ?? 0
-          ),
-          detected: Number(
-            data?.detected ?? 0
-          ),
-          note: data?.note,
-          error: data?.error,
-        });
+        const scanned = Number(
+  data?.scanned ?? 0
+);
+
+const detected = Number(
+  data?.detected ?? 0
+);
+
+const walletPositionsCreated =
+  Number(
+    data?.positionsCreated ?? 0
+  );
+
+const walletDisqualified =
+  Number(
+    data?.disqualified ?? 0
+  );
+
+positionsCreated +=
+  walletPositionsCreated;
+
+disqualified +=
+  walletDisqualified;
+
+if (
+  Array.isArray(data?.newCommitments)
+) {
+  newCommitments.push(
+    ...data.newCommitments
+  );
+}
+
+if (
+  Array.isArray(
+    data?.disqualifiedCommitments
+  )
+) {
+  disqualifiedCommitments.push(
+    ...data.disqualifiedCommitments
+  );
+}
+
+results.push({
+  walletAddress,
+  ok: response.ok,
+  status: response.status,
+  scanned,
+  detected,
+  positionsCreated:
+    walletPositionsCreated,
+  disqualified:
+    walletDisqualified,
+  note: data?.note,
+  error: data?.error,
+});
       } catch (walletError) {
         results.push({
           walletAddress,
@@ -161,12 +209,25 @@ export async function POST(request: NextRequest) {
       );
 
     return NextResponse.json({
-      ok: true,
-      walletsScanned: results.length,
-      transactionsScanned,
-      eventsDetected,
-      results,
-    });
+  ok: true,
+
+  walletsScanned:
+    results.length,
+
+  transactionsScanned,
+
+  eventsDetected,
+
+  positionsCreated,
+
+  disqualified,
+
+  newCommitments,
+
+  disqualifiedCommitments,
+
+  results,
+});
   } catch (error) {
     return NextResponse.json(
       {
