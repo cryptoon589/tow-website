@@ -319,3 +319,16 @@ results.push({
   disqualifiedCommitments,
   results,
 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Could not sync wallet events.",
+        details:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
