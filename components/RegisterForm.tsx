@@ -22,7 +22,7 @@ export default function RegisterForm() {
   const [generatingCode, setGeneratingCode] = useState(false);
 
   const telegramBotUsername =
-    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "";
+    process.env.TELEGRAM_BOT_USERNAME ?? "";
 
   useEffect(() => {
     setExistingUser(getCurrentUser());
