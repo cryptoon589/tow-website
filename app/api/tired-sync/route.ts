@@ -28,6 +28,9 @@ const VALID_EVENT_TYPES = new Set([
   "reward",
 ]);
 
+const MIN_REAL_SELL_XRP = 5;
+const MIN_REAL_SELL_TOW = 1000;
+
 function getSupabase() {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -277,7 +280,23 @@ const neededXrp = Math.max(
   continue;
 }
 
-      if (eventType === "sell") {
+  if (
+  eventType === "sell" &&
+  (xrpValue < MIN_REAL_SELL_XRP || towAmount < MIN_REAL_SELL_TOW)
+) {
+  results.push({
+    walletAddress,
+    txHash,
+    ok: true,
+    action: "sell_ignored_dust_or_amm_noise",
+    xrpValue,
+    towAmount,
+  });
+
+  continue;
+}
+
+if (eventType === "sell") {
         const { data: alivePositions, error: findError } = await supabase
           .from("tow_buy_positions")
           .select("id,created_at")
