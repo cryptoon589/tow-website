@@ -131,92 +131,151 @@ export async function POST(request: Request) {
         continue;
       }
 
-      if (eventType === "buy") {
-        if (xrpValue >= MIN_QUALIFYING_BUY_XRP && towAmount > 0) {
-          const { data: existingPosition, error: existingPositionError } =
-            await supabase
-              .from("tow_buy_positions")
-              .select("id,status")
-              .eq("buy_tx_hash", txHash)
-              .maybeSingle();
+if (eventType === "buy") {
+  if (towAmount <= 0 || xrpValue <= 0) {
+    results.push({
+      walletAddress,
+      txHash,
+      ok: true,
+      action: "buy_recorded_not_counted",
+    });
+    continue;
+  }
 
-          if (existingPositionError) {
-            results.push({
-              walletAddress,
-              txHash,
-              ok: false,
-              error: existingPositionError.message,
-            });
-            continue;
-          }
+  const { data: buyEvents, error: buyEventsError } = await supabase
+    .from("tow_wallet_events")
+    .select("tx_hash,xrp_value,tow_amount,event_at")
+    .eq("wallet_address", walletAddress)
+    .eq("event_type", "buy")
+    .order("event_at", { ascending: true });
 
-          if (existingPosition) {
-            results.push({
-              walletAddress,
-              txHash,
-              ok: true,
-              action: "position_already_exists",
-              status: existingPosition.status,
-            });
-            continue;
-          }
+  if (buyEventsError) {
+    results.push({
+      walletAddress,
+      txHash,
+      ok: false,
+      error: buyEventsError.message,
+    });
+    continue;
+  }
 
-          const { error: positionError } = await supabase
-            .from("tow_buy_positions")
-            .insert({
-              wallet_address: walletAddress,
-              buy_tx_hash: txHash,
-              buy_value_xrp: xrpValue,
-              tow_amount: towAmount,
-              max_reward_tow: calculateMaxRewardTow(towAmount),
-              status: "alive",
-              created_at: eventAt.toISOString(),
-            });
+  const cumulativeXrp = (buyEvents ?? []).reduce(
+    (sum, buy) => sum + Number(buy.xrp_value ?? 0),
+    0
+  );
 
-          if (positionError) {
-            results.push({
-              walletAddress,
-              txHash,
-              ok: false,
-              error: positionError.message,
-            });
-            continue;
-          }
+  const cumulativeTow = (buyEvents ?? []).reduce(
+    (sum, buy) => sum + Number(buy.tow_amount ?? 0),
+    0
+  );
 
-          positionsCreated++;
+  const earnedCommitments = Math.floor(
+    cumulativeXrp / MIN_QUALIFYING_BUY_XRP
+  );
 
-const { data: player } = await supabase
-  .from("tow_players")
-  .select("x_username,telegram_username")
-  .eq("wallet_address", walletAddress)
-  .maybeSingle();
+  const { data: existingCommitments, error: commitmentError } =
+    await supabase
+      .from("tow_buy_positions")
+      .select("id")
+      .eq("wallet_address", walletAddress);
 
-newCommitments.push({
-  walletAddress,
-  xUsername: player?.x_username ?? null,
-  telegramUsername: player?.telegram_username ?? null,
-  xrpAmount: xrpValue,
-  towAmount,
-  txHash,
-});
+  if (commitmentError) {
+    results.push({
+      walletAddress,
+      txHash,
+      ok: false,
+      error: commitmentError.message,
+    });
+    continue;
+  }
 
-results.push({
-  walletAddress,
-  txHash,
-  ok: true,
-  action: "position_created",
-});
-        } else {
-          results.push({
-            walletAddress,
-            txHash,
-            ok: true,
-            action: "buy_recorded_not_qualifying",
-          });
-        }
+  const existingCount = existingCommitments?.length ?? 0;
+  const commitmentsToCreate = earnedCommitments - existingCount;
+  const nextThreshold =
+  (existingCount + 1) * MIN_QUALIFYING_BUY_XRP;
 
-        continue;
-      }
+const neededXrp = Math.max(
+  0,
+  nextThreshold - cumulativeXrp
+);
+
+  if (commitmentsToCreate <= 0) {
+    results.push({
+      walletAddress,
+      txHash,
+      ok: true,
+      action: "buy_recorded_accumulating",
+      cumulativeXrp,
+      neededXrp,
+    });
+    continue;
+  }
+
+  const firstBuy = (buyEvents ?? [])[0];
+  const commitmentStartAt =
+  eventAt.toISOString();
+  const commitmentTxHash = firstBuy?.tx_hash ?? txHash;
+
+  const perCommitmentTow =
+    earnedCommitments > 0 ? cumulativeTow / earnedCommitments : cumulativeTow;
+
+  const { data: player } = await supabase
+    .from("tow_players")
+    .select("x_username,telegram_username")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  for (let i = 0; i < commitmentsToCreate; i++) {
+    const commitmentNumber = existingCount + i + 1;
+
+    const { error: positionError } = await supabase
+      .from("tow_buy_positions")
+      .insert({
+        wallet_address: walletAddress,
+        buy_tx_hash: `${commitmentTxHash}_${commitmentNumber}`,
+        buy_value_xrp: MIN_QUALIFYING_BUY_XRP,
+        tow_amount: perCommitmentTow,
+        max_reward_tow: calculateMaxRewardTow(perCommitmentTow),
+        status: "alive",
+        created_at: commitmentStartAt,
+      });
+
+    if (positionError) {
+      results.push({
+        walletAddress,
+        txHash,
+        ok: false,
+        error: positionError.message,
+      });
+      continue;
+    }
+
+    positionsCreated++;
+
+    newCommitments.push({
+      walletAddress,
+      xUsername: player?.x_username ?? null,
+      telegramUsername: player?.telegram_username ?? null,
+      xrpAmount: MIN_QUALIFYING_BUY_XRP,
+      towAmount: perCommitmentTow,
+      txHash: `${commitmentTxHash}_${commitmentNumber}`,
+    });
+  }
+
+  results.push({
+    walletAddress,
+    txHash,
+    ok: true,
+    action: "cumulative_positions_checked",
+    cumulativeXrp,
+    cumulativeTow,
+    earnedCommitments,
+    existingCount,
+    createdCommitments: commitmentsToCreate,
+  });
+
+  continue;
+}
 
       if (eventType === "sell") {
         const { data: alivePositions, error: findError } = await supabase
