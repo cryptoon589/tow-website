@@ -134,13 +134,18 @@ export async function POST(request: Request) {
         continue;
       }
 
-if (eventType === "buy") {
-  if (towAmount <= 0 || xrpValue <= 0) {
+if (eventType === "buy" || eventType === "sell") {
+  if (
+    eventType === "sell" &&
+    (xrpValue < MIN_REAL_SELL_XRP || towAmount < MIN_REAL_SELL_TOW)
+  ) {
     results.push({
       walletAddress,
       txHash,
       ok: true,
-      action: "buy_recorded_not_counted",
+      action: "sell_ignored_dust_or_amm_noise",
+      xrpValue,
+      towAmount,
     });
     continue;
   }
@@ -149,237 +154,183 @@ if (eventType === "buy") {
     .from("tow_wallet_events")
     .select("tx_hash,xrp_value,tow_amount,event_at")
     .eq("wallet_address", walletAddress)
-    .eq("event_type", "buy")
-    .order("event_at", { ascending: true });
+    .eq("event_type", "buy");
 
   if (buyEventsError) {
-    results.push({
-      walletAddress,
-      txHash,
-      ok: false,
-      error: buyEventsError.message,
-    });
+    results.push({ walletAddress, txHash, ok: false, error: buyEventsError.message });
     continue;
   }
 
-  const cumulativeXrp = (buyEvents ?? []).reduce(
+  const { data: sellEvents, error: sellEventsError } = await supabase
+    .from("tow_wallet_events")
+    .select("tx_hash,xrp_value,tow_amount,event_at")
+    .eq("wallet_address", walletAddress)
+    .eq("event_type", "sell")
+    .gte("xrp_value", MIN_REAL_SELL_XRP)
+    .gte("tow_amount", MIN_REAL_SELL_TOW);
+
+  if (sellEventsError) {
+    results.push({ walletAddress, txHash, ok: false, error: sellEventsError.message });
+    continue;
+  }
+
+  const totalBuyXrp = (buyEvents ?? []).reduce(
     (sum, buy) => sum + Number(buy.xrp_value ?? 0),
     0
   );
 
-  const cumulativeTow = (buyEvents ?? []).reduce(
+  const totalBuyTow = (buyEvents ?? []).reduce(
     (sum, buy) => sum + Number(buy.tow_amount ?? 0),
     0
   );
 
-  const earnedCommitments = Math.floor(
-    cumulativeXrp / MIN_QUALIFYING_BUY_XRP
+  const totalSellXrp = (sellEvents ?? []).reduce(
+    (sum, sell) => sum + Number(sell.xrp_value ?? 0),
+    0
   );
 
-  const { data: existingCommitments, error: commitmentError } =
-    await supabase
-      .from("tow_buy_positions")
-      .select("id")
-      .eq("wallet_address", walletAddress);
+  const totalSellTow = (sellEvents ?? []).reduce(
+  (sum, sell) => sum + Number(sell.tow_amount ?? 0),
+  0
+);
+
+const netCommittedTow = Math.max(0, totalBuyTow - totalSellTow);
+
+  const netCommittedXrp = Math.max(0, totalBuyXrp - totalSellXrp);
+
+  const targetCommitments = Math.floor(
+    netCommittedXrp / MIN_QUALIFYING_BUY_XRP
+  );
+
+  const { data: existingCommitments, error: commitmentError } = await supabase
+    .from("tow_buy_positions")
+    .select("id,created_at,status")
+    .eq("wallet_address", walletAddress)
+    .eq("status", "alive")
+    .order("created_at", { ascending: true });
 
   if (commitmentError) {
-    results.push({
-      walletAddress,
-      txHash,
-      ok: false,
-      error: commitmentError.message,
-    });
+    results.push({ walletAddress, txHash, ok: false, error: commitmentError.message });
     continue;
   }
 
   const existingCount = existingCommitments?.length ?? 0;
-  const commitmentsToCreate = earnedCommitments - existingCount;
-  const nextThreshold =
-  (existingCount + 1) * MIN_QUALIFYING_BUY_XRP;
+  const delta = targetCommitments - existingCount;
 
-const neededXrp = Math.max(
-  0,
-  nextThreshold - cumulativeXrp
-);
+  const { data: player } = await supabase
+    .from("tow_players")
+    .select("x_username,telegram_username,proof_started_at")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
 
-  if (commitmentsToCreate <= 0) {
-    results.push({
-      walletAddress,
-      txHash,
-      ok: true,
-      action: "buy_recorded_accumulating",
-      cumulativeXrp,
-      neededXrp,
-    });
-    continue;
-  }
+  const proofStartedAt = player?.proof_started_at
+    ? new Date(player.proof_started_at)
+    : null;
 
-  const firstBuy = (buyEvents ?? [])[0];
-  const commitmentStartAt =
-  eventAt.toISOString();
-  const commitmentTxHash = firstBuy?.tx_hash ?? txHash;
+  const isHistoricalEvent = proofStartedAt ? eventAt < proofStartedAt : true;
 
   const perCommitmentTow =
-    earnedCommitments > 0 ? cumulativeTow / earnedCommitments : cumulativeTow;
+  targetCommitments > 0 ? netCommittedTow / targetCommitments : 0;
 
-  const { data: player } = await supabase
-    .from("tow_players")
-    .select("x_username,telegram_username")
-    .eq("wallet_address", walletAddress)
-    .maybeSingle();
+  if (delta > 0) {
+    for (let i = 0; i < delta; i++) {
+      const commitmentNumber = existingCount + i + 1;
 
-  for (let i = 0; i < commitmentsToCreate; i++) {
-    const commitmentNumber = existingCount + i + 1;
+      const { error: insertError } = await supabase
+        .from("tow_buy_positions")
+        .insert({
+          wallet_address: walletAddress,
+          buy_tx_hash: `${txHash}_${commitmentNumber}`,
+          buy_value_xrp: MIN_QUALIFYING_BUY_XRP,
+          tow_amount: perCommitmentTow,
+          max_reward_tow: calculateMaxRewardTow(perCommitmentTow),
+          status: "alive",
+          created_at: eventAt.toISOString(),
+        });
 
-    const { error: positionError } = await supabase
-      .from("tow_buy_positions")
-      .insert({
-        wallet_address: walletAddress,
-        buy_tx_hash: `${commitmentTxHash}_${commitmentNumber}`,
-        buy_value_xrp: MIN_QUALIFYING_BUY_XRP,
-        tow_amount: perCommitmentTow,
-        max_reward_tow: calculateMaxRewardTow(perCommitmentTow),
-        status: "alive",
-        created_at: commitmentStartAt,
-      });
-
-    if (positionError) {
-      results.push({
-        walletAddress,
-        txHash,
-        ok: false,
-        error: positionError.message,
-      });
-      continue;
-    }
-
-    positionsCreated++;
-
-    newCommitments.push({
-      walletAddress,
-      xUsername: player?.x_username ?? null,
-      telegramUsername: player?.telegram_username ?? null,
-      xrpAmount: MIN_QUALIFYING_BUY_XRP,
-      towAmount: perCommitmentTow,
-      txHash: `${commitmentTxHash}_${commitmentNumber}`,
-    });
-  }
-
-  results.push({
-    walletAddress,
-    txHash,
-    ok: true,
-    action: "cumulative_positions_checked",
-    cumulativeXrp,
-    cumulativeTow,
-    earnedCommitments,
-    existingCount,
-    createdCommitments: commitmentsToCreate,
-  });
-
-  continue;
-}
-
-  if (
-  eventType === "sell" &&
-  (xrpValue < MIN_REAL_SELL_XRP || towAmount < MIN_REAL_SELL_TOW)
-) {
-  results.push({
-    walletAddress,
-    txHash,
-    ok: true,
-    action: "sell_ignored_dust_or_amm_noise",
-    xrpValue,
-    towAmount,
-  });
-
-  continue;
-}
-
-if (eventType === "sell") {
-        const { data: alivePositions, error: findError } = await supabase
-          .from("tow_buy_positions")
-          .select("id,created_at")
-          .order("created_at", { ascending: true })
-          .eq("wallet_address", walletAddress)
-          .eq("status", "alive");
-
-        if (findError) {
-          results.push({
-            walletAddress,
-            txHash,
-            ok: false,
-            error: findError.message,
-          });
-          continue;
-        }
-
-        const { error: disqualifyError } = await supabase
-          .from("tow_buy_positions")
-          .update({
-            status: "disqualified",
-            disqualified_at: eventAt.toISOString(),
-            sell_tx_hash: txHash,
-          })
-          .eq("wallet_address", walletAddress)
-          .eq("status", "alive");
-
-        if (disqualifyError) {
-          results.push({
-            walletAddress,
-            txHash,
-            ok: false,
-            error: disqualifyError.message,
-          });
-          continue;
-        }
-
-        const disqualifiedCount =
-  alivePositions?.length ?? 0;
-
-if (disqualifiedCount > 0) {
-  disqualified += disqualifiedCount;
-
-  const { data: player } = await supabase
-    .from("tow_players")
-    .select("x_username,telegram_username")
-    .eq("wallet_address", walletAddress)
-    .maybeSingle();
-
-  const oldestPosition =
-  alivePositions?.[0];
-
-const holdDays = oldestPosition?.created_at
-  ? Math.floor(
-      (Date.now() -
-        new Date(
-          oldestPosition.created_at
-        ).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  : 0;
-
-  disqualifiedCommitments.push({
-    holdDays,
-    walletAddress,
-    xUsername: player?.x_username ?? null,
-    telegramUsername:
-      player?.telegram_username ?? null,
-    txHash,
-    count: disqualifiedCount,
-  });
-}
-
-results.push({
-  walletAddress,
-  txHash,
-  ok: true,
-  action: "wallet_disqualified",
-  disqualifiedPositions: disqualifiedCount,
-});
-
+      if (insertError) {
+        results.push({ walletAddress, txHash, ok: false, error: insertError.message });
         continue;
       }
+
+      positionsCreated++;
+
+      if (!isHistoricalEvent) {
+        newCommitments.push({
+          walletAddress,
+          xUsername: player?.x_username ?? null,
+          telegramUsername: player?.telegram_username ?? null,
+          xrpAmount: MIN_QUALIFYING_BUY_XRP,
+          towAmount: perCommitmentTow,
+          txHash: `${txHash}_${commitmentNumber}`,
+        });
+      }
+    }
+  }
+
+  if (delta < 0) {
+    const commitmentsToRemove = Math.abs(delta);
+    const removable = (existingCommitments ?? []).slice(0, commitmentsToRemove);
+
+    for (const position of removable) {
+      const { error: removeError } = await supabase
+        .from("tow_buy_positions")
+        .update({
+          status: "disqualified",
+          disqualified_at: eventAt.toISOString(),
+          sell_tx_hash: txHash,
+        })
+        .eq("id", position.id);
+
+      if (removeError) {
+        results.push({ walletAddress, txHash, ok: false, error: removeError.message });
+        continue;
+      }
+
+      disqualified++;
+
+      if (!isHistoricalEvent) {
+        const holdDays = position.created_at
+          ? Math.floor(
+              (Date.now() - new Date(position.created_at).getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          : 0;
+
+        disqualifiedCommitments.push({
+          holdDays,
+          walletAddress,
+          xUsername: player?.x_username ?? null,
+          telegramUsername: player?.telegram_username ?? null,
+          txHash,
+          count: 1,
+        });
+      }
+    }
+  }
+
+  const nextThreshold = (targetCommitments + 1) * MIN_QUALIFYING_BUY_XRP;
+  const neededXrp = Math.max(0, nextThreshold - netCommittedXrp);
+
+  results.push({
+    walletAddress,
+    txHash,
+    ok: true,
+    action: "net_commitments_reconciled",
+    totalBuyXrp,
+    totalSellXrp,
+    netCommittedXrp,
+    targetCommitments,
+    existingCount,
+    delta,
+    neededXrp,
+    totalSellTow,
+    netCommittedTow,
+    totalBuyTow,
+  });
+
+  continue;
+}
 
       results.push({
         walletAddress,
