@@ -267,14 +267,39 @@ export function calculateSurvivalScore(input: {
   alivePositions: number;
   totalTowAmount: number;
 }) {
-  const holdScore = input.holdDays * 10;
-  const commitmentScore = input.alivePositions * 100;
-  const towScore = Math.sqrt(Math.max(0, input.totalTowAmount) / 1000);
-  const raidScore = input.raidPosts * 5;
-  const runScore = Math.floor(input.gameRuns * 0.75);
-  const bestScore = Math.floor(input.gameBestScore / 25);
+  const holdScore = input.holdDays * 2;
 
-  return Math.floor(holdScore + commitmentScore + towScore + raidScore + runScore + bestScore);
+  const commitmentScore =
+    input.alivePositions * 25;
+
+  const towScore = Math.min(
+  25,
+  Math.floor(
+    Math.sqrt(
+      Math.max(0, input.totalTowAmount)
+    ) / 50
+  )
+);
+
+  const raidScore =
+    input.raidPosts * 2;
+
+  const runScore = Math.floor(
+    input.gameRuns * 0.25
+  );
+
+  const bestScore = Math.floor(
+    input.gameBestScore / 100
+  );
+
+  return Math.floor(
+    holdScore +
+      commitmentScore +
+      towScore +
+      raidScore +
+      runScore +
+      bestScore
+  );
 }
 
 export const calculateActivityScore = calculateSurvivalScore;
