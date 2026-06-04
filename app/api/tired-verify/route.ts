@@ -181,13 +181,14 @@ export async function POST(request: Request) {
      */
 
     const { error: updateError } =
-      await supabase
-        .from("tow_players")
-        .update({
-          verified: true,
-          verified_at: verifiedAt,
-          verification_code: null,
-        })
+    await supabase
+    .from("tow_players")
+    .update({
+      verified: true,
+      verified_at: verifiedAt,
+      proof_started_at: verifiedAt,
+      verification_code: null,
+    })
         .eq("id", player.id)
         .eq("verified", false);
 
