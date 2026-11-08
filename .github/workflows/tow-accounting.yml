@@ -27,6 +27,7 @@ on:
       - "tests/towHistoryCoverage.test.cjs"
       - "tests/towAccountTxCoverage.test.cjs"
       - "tests/towLedgerMovementInspection.test.cjs"
+      - "tests/towSchemaApiCompatibility.test.cjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
