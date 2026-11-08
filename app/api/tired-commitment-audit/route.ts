@@ -5,6 +5,7 @@ import { reconcileCostBasis, type LedgerMovement } from "@/lib/towCostBasis";
 import { replayProofCommitments, type ProofMovement } from "@/lib/towCommitmentLifecycle";
 import { reconstructProofBaseline } from "@/lib/towProofBaseline";
 import { assessProofMigration } from "@/lib/towMigrationReadiness";
+import { previewVerifiedProof } from "@/lib/towUnifiedProofPreview";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +94,20 @@ export async function GET(request: NextRequest) {
           MIN_QUALIFYING_BUY_XRP
         )
       : null;
+    const unified = proofStartedAt
+      ? previewVerifiedProof(
+          movements.map((movement): ProofMovement => ({
+            ...movement,
+            eventAt: movement.eventAt ?? "",
+            transactionIndex: movement.transactionIndex ?? undefined,
+          })),
+          proofStartedAt,
+          MIN_QUALIFYING_BUY_XRP,
+          false
+        )
+      : null;
     const warnings: string[] = [
+      ...(unified?.warnings ?? []),
       ...costBasis.warnings,
       ...lifecycle.warnings,
       ...(baseline?.warnings ?? []),
@@ -117,8 +131,8 @@ export async function GET(request: NextRequest) {
       eventHistoryComplete: false,
       baselineComplete: Boolean(baseline?.complete),
       lifecycleComplete: lifecycle.complete,
-      predictedAliveCount: lifecycle.commitments.filter((p) => p.status === "alive").length,
-      predictedDisqualifiedCount: lifecycle.commitments.filter((p) => p.status === "disqualified").length,
+      predictedAliveCount: (unified?.lifecycle ?? lifecycle).commitments.filter((p) => p.status === "alive").length,
+      predictedDisqualifiedCount: (unified?.lifecycle ?? lifecycle).commitments.filter((p) => p.status === "disqualified").length,
       positions: positions.map((p) => ({
         ...p,
         unlocked_reward_tow: Number(p.unlocked_reward_tow ?? 0),
@@ -138,6 +152,7 @@ export async function GET(request: NextRequest) {
         disqualified: positions.filter((p) => p.status === "disqualified").length,
       },
       warnings,
+      unifiedPreview: unified,
       baseline: baseline ? { ...baseline, safeToApply: false } : null,
       lifecycle: { ...lifecycle, safeToApply: false },
       costBasis: {
