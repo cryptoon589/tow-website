@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { isValidXrplWallet } from "@/lib/towProof";
+import { isValidXrplWallet, MIN_QUALIFYING_BUY_XRP } from "@/lib/towProof";
+import { reconcileCostBasis, type LedgerMovement } from "@/lib/towCostBasis";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const [playerResult, eventsResult, positionsResult] = await Promise.all([
       db.from("tow_players").select("verified,proof_started_at,last_scanned_ledger").eq("wallet_address", wallet).maybeSingle(),
       db.from("tow_wallet_events").select("tx_hash,event_type,xrp_value,tow_amount,ledger_index,event_at,raw_event").eq("wallet_address", wallet).order("ledger_index", { ascending: true }).limit(1000),
-      db.from("tow_buy_positions").select("id,buy_tx_hash,buy_value_xrp,tow_amount,remaining_tow,status,created_at,disqualified_at,sell_tx_hash,reward_status,reward_tx_hash").eq("wallet_address", wallet).order("created_at", { ascending: true }).limit(1000),
+      db.from("tow_buy_positions").select("id,buy_tx_hash,buy_value_xrp,tow_amount,remaining_tow,status,created_at,disqualified_at,sell_tx_hash,reward_status").eq("wallet_address", wallet).order("created_at", { ascending: true }).limit(1000),
     ]);
     if (playerResult.error) throw playerResult.error;
     if (eventsResult.error) throw eventsResult.error;
@@ -59,7 +60,17 @@ export async function GET(request: NextRequest) {
       tow_amount: Number(position.tow_amount),
       remaining_tow: position.remaining_tow == null ? null : Number(position.remaining_tow),
     }));
-    const warnings: string[] = [];
+    const movements: LedgerMovement[] = (eventsResult.data ?? []).map((event) => ({
+      txHash: String(event.tx_hash),
+      ledgerIndex: Number(event.ledger_index),
+      transactionIndex: Number((event.raw_event as any)?.meta?.TransactionIndex ?? 0),
+      eventAt: xrplTime(event.raw_event),
+      type: event.event_type as LedgerMovement["type"],
+      xrpValue: Number(event.xrp_value),
+      towAmount: Number(event.tow_amount),
+    }));
+    const costBasis = reconcileCostBasis(movements, MIN_QUALIFYING_BUY_XRP);
+    const warnings: string[] = [...costBasis.warnings];
     if (events.length === 1000) warnings.push("Event query hit 1000 rows: audit may be incomplete.");
     if (positions.length === 1000) warnings.push("Position query hit 1000 rows: audit may be incomplete.");
     if (events.some((event) => event.xrplTime == null)) warnings.push("Some events have no verifiable XRPL timestamp.");
@@ -81,6 +92,13 @@ export async function GET(request: NextRequest) {
         disqualified: positions.filter((p) => p.status === "disqualified").length,
       },
       warnings,
+      costBasis: {
+        ...costBasis,
+        safeToApply: false,
+        currentAlivePositions: positions.filter((p) => p.status === "alive").length,
+        differenceFromStoredAlive: costBasis.qualifyingCommitments -
+          positions.filter((p) => p.status === "alive").length,
+      },
       events,
       positions,
     });
