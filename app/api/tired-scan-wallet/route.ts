@@ -651,6 +651,7 @@ export async function POST(request: NextRequest) {
       // Do not silently skip a TOW movement with an unknown timestamp.
       // Otherwise the ledger cursor would advance past an unprocessed event.
       const meta = getTxMeta(entry);
+      if ((meta?.TransactionResult ?? meta?.transactionResult) !== "tesSUCCESS") continue;
       const inspection = inspectTowDelta(entry, walletAddress, issuerAddress, currencyCode);
       if (!inspection.reliable) {
         throw new Error(`Unverifiable XRPL movement at ledger ${ledgerIndex}: ${inspection.warnings.join("; ")}; checkpoint NOT advanced.`);
