@@ -1,0 +1,28 @@
+name: TOW commitment accounting checks
+
+on:
+  pull_request:
+    paths:
+      - "lib/towCostBasis.ts"
+      - "tests/towCostBasis.test.cjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/tow-accounting.yml"
+  push:
+    branches:
+      - "fix/tow-commitment-audit"
+
+jobs:
+  accounting-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:cost-basis
+      - run: npx tsc --noEmit
