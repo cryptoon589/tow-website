@@ -26,6 +26,19 @@ create table if not exists public.tow_accounting_processed (
   tx_hash text not null,
   primary key(wallet_address,tx_hash)
 );
+-- A wallet must have independent XRPL history verification before writes.
+-- There is deliberately no automatic certification based on event counts.
+create table if not exists public.tow_accounting_coverage (
+  wallet_address text primary key,
+  verified_complete boolean not null default false,
+  checked_at timestamptz,
+  first_wallet_ledger bigint,
+  proof_ledger bigint,
+  checked_through_ledger bigint,
+  balance_verified boolean not null default false,
+  notes text
+);
+alter table public.tow_accounting_coverage enable row level security;
 create table if not exists public.tow_accounting_initialized (
   wallet_address text primary key,
   initialized_at timestamptz not null
@@ -132,6 +145,14 @@ begin
   if not coalesce(v_player.verified,false) or v_player.proof_started_at is null then
     raise exception 'Verified proof start required before accounting';
   end if;
+  if not exists (
+    select 1 from public.tow_accounting_coverage
+    where wallet_address=p_wallet and verified_complete=true
+      and balance_verified=true and first_wallet_ledger is not null
+      and proof_ledger is not null and checked_through_ledger is not null
+      and first_wallet_ledger<=proof_ledger
+      and checked_through_ledger>=proof_ledger
+  ) then raise exception 'XRPL_HISTORY_COVERAGE_NOT_CERTIFIED'; end if;
   -- A legacy wallet must be mapped to its existing UUIDs before this engine
   -- may touch it. Never create replacement commitments over live positions.
   select count(*) into v_existing from public.tow_buy_positions
