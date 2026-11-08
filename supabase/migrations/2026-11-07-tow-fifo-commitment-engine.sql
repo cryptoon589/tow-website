@@ -217,7 +217,8 @@ begin
         from (
           select 0 as movement_kind,s.position_id,s.source_tx_hash,
                  s.remaining_tow,0::numeric as available_cost_xrp,
-                 p.status as position_status,l.ledger_index,l.acquired_at
+                 p.status as position_status,l.ledger_index,l.acquired_at,
+                 p.buy_tx_hash as commitment_order
           from public.tow_accounting_slices s
           join public.tow_buy_positions p on p.id=s.position_id
           join public.tow_accounting_lots l
@@ -228,11 +229,12 @@ begin
           select 1 as movement_kind,null::uuid as position_id,
                  l.source_tx_hash,l.available_tow as remaining_tow,
                  l.available_cost_xrp,null::text as position_status,
-                 l.ledger_index,l.acquired_at
+                 l.ledger_index,l.acquired_at,
+                 null::text as commitment_order
           from public.tow_accounting_lots l
           where l.wallet_address=p_wallet and l.available_tow>0
         ) inventory
-        order by ledger_index,acquired_at,source_tx_hash,movement_kind,position_id
+        order by ledger_index,acquired_at,source_tx_hash,movement_kind,commitment_order
       loop
         exit when v_remaining <= 0.00000001;
         v_take := least(v_remaining,v_slice.remaining_tow);
