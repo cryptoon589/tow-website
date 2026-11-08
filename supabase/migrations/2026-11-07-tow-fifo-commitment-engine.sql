@@ -138,6 +138,7 @@ declare
   v_proof_started boolean := false;
   v_last_processed_ledger bigint;
   v_has_transfer boolean;
+  v_proof_ledger bigint;
 begin
   select * into v_player from public.tow_players
   where wallet_address = p_wallet for update;
@@ -156,13 +157,12 @@ begin
         (select max(ledger_index) from public.tow_wallet_events
          where wallet_address=p_wallet),proof_ledger)
   ) then raise exception 'XRPL_HISTORY_COVERAGE_NOT_CERTIFIED'; end if;
-  if exists(
-    select 1 from public.tow_wallet_events
-    where wallet_address=p_wallet
-      and (event_at < v_player.proof_started_at and
-           ledger_index > (select proof_ledger from public.tow_accounting_coverage
-                           where wallet_address=p_wallet))
-  ) then raise exception 'PROOF_LEDGER_TIMESTAMP_CONFLICT'; end if;
+  -- Historical event_at may be import time. Proof phase is determined
+  -- exclusively from independently certified proof_ledger, not event_at.
+  -- If a transaction shares the proof ledger, it is treated as pre-proof
+  -- until its transaction index is independently verified.
+  select proof_ledger into v_proof_ledger
+  from public.tow_accounting_coverage where wallet_address=p_wallet;
   -- A legacy wallet must be mapped to its existing UUIDs before this engine
   -- may touch it. Never create replacement commitments over live positions.
   select count(*) into v_existing from public.tow_buy_positions
@@ -217,7 +217,7 @@ begin
         raise exception 'OUT_OF_ORDER_LEDGER_REPLAY';
       end if;
     end if;
-    if not v_proof_started and v_event.event_at >= v_player.proof_started_at then
+    if not v_proof_started and v_event.ledger_index > v_proof_ledger then
       v_positions_created := v_positions_created +
         public.tow_allocate_available_commitments(
           p_wallet,v_player.proof_started_at,v_event.tx_hash);
@@ -305,7 +305,7 @@ begin
     else
       raise exception 'Unsupported event type %',v_event.event_type;
     end if;
-    if v_event.event_at >= v_player.proof_started_at then
+    if v_event.ledger_index > v_proof_ledger then
       v_positions_created := v_positions_created +
         public.tow_allocate_available_commitments(p_wallet,v_event.event_at,v_event.tx_hash);
     end if;
