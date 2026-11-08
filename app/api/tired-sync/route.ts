@@ -70,6 +70,18 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as SyncEvent | SyncEvent[];
     const events = Array.isArray(body) ? body : [body];
+    // Fail closed until the per-commitment ledger migration is verified.
+    // The legacy algorithm subtracts XRP sale proceeds from XRP purchase cost
+    // and can disqualify unrelated commitments. A non-2xx response also stops
+    // tired-scan-wallet from advancing its checkpoint after an unsafe sync.
+    if (events.some((event) => event.eventType === "buy" || event.eventType === "sell" ||
+      event.eventType === "transfer_in" || event.eventType === "transfer_out")) {
+      return NextResponse.json({
+        error: "Commitment-affecting sync paused pending ledger-safe accounting migration.",
+        code: "TOW_ACCOUNTING_MIGRATION_REQUIRED",
+        retryable: false,
+      }, { status: 409 });
+    }
     const supabase = getSupabase();
     const results = [];
 
