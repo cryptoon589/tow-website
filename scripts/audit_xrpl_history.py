@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live, read-only XRPL account_tx verification. No DB writes or secrets."""
 import json, urllib.request, time
-RPC="https://xrplcluster.com"
+RPC_ENDPOINTS=["https://s1.ripple.com:51234","https://s2.ripple.com:51234","https://xrplcluster.com"]
 WALLETS={
 "r4e4c8QgoSjTaskaAaHvWLSKfMrAW92Cbn":{"stored":20,"checkpoint":108201300},
 "r4QqFdgZWoHhJwzhLs2dhR7pgGMfg1cSGf":{"stored":29,"checkpoint":108182015},
@@ -12,23 +12,28 @@ KNOWN={
 "85BE409C3D76E62FBB6238895775D3D57692F0D4CA2DFC52D32C4B291A066055":"rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA",
 }
 def rpc(method,params):
-    body=json.dumps({"method":method,"params":[params]}).encode()
-    for attempt in range(3):
-        try:
-            req=urllib.request.Request(RPC,data=body,headers={"Content-Type":"application/json","User-Agent":"TOW-History-Audit/1.0"})
-            with urllib.request.urlopen(req,timeout=35) as res: data=json.load(res)
-            result=data.get("result",{})
-            if result.get("status")!="success": raise RuntimeError(str(result.get("error",data))[:300])
-            return result
-        except Exception:
-            if attempt==2: raise
-            time.sleep(2*(attempt+1))
+    errors=[]
+    for endpoint in RPC_ENDPOINTS:
+        for attempt in range(3):
+            try:
+                body=json.dumps({"method":method,"params":[params]}).encode()
+                req=urllib.request.Request(endpoint,data=body,headers={"Content-Type":"application/json","User-Agent":"TOW-History-Audit/1.0"})
+                with urllib.request.urlopen(req,timeout=25) as res: data=json.load(res)
+                result=data.get("result",{})
+                if result.get("status")!="success":
+                    raise RuntimeError(str(result.get("error",data))[:200])
+                return result,endpoint
+            except Exception as exc:
+                errors.append(endpoint+":"+str(exc)[:100])
+                time.sleep(2*(attempt+1))
+    raise RuntimeError("All public XRPL endpoints failed: "+"; ".join(errors[-6:]))
 for wallet,known in WALLETS.items():
     marker=None; hashes=set(); pages=0; earliest=None; latest=None; duplicate=0; exhausted=False; validated=0; failures=0
-    while pages<100:
+    while pages<500:
         args={"account":wallet,"ledger_index_min":-1,"ledger_index_max":-1,"forward":True,"limit":200,"binary":False}
         if marker is not None: args["marker"]=marker
-        result=rpc("account_tx",args)
+        result,used_endpoint=rpc("account_tx",args)
+        time.sleep(0.3)
         pages+=1
         for entry in result.get("transactions",[]):
             tx=entry.get("tx_json") or entry.get("tx") or {}
@@ -44,4 +49,7 @@ for wallet,known in WALLETS.items():
         marker=result.get("marker")
         if marker is None: exhausted=True; break
     found=[h for h,w in KNOWN.items() if w==wallet and h in hashes]
-    print(json.dumps({"wallet":wallet,"rpc":RPC,"pages":pages,"pagination_exhausted":exhausted,"unique_account_transactions":len(hashes),"duplicate_hashes":duplicate,"validated_entries":validated,"not_validated_entries":failures,"earliest_account_ledger":earliest,"latest_account_ledger":latest,"stored_tow_event_count":known["stored"],"stored_checkpoint":known["checkpoint"],"known_purchase_hashes_found":found,"known_purchase_hashes_expected":[h for h,w in KNOWN.items() if w==wallet],"historical_balance_certified":False,"fifo_migration_authorized":False}),flush=True)
+    print(json.dumps({"wallet":wallet,"rpc":used_endpoint,"pages":pages,"pagination_exhausted":exhausted,"unique_account_transactions":len(hashes),"duplicate_hashes":duplicate,"validated_entries":validated,"not_validated_entries":failures,"earliest_account_ledger":earliest,"latest_account_ledger":latest,"stored_tow_event_count":known["stored"],"stored_checkpoint":known["checkpoint"],"known_purchase_hashes_found":found,"known_purchase_hashes_expected":[h for h,w in KNOWN.items() if w==wallet],"historical_balance_certified":False,"fifo_migration_authorized":False}),flush=True)
+
+# An incomplete account_tx scan is evidence of an unresolved coverage gap,
+# not a successful historical verification. No database writes occur.
