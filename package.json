@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:cost-basis": "node --test tests/towCostBasis.test.cjs",
-    "test:accounting": "node --test tests/towCostBasis.test.cjs tests/towCommitmentLifecycle.test.cjs"
+    "test:accounting": "node --test tests/towCostBasis.test.cjs tests/towCommitmentLifecycle.test.cjs tests/towProofBaseline.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",
