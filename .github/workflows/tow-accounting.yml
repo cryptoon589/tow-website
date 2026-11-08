@@ -1,0 +1,107 @@
+name: TOW commitment accounting checks
+
+on:
+  pull_request:
+    paths:
+      - "lib/towCostBasis.ts"
+      - "lib/towCommitmentLifecycle.ts"
+      - "lib/towProofBaseline.ts"
+      - "lib/towMigrationReadiness.ts"
+      - "lib/towUnifiedProofPreview.ts"
+      - "lib/towIdentityReconciliation.ts"
+      - "lib/towHistoryCoverage.ts"
+      - "lib/towAccountTxCoverage.ts"
+      - "lib/towLedgerMovementInspection.ts"
+      - "lib/towPurchaseLotInventory.ts"
+      - "lib/towOpeningCommitmentAllocation.ts"
+      - "lib/towOpeningIdentityReport.ts"
+      - "app/api/tired-history-inspect/route.ts"
+      - "app/api/admin/mark-reward-sent/route.ts"
+      - "app/api/tired-sync/route.ts"
+      - "app/api/tired-scan-wallet/route.ts"
+      - "app/api/tired-status/route.ts"
+      - "app/api/tired-claim-execute/route.ts"
+      - "supabase/migrations/**"
+      - "supabase/audits/**"
+      - "tests/towCostBasis.test.cjs"
+      - "tests/towCommitmentLifecycle.test.cjs"
+      - "tests/towProofBaseline.test.cjs"
+      - "tests/towMigrationReadiness.test.cjs"
+      - "tests/towUnifiedProofPreview.test.cjs"
+      - "tests/towIdentityReconciliation.test.cjs"
+      - "tests/towHistoryCoverage.test.cjs"
+      - "tests/towAccountTxCoverage.test.cjs"
+      - "tests/towLedgerMovementInspection.test.cjs"
+      - "tests/towSchemaApiCompatibility.test.cjs"
+      - "tests/towPurchaseLotInventory.test.cjs"
+      - "tests/towOpeningCommitmentAllocation.test.cjs"
+      - "tests/towOpeningIdentityReport.test.cjs"
+      - "tests/towMainCompatibility.test.cjs"
+      - "tests/towAtomicClaimCompatibility.test.cjs"
+      - "tests/towAtomicFifoIntegration.test.cjs"
+      - "tests/towLegacyMappingContract.test.cjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/tow-accounting.yml"
+
+concurrency:
+  group: tow-accounting-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  accounting-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:accounting
+      - run: npx tsc --noEmit
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: tow_accounting_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tow_accounting_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test-only
+      PGDATABASE: tow_accounting_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable PostgreSQL schema
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-disposable-postgres-schema.sql
+      - name: Apply wallet event uniqueness migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-wallet-event-per-wallet-uniqueness.sql
+      - name: Apply atomic ingestion migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-event-ingestion.sql
+      - name: Apply FIFO accounting migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-fifo-commitment-engine.sql
+      - name: Apply atomic claim migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-claim-execute.sql
+      - name: Execute rollback-only claim integration fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-atomic-claim-integration-test.sql
+      - name: Execute rollback-only accounting integration fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
+      - name: Execute rollback-only lifecycle and atomicity fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-lifecycle-integration-test.sql

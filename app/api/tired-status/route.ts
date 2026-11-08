@@ -211,13 +211,13 @@ export async function GET(request: NextRequest) {
       xUsername: player?.x_username ?? null,
       eligible: verified && alivePositions.length > 0,
       disqualified:
-        normalizedPositions.length > 0 && alivePositions.length === 0,
+        normalizedPositions.some((position) => position.status === "disqualified") && alivePositions.length === 0,
       tiredLevel: getTiredLevel(holdDays),
       holdDays,
       stillHereSince,
       alivePositions: alivePositions.length,
       disqualifiedPositions:
-        normalizedPositions.length - alivePositions.length,
+        normalizedPositions.filter((position) => position.status === "disqualified").length,
       totalQualifyingXrp,
       totalTowAmount,
       maxRewardTow,

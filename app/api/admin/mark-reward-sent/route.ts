@@ -14,8 +14,16 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+function isAuthorized(request: NextRequest): boolean {
+  const secret = process.env.TOW_CLAIM_SECRET ?? process.env.TOW_SYNC_SECRET;
+  return Boolean(secret) && request.headers.get("x-tow-claim-secret") === secret;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    if (!isAuthorized(request)) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
     const body = await request.json();
 
     const claimId = String(body?.claimId ?? "").trim();
@@ -27,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("tow_buy_positions")
       .update({
         reward_status: "sent",
@@ -35,12 +43,17 @@ export async function POST(request: NextRequest) {
         reward_tx_hash: txHash || null,
       })
       .eq("id", claimId)
-      .eq("status", "claimed");
+      .eq("status", "claimed")
+      .neq("reward_status", "sent")
+      .select("id");
 
     if (error) {
       throw error;
     }
 
+    if (!data?.length) {
+      return NextResponse.json({ error: "Claim not found, not claimed, or already marked sent." }, { status: 409 });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

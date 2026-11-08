@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet } from "@/lib/towProof";
+import { inspectTowDelta } from "@/lib/towLedgerMovementInspection";
 
 export const dynamic = "force-dynamic";
 
@@ -371,7 +372,9 @@ function buildSyncEventFromTx(input: {
   const eventAt = getEventAt(entry);
   if (!/^[A-Fa-f0-9]{64}$/.test(txHash) || !ledgerIndex || !eventAt) return null;
 
-  const towDelta = getTowDeltaFromMeta(meta, walletAddress, issuerAddress, currencyCode);
+  const inspection = inspectTowDelta(entry, walletAddress, issuerAddress, currencyCode);
+  if (!inspection.reliable) throw new Error(`Unverifiable XRPL transaction ${txHash}: ${inspection.warnings.join("; ")}`);
+  const towDelta = inspection.deltaTow ?? 0;
   if (Math.abs(towDelta) < 0.000001) return null;
 
   const xrpDelta = getXrpDeltaFromMeta(meta, walletAddress);
@@ -471,8 +474,16 @@ async function fetchAccountTransactions(input: {
       );
     }
 
-    const pageTxs = json?.result?.transactions ?? [];
-
+    const pageTxs = json?.result?.transactions;
+    if (!Array.isArray(pageTxs)) throw new Error("Malformed XRPL account_tx response; checkpoint NOT advanced.");
+    for (const entry of pageTxs) {
+      if (entry?.validated !== true) {
+        throw new Error("Unvalidated XRPL account_tx entry; checkpoint NOT advanced.");
+      }
+      if (!getTxMeta(entry)) {
+        throw new Error("Missing XRPL transaction metadata; checkpoint NOT advanced.");
+      }
+    }
     transactions.push(...pageTxs);
 
     marker = json?.result?.marker;
@@ -623,7 +634,9 @@ export async function POST(request: NextRequest) {
     for (const entry of txs) {
       const ledgerIndex = getLedgerIndex(entry);
 
-      if (!ledgerIndex) continue;
+      if (!Number.isSafeInteger(ledgerIndex) || ledgerIndex <= 0) {
+        throw new Error("XRPL transaction missing valid ledger index; checkpoint NOT advanced.");
+      }
 
       if (
         lastScannedLedger &&
@@ -640,8 +653,13 @@ export async function POST(request: NextRequest) {
       // Do not silently skip a TOW movement with an unknown timestamp.
       // Otherwise the ledger cursor would advance past an unprocessed event.
       const meta = getTxMeta(entry);
+      if ((meta?.TransactionResult ?? meta?.transactionResult) !== "tesSUCCESS") continue;
+      const inspection = inspectTowDelta(entry, walletAddress, issuerAddress, currencyCode);
+      if (!inspection.reliable) {
+        throw new Error(`Unverifiable XRPL movement at ledger ${ledgerIndex}: ${inspection.warnings.join("; ")}; checkpoint NOT advanced.`);
+      }
       if (meta && (meta.TransactionResult ?? meta.transactionResult) === "tesSUCCESS" &&
-          Math.abs(getTowDeltaFromMeta(meta, walletAddress, issuerAddress, currencyCode)) > 0.000001 &&
+          Math.abs(inspection.deltaTow ?? 0) > 0.000001 &&
           !getEventAt(entry)) {
         throw new Error(`Missing XRPL timestamp at ledger ${ledgerIndex}; checkpoint NOT advanced.`);
       }
@@ -664,7 +682,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (syncResult?.ok !== true ||
-        (Array.isArray(syncResult?.results) && syncResult.results.some((r: any) => r.ok === false))) {
+        !Array.isArray(syncResult?.results) ||
+        syncResult.results.length !== events.length ||
+        syncResult.results.some((r: any, index: number) =>
+          r?.ok !== true ||
+          String(r?.txHash ?? "").toUpperCase() !== events[index].txHash.toUpperCase()
+        )) {
       throw new Error("Sync returned failed events; checkpoint NOT advanced.");
     }
 
