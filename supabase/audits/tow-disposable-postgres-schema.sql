@@ -68,6 +68,18 @@ create table public.tow_survivor_archives(
  archived_at timestamptz,
  paid_at timestamptz
 );
+create table public.tow_weekly_scores(
+ id uuid primary key default gen_random_uuid(),
+ wallet_address text not null,
+ best_score integer not null default 0,
+ runs integer not null default 0,
+ updated_at timestamptz not null default now()
+);
+create table public.raid_posts(
+ id uuid primary key default gen_random_uuid(),
+ wallet text not null,
+ created_at timestamptz not null default now()
+);
 -- The real Supabase instance already has these roles.
 do $roles$ begin
  if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
