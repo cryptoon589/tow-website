@@ -15,6 +15,15 @@ declare
   v_verified boolean;
   v_days integer;
   v_unlocked numeric;
+  v_recent_raid_posts integer;
+  v_recent_game_runs integer;
+  v_raid_bonus numeric;
+  v_game_bonus numeric;
+  v_recent_bonus numeric;
+  v_loyalty_bonus numeric;
+  v_activity_bonus numeric;
+  v_survival_bonus numeric;
+  v_total_percent numeric;
   v_season text;
   v_now timestamptz := now();
 begin
@@ -54,13 +63,28 @@ begin
   v_season := case when v_days >= 84 then 'Season 3 Survivor'
                    when v_days >= 56 then 'Season 2 Survivor'
                    else 'Season 1 Survivor' end;
-  -- Match calculateUnlockedRewardTow in main when no activity inputs are supplied:
-  -- survival 2.5% / 7% / 15% plus 0.25% loyalty per 28 days (max 1%).
-  v_unlocked := round(v_position.tow_amount * least(20::numeric,
-    (case when v_days >= 84 then 15::numeric
-          when v_days >= 56 then 7::numeric
-          else 2.5::numeric end) +
-    least(1::numeric, floor(v_days::numeric / 28) * 0.25::numeric)) / 100, 6);
+  -- Match lib/towProof.ts recent activity and 20% reward cap.
+  select count(*)::integer into v_recent_raid_posts
+  from public.raid_posts
+  where wallet=v_request.wallet_address
+    and created_at >= v_now - interval '30 days';
+  select coalesce(sum(greatest(0,coalesce(runs,0))),0)::integer
+    into v_recent_game_runs
+  from public.tow_weekly_scores
+  where wallet_address=v_request.wallet_address
+    and updated_at >= v_now - interval '30 days';
+  v_raid_bonus := least(3::numeric,round(v_recent_raid_posts*0.5,2));
+  v_game_bonus := least(1::numeric,round(least(50,v_recent_game_runs)*0.1,2));
+  v_recent_bonus := case when v_recent_raid_posts>0 or v_recent_game_runs>0
+                         then 1::numeric else 0::numeric end;
+  v_loyalty_bonus := least(1::numeric,floor(v_days::numeric/28)*0.25);
+  v_activity_bonus := least(5::numeric,
+    v_raid_bonus+v_game_bonus+v_recent_bonus+v_loyalty_bonus);
+  v_survival_bonus := case when v_days>=84 then 15::numeric
+                           when v_days>=56 then 7::numeric
+                           else 2.5::numeric end;
+  v_total_percent := least(20::numeric,v_survival_bonus+v_activity_bonus);
+  v_unlocked := round(v_position.tow_amount*v_total_percent/100,6);
   update public.tow_buy_positions
   set status = 'claimed', claimed_at = v_now, reward_status = 'pending_manual_payout'
   where id = v_position.id and status = 'alive';
