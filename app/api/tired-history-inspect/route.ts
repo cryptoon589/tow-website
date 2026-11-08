@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet } from "@/lib/towProof";
 import { inspectAccountTxCoverage } from "@/lib/towAccountTxCoverage";
 import { inspectTowDelta } from "@/lib/towLedgerMovementInspection";
+import { auditTowMovements, type StoredTowMovement } from "@/lib/towMovementAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -77,15 +78,17 @@ export async function GET(request: NextRequest) {
     }
 
     const storedHashes: string[] = [];
+    const storedMovements: StoredTowMovement[] = [];
     let storedTruncated = false;
     for (let page = 0; page < 20; page++) {
       const { data, error } = await db.from("tow_wallet_events")
-        .select("tx_hash").eq("wallet_address", wallet)
+        .select("tx_hash,event_type,tow_amount").eq("wallet_address", wallet)
         .order("id", { ascending: true })
         .range(page * 1000, page * 1000 + 999);
       if (error) throw error;
       const rows = data ?? [];
       storedHashes.push(...rows.map((row) => String(row.tx_hash)));
+      storedMovements.push(...rows.map((row) => ({ tx_hash: String(row.tx_hash), event_type: String(row.event_type), tow_amount: row.tow_amount })));
       if (rows.length < 1000) break;
       if (page === 19) storedTruncated = true;
     }
@@ -98,7 +101,8 @@ export async function GET(request: NextRequest) {
       movement.hasTowMovement && !storedSet.has(movement.hash)
     );
     const unreliableTransactions = movementCandidates.filter((movement) => !movement.reliable);
-        return NextResponse.json({
+    const movementAudit = auditTowMovements(movementCandidates, storedMovements, paginationExhausted, storedTruncated);
+    return NextResponse.json({
       ok: true,
       readOnly: true,
       wallet,
@@ -106,6 +110,7 @@ export async function GET(request: NextRequest) {
       rpcPaginationExhausted: paginationExhausted,
       storedTruncated,
       coverage,
+      movementAudit,
       missingTowCandidates,
       unreliableTransactions,
       towMovementCandidatesInspected: movementCandidates.filter((movement) => movement.hasTowMovement).length,
