@@ -634,7 +634,9 @@ export async function POST(request: NextRequest) {
     for (const entry of txs) {
       const ledgerIndex = getLedgerIndex(entry);
 
-      if (!ledgerIndex) continue;
+      if (!Number.isSafeInteger(ledgerIndex) || ledgerIndex <= 0) {
+        throw new Error("XRPL transaction missing valid ledger index; checkpoint NOT advanced.");
+      }
 
       if (
         lastScannedLedger &&
@@ -680,7 +682,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (syncResult?.ok !== true ||
-        (Array.isArray(syncResult?.results) && syncResult.results.some((r: any) => r.ok === false))) {
+        !Array.isArray(syncResult?.results) ||
+        syncResult.results.length !== events.length ||
+        syncResult.results.some((r: any, index: number) =>
+          r?.ok !== true ||
+          String(r?.txHash ?? "").toUpperCase() !== events[index].txHash.toUpperCase()
+        )) {
       throw new Error("Sync returned failed events; checkpoint NOT advanced.");
     }
 
