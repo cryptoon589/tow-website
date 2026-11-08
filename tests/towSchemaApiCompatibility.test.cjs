@@ -23,6 +23,8 @@ test("claim status compatibility explicitly includes claimed", () => {
   assert.match(claimMigration, /status in \('alive', 'claimed', 'disqualified', 'paid'\)/);
 });
 test("legacy net XRP accounting remains blocked before migration", () => {
-  assert.match(sync, /TOW_ACCOUNTING_MIGRATION_REQUIRED/);
-  assert.match(sync, /status:\s*409/);
+  assert.match(sync, /"staged_not_reconciled"/);
+  assert.match(sync, /commitmentsUpdated: !stagedOnly/);
+  assert.match(sync, /positionsCreated: stagedOnly \? 0/);
+  assert.match(sync, /TOW_ENABLE_FIFO_ACCOUNTING === "true"/);
 });
