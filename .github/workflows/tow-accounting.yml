@@ -43,6 +43,7 @@ on:
       - "scripts/audit_xrpl_history.py"
       - "scripts/audit_tow_wallet3_opening.py"
       - "scripts/audit_tow_wallet3_cost.py"
+      - "scripts/prepare_tow_fifo_migration.py"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
@@ -118,12 +119,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Query live public XRPL account history without production credentials
         run: python3 scripts/audit_xrpl_history.py
+      - name: Reconstruct FIFO inventory from complete XRPL evidence (dry run only)
+        run: python3 scripts/prepare_tow_fifo_migration.py
       - name: Upload complete reconciliation evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tow-reconciliation-evidence
-          path: tow-reconciliation-evidence.json
+          path: |
+            tow-reconciliation-evidence.json
+            tow-fifo-migration-dry-run.json
           if-no-files-found: warn
           retention-days: 30
       - name: Independently verify Wallet 3 pre-existing TOW inventory
