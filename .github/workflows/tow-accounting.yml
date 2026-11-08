@@ -44,6 +44,7 @@ on:
       - "scripts/audit_tow_wallet3_opening.py"
       - "scripts/audit_tow_wallet3_cost.py"
       - "scripts/prepare_tow_fifo_migration.py"
+      - "tests/test_tow_fifo_migration.py"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
@@ -66,6 +67,7 @@ jobs:
       - run: npm ci
       - run: npm run test:accounting
       - run: npx tsc --noEmit
+      - run: python3 -m unittest discover -s tests -p test_tow_fifo_migration.py
 
   postgres-integration:
     runs-on: ubuntu-latest
