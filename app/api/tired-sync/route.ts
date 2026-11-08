@@ -72,20 +72,23 @@ export async function POST(request: Request) {
       }
       throw error;
     }
-    if (hasCommitmentMovements && !fifoEnabled) {
-      return NextResponse.json({
-        error: "Events durably staged; commitment reconciliation is not enabled.",
-        code: "TOW_ACCOUNTING_MIGRATION_REQUIRED",
-        recorded: data?.recorded ?? 0,
-        duplicates: data?.duplicates ?? 0,
-      }, { status: 409 });
-    }
+    // Staging is a successful, durable write, NOT a reconciliation failure.
+    // Returning HTTP 409 here made the scanner retry the same ledger range
+    // forever and prevented its checkpoint from advancing. The scanner may
+    // advance only after every event in the batch has been stored atomically.
+    const stagedOnly = !fifoEnabled || !hasCommitmentMovements;
     return NextResponse.json({
-      ok: true, positionsCreated: data?.positionsCreated ?? 0, disqualified: data?.disqualified ?? 0,
+      ok: true,
+      accountingStatus: stagedOnly ? "staged_not_reconciled" : "reconciled",
+      commitmentsUpdated: !stagedOnly,
+      recorded: data?.recorded ?? 0,
+      duplicates: data?.duplicates ?? 0,
+      positionsCreated: stagedOnly ? 0 : (data?.positionsCreated ?? 0),
+      disqualified: stagedOnly ? 0 : (data?.disqualified ?? 0),
       newCommitments: [], disqualifiedCommitments: [],
       results: normalized.map(event => ({
         walletAddress: wallet, txHash: event.txHash,
-        ok: true, action: "event_recorded",
+        ok: true, action: stagedOnly ? "event_staged" : "event_reconciled",
       })),
     });
   } catch (error) {
