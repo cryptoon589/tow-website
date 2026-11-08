@@ -133,7 +133,7 @@ export async function POST(request: Request) {
             event_at: eventAt.toISOString(),
             raw_event: event.rawEvent ?? event,
           },
-          { onConflict: "tx_hash" }
+          { onConflict: "wallet_address,tx_hash", ignoreDuplicates: true }
         );
 
       if (eventError) {
