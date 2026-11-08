@@ -35,3 +35,14 @@ test("ambiguous transfers and protected claims fail closed",()=>{
 test("per-commitment original reward is capped at 20 percent",()=>{
  assert.match(sql,/round\(v_allocated\*0\.2,6\)/);
 });
+
+test("live FIFO writes require explicit independently certified XRPL coverage",()=>{
+ assert.match(sql,/XRPL_HISTORY_COVERAGE_NOT_CERTIFIED/);
+ assert.match(sql,/verified_complete=true/);
+ assert.match(sql,/balance_verified=true/);
+ assert.match(sql,/first_wallet_ledger<=proof_ledger/);
+});
+test("opening commitments initialize even if there were no post-proof movements",()=>{
+ assert.match(sql,/if not v_proof_started then/);
+ assert.match(sql,/p_wallet,v_player.proof_started_at,'OPENING_'/);
+});
