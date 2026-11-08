@@ -167,13 +167,28 @@ begin
   -- may touch it. Never create replacement commitments over live positions.
   select count(*) into v_existing from public.tow_buy_positions
   where wallet_address = p_wallet;
+  -- An existing position is NEVER enough to authorize a replay.
+  -- A verified legacy migration must atomically install purchase slices,
+  -- processed-event markers AND the initialized marker together. Until then
+  -- block the wallet, even if someone staged partial slice mappings.
+  select exists(select 1 from public.tow_accounting_initialized
+    where wallet_address=p_wallet) into v_proof_started;
+  if v_existing > 0 and not v_proof_started then
+    raise exception 'LEGACY_POSITION_RECONCILIATION_REQUIRED';
+  end if;
   if v_existing > 0 and not exists(
-    select 1 from public.tow_accounting_slices where wallet_address = p_wallet
+    select 1 from public.tow_accounting_slices where wallet_address=p_wallet
   ) then
     raise exception 'LEGACY_POSITION_RECONCILIATION_REQUIRED';
   end if;
-  select exists(select 1 from public.tow_accounting_initialized
-    where wallet_address=p_wallet) into v_proof_started;
+  -- Proof-ledger equality is ambiguous without the proof transaction index.
+  -- Do not silently treat same-ledger transactions as pre-proof.
+  if exists (
+    select 1 from public.tow_wallet_events
+    where wallet_address=p_wallet and ledger_index=v_proof_ledger
+  ) then
+    raise exception 'PROOF_LEDGER_TRANSACTION_ORDER_REQUIRES_REVIEW';
+  end if;
   -- Transfers/rewards cannot be assumed to be purchase-funded inventory.
   -- No partial application when provenance is ambiguous.
   select exists(
