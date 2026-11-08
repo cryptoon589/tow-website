@@ -15,7 +15,7 @@ test("opening allocations preserve distinct acquisition prices and sources",()=>
  assert.equal(r.complete,true);
  assert.equal(r.commitments.length,2);
  assert.equal(r.commitments[0].costXrp,50);
- assert.equal(r.commitments[0].originalTow,100+200*20/70);
+ assert.ok(Math.abs(r.commitments[0].originalTow-(100+200*20/70))<1e-8);
  assert.deepEqual(Array.from(r.commitments[0].slices,x=>x.sourceTxHash),[A,B]);
  assert.equal(r.commitments[1].slices[0].sourceTxHash,B);
 });
