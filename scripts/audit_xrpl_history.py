@@ -2,6 +2,8 @@
 """Live, read-only XRPL account_tx verification. No DB writes or secrets."""
 import json, urllib.request, time
 from decimal import Decimal
+from pathlib import Path
+STORED_HASHES=json.loads(Path(__file__).with_name("tow_stored_event_hashes.json").read_text())
 RPC_ENDPOINTS=["https://s1.ripple.com:51234","https://s2.ripple.com:51234","https://xrplcluster.com"]
 WALLETS={
 "r4e4c8QgoSjTaskaAaHvWLSKfMrAW92Cbn":{"stored":20,"checkpoint":108201300},
@@ -96,9 +98,14 @@ for wallet,known in WALLETS.items():
         marker=result.get("marker")
         if marker is None: exhausted=True; break
     found=[h for h,w in KNOWN.items() if w==wallet and h in hashes]
+    stored_hashes=set(STORED_HASHES[wallet])
+    chain_hashes={item["hash"] for item in movement_records}
+    missing=sorted(chain_hashes-stored_hashes)
+    stored_without_tow=sorted(stored_hashes-chain_hashes)
+    print(json.dumps({"wallet":wallet,"missing_tow_movement_hashes":missing,"missing_count":len(missing),"stored_hashes_without_detected_tow_delta":stored_without_tow,"stored_without_detected_delta_count":len(stored_without_tow),"hash_set_reconciled":not missing and not stored_without_tow}),flush=True)
     if wallet=="rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA":
         print(json.dumps({"wallet":wallet,"all_tow_movements":movement_records}),flush=True)
-    print(json.dumps({"wallet":wallet,"tow_movement_count":movement_count,"tow_inflows":str(inflows),"tow_outflows":str(outflows),"net_tow_change":str(inflows-outflows),"stored_tow_event_count":known["stored"],"unresolved_metadata_count":len(unresolved),"unresolved_samples":unresolved[:5],"movement_samples":movement_samples,"tow_history_reconciled":exhausted and not unresolved and movement_count==known["stored"]}),flush=True)
+    print(json.dumps({"wallet":wallet,"tow_movement_count":movement_count,"tow_inflows":str(inflows),"tow_outflows":str(outflows),"net_tow_change":str(inflows-outflows),"stored_tow_event_count":known["stored"],"unresolved_metadata_count":len(unresolved),"unresolved_samples":unresolved[:5],"movement_samples":movement_samples,"tow_history_reconciled":exhausted and not unresolved and not missing and not stored_without_tow}),flush=True)
     print(json.dumps({"wallet":wallet,"rpc":used_endpoint,"pages":pages,"pagination_exhausted":exhausted,"unique_account_transactions":len(hashes),"duplicate_hashes":duplicate,"validated_entries":validated,"not_validated_entries":failures,"earliest_account_ledger":earliest,"latest_account_ledger":latest,"stored_tow_event_count":known["stored"],"stored_checkpoint":known["checkpoint"],"known_purchase_hashes_found":found,"known_purchase_hashes_expected":[h for h,w in KNOWN.items() if w==wallet],"historical_balance_certified":False,"fifo_migration_authorized":False}),flush=True)
 
 # An incomplete account_tx scan is evidence of an unresolved coverage gap,
