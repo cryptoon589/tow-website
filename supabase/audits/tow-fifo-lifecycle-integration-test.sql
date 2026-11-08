@@ -23,15 +23,17 @@ begin
     wallet_address,verified_complete,first_wallet_ledger,proof_ledger,
     checked_through_ledger,balance_verified
   ) values(w,true,10,13,20,true),(x,true,10,13,20,true);
+  -- Intentionally misleading import timestamps: ledger 10/11 are pre-proof
+  -- despite later event_at; ledger 14 is post-proof despite earlier event_at.
   -- 80 XRP / 800 TOW; sell 300 TOW before proof leaves 50 XRP of
   -- qualifying inventory. No pre-proof disqualification is allowed.
   v := public.tow_ingest_and_reconcile_wallet_atomic(w,jsonb_build_array(
     jsonb_build_object('walletAddress',w,'txHash',h1,'eventType','buy',
       'xrpValue',80,'towAmount',800,'ledgerIndex',10,
-      'eventAt','2026-01-01T00:00:00Z'),
+      'eventAt','2026-01-10T00:00:00Z'),
     jsonb_build_object('walletAddress',w,'txHash',h2,'eventType','sell',
       'xrpValue',1,'towAmount',300,'ledgerIndex',11,
-      'eventAt','2026-01-02T00:00:00Z')
+      'eventAt','2026-01-10T00:00:00Z')
   ));
   select count(*) into n from public.tow_buy_positions where wallet_address=w;
   if n<>1 or (select status from public.tow_buy_positions where wallet_address=w)<>'alive'
@@ -40,7 +42,7 @@ begin
   v := public.tow_ingest_and_reconcile_wallet_atomic(w,jsonb_build_array(
     jsonb_build_object('walletAddress',w,'txHash',h3,'eventType','buy',
       'xrpValue',20,'towAmount',200,'ledgerIndex',14,
-      'eventAt','2026-01-05T00:00:00Z'),
+      'eventAt','2026-01-03T00:00:00Z'),
     jsonb_build_object('walletAddress',w,'txHash',h4,'eventType','buy',
       'xrpValue',30,'towAmount',300,'ledgerIndex',15,
       'eventAt','2026-01-06T00:00:00Z')
