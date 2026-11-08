@@ -8,6 +8,7 @@ import { assessProofMigration } from "@/lib/towMigrationReadiness";
 import { previewVerifiedProof } from "@/lib/towUnifiedProofPreview";
 import { reconcileCommitmentIdentities } from "@/lib/towIdentityReconciliation";
 import { assessHistoryCoverage } from "@/lib/towHistoryCoverage";
+import { replayPurchaseLots } from "@/lib/towPurchaseLotInventory";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,9 @@ export async function GET(request: NextRequest) {
       towAmount: Number(event.tow_amount),
     }));
     const costBasis = reconcileCostBasis(movements, MIN_QUALIFYING_BUY_XRP);
+    const purchaseLots = replayPurchaseLots(movements.map((movement): ProofMovement => ({
+      ...movement, eventAt: movement.eventAt ?? "",
+    })));
     const lifecycle = replayProofCommitments(
       movements.map((movement): ProofMovement => ({
         ...movement,
@@ -174,6 +178,7 @@ export async function GET(request: NextRequest) {
       migrationReadiness: readiness,
       identityReconciliation,
       historyCoverage,
+      purchaseLotInventory: { ...purchaseLots, safeToApply: false },
       wallet,
       player: playerResult.data,
       counts: {
