@@ -28,6 +28,7 @@ export type ProofCommitment = {
   status: "alive" | "disqualified";
   disqualifiedAt: string | null;
   disqualifiedBy: string | null;
+  acquiredBeforeProof: boolean;
 };
 
 export type ProofReplay = {
@@ -43,12 +44,17 @@ const EPS = 0.0000001;
 
 export function replayProofCommitments(
   movements: ProofMovement[],
-  thresholdXrp = 50
+  thresholdXrp = 50,
+  proofStartedAt?: string | null
 ): ProofReplay {
   if (!Number.isFinite(thresholdXrp) || thresholdXrp <= 0) {
     throw new Error("Invalid threshold");
   }
 
+  const proofTime = proofStartedAt ? new Date(proofStartedAt).getTime() : null;
+  if (proofStartedAt && !Number.isFinite(proofTime)) {
+    throw new Error("Invalid proof start");
+  }
   const commitments: ProofCommitment[] = [];
   const warnings: string[] = [];
   const seen = new Set<string>();
@@ -98,7 +104,10 @@ export function replayProofCommitments(
         const sliceTow = poolTow * (thresholdXrp / poolCost);
         commitments.push({
           id: `${hash}_${++sequence}`,
-          createdAt: event.eventAt,
+          createdAt: proofTime !== null && proofTime !== undefined &&
+            new Date(event.eventAt).getTime() < proofTime
+              ? new Date(proofTime).toISOString()
+              : event.eventAt,
           sourceTxHash: hash,
           originalTow: sliceTow,
           remainingTow: sliceTow,
@@ -106,6 +115,7 @@ export function replayProofCommitments(
           status: "alive",
           disqualifiedAt: null,
           disqualifiedBy: null,
+          acquiredBeforeProof: proofTime !== null && proofTime !== undefined && new Date(event.eventAt).getTime() < proofTime,
         });
         poolTow = Math.max(0, poolTow - sliceTow);
         poolCost = Math.max(0, poolCost - thresholdXrp);
