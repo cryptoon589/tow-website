@@ -77,7 +77,8 @@ export async function GET(request: NextRequest) {
         eventAt: movement.eventAt ?? "",
         transactionIndex: movement.transactionIndex ?? undefined,
       })),
-      MIN_QUALIFYING_BUY_XRP
+      MIN_QUALIFYING_BUY_XRP,
+      proofStartedAt
     );
     const warnings: string[] = [...costBasis.warnings, ...lifecycle.warnings];
     if (events.length === 1000) warnings.push("Event query hit 1000 rows: audit may be incomplete.");
