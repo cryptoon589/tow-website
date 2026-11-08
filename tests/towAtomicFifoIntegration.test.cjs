@@ -57,3 +57,13 @@ test("certified history must extend through every staged ledger event",()=>{
  assert.match(sql,/v_event\.ledger_index > v_proof_ledger/);
  assert.doesNotMatch(sql,/v_event\.event_at >= v_player\.proof_started_at/);
 });
+
+test("legacy mapping accepts multiple purchase slices per original UUID but cannot authorize writes",()=>{
+ const manifest=fs.readFileSync(path.join(root,"supabase/migrations/2026-11-07-tow-legacy-position-reconciliation.sql"),"utf8");
+ assert.match(manifest,/primary key\(position_id,source_tx_hash\)/);
+ assert.match(manifest,/count\(distinct position_id\)/);
+ assert.match(manifest,/sum\(m\.source_cost_xrp\)/);
+ assert.match(manifest,/sum\(m\.source_tow\)/);
+ assert.match(manifest,/'safeToApply',false/);
+ assert.match(sql,/LEGACY_POSITION_RECONCILIATION_REQUIRED/);
+});
