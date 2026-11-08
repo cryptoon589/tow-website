@@ -86,7 +86,8 @@ begin
   v_total_percent := least(20::numeric,v_survival_bonus+v_activity_bonus);
   v_unlocked := round(v_position.tow_amount*v_total_percent/100,6);
   update public.tow_buy_positions
-  set status = 'claimed', claimed_at = v_now, reward_status = 'pending_manual_payout'
+  set status = 'claimed', claimed_at = v_now, reward_status = 'pending_manual_payout',
+      unlocked_reward_tow = v_unlocked
   where id = v_position.id and status = 'alive';
   if not found then raise exception 'Commitment status changed'; end if;
   insert into public.tow_survivor_archives(
