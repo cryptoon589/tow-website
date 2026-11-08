@@ -17,7 +17,7 @@ const proposed = {
   acquiredBeforeProof: false,
 };
 const stored = {
-  id: "db-1", buy_tx_hash: proposed.id, status: "alive",
+  id: "db-1", buy_tx_hash: proposed.sourceTxHash, status: "alive",
   created_at: proposed.createdAt, tow_amount: 1000, buy_value_xrp: 50,
   unlocked_reward_tow: 0,
 };
@@ -42,4 +42,10 @@ test("ambiguous duplicate candidate cannot be silently mapped", () => {
   const r = reconcileCommitmentIdentities([stored, { ...stored, id: "db-2" }], [proposed]);
   assert.equal(r.matches.length, 0);
   assert.ok(r.blockers.some((x) => x.includes("Ambiguous")));
+});
+
+test("synthetic preview ID is not mistaken for the on-ledger source hash", () => {
+  const r = reconcileCommitmentIdentities([{ ...stored, buy_tx_hash: proposed.id }], [proposed]);
+  assert.equal(r.matches.length, 0);
+  assert.equal(r.safeToApply, false);
 });
