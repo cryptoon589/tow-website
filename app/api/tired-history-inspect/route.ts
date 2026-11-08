@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet } from "@/lib/towProof";
 import { inspectAccountTxCoverage } from "@/lib/towAccountTxCoverage";
+import { inspectTowDelta } from "@/lib/towLedgerMovementInspection";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,11 @@ export async function GET(request: NextRequest) {
     // This is a bounded inspection, NOT a scan or sync. No cursor writes.
     const maxPages = 10;
     const pageLimit = 200;
+    const issuer = String(process.env.TOW_ISSUER ?? "");
+    const currency = String(process.env.TOW_CURRENCY ?? "TOW");
+    if (!issuer) throw new Error("Missing TOW_ISSUER");
     const rpcHashes: string[] = [];
+    const movementCandidates: ReturnType<typeof inspectTowDelta>[] = [];
     let marker: unknown = undefined;
     let paginationExhausted = false;
     let pagesFetched = 0;
@@ -60,6 +65,8 @@ export async function GET(request: NextRequest) {
       for (const entry of transactions) {
         const hash = entry?.tx_json?.hash ?? entry?.tx?.hash ?? entry?.hash;
         rpcHashes.push(String(hash ?? ""));
+        const inspection = inspectTowDelta(entry, wallet, issuer, currency);
+        if (inspection.hasTowMovement || !inspection.reliable) movementCandidates.push(inspection);
       }
       pagesFetched++;
       marker = json?.result?.marker;
@@ -86,7 +93,12 @@ export async function GET(request: NextRequest) {
       rpcHashes, storedHashes, paginationExhausted && !storedTruncated
     );
     if (storedTruncated) coverage.warnings.push("Stored event query hit the 20,000-row safety cap.");
-    return NextResponse.json({
+    const storedSet = new Set(storedHashes.map((hash) => hash.toUpperCase()));
+    const missingTowCandidates = movementCandidates.filter((movement) =>
+      movement.hasTowMovement && !storedSet.has(movement.hash)
+    );
+    const unreliableTransactions = movementCandidates.filter((movement) => !movement.reliable);
+        return NextResponse.json({
       ok: true,
       readOnly: true,
       wallet,
@@ -94,6 +106,9 @@ export async function GET(request: NextRequest) {
       rpcPaginationExhausted: paginationExhausted,
       storedTruncated,
       coverage,
+      missingTowCandidates,
+      unreliableTransactions,
+      towMovementCandidatesInspected: movementCandidates.filter((movement) => movement.hasTowMovement).length,
       note: "This inspection does not verify TOW classification, historical balance, or migration eligibility.",
     });
   } catch (error) {
