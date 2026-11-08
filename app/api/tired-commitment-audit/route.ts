@@ -105,7 +105,10 @@ export async function GET(request: NextRequest) {
       : null;
     const openingAllocation = baseline ? allocateOpeningCommitments(baseline.lots, MIN_QUALIFYING_BUY_XRP) : null;
     const openingIdentityReport = openingAllocation
-      ? reconcileOpeningIdentities(storedPositions, openingAllocation.commitments)
+      ? reconcileOpeningIdentities(positions.map((p) => ({
+          ...p,
+          unlocked_reward_tow: Number(p.unlocked_reward_tow ?? 0),
+        })), openingAllocation.commitments)
       : null;
     const unified = proofStartedAt
       ? previewVerifiedProof(
