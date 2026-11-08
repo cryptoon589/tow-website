@@ -307,7 +307,7 @@ begin
     end if;
     if v_event.ledger_index > v_proof_ledger then
       v_positions_created := v_positions_created +
-        public.tow_allocate_available_commitments(p_wallet,v_event.event_at,v_event.tx_hash);
+        public.tow_allocate_available_commitments(p_wallet,greatest(v_player.proof_started_at,v_event.event_at),v_event.tx_hash);
     end if;
     insert into public.tow_accounting_processed(wallet_address,tx_hash)
     values(p_wallet,v_event.tx_hash);
