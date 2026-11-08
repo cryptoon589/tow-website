@@ -198,59 +198,63 @@ begin
     elsif v_event.event_type in ('sell','transfer_out') then
       v_remaining := v_event.tow_amount;
       if v_remaining <= 0 then raise exception 'Invalid outgoing amount'; end if;
-      -- Before verification, inventory is a baseline, not a streak.
-      -- After verification, consume oldest committed purchase slices first.
-      if v_event.event_at >= v_player.proof_started_at then
-        for v_slice in
-          select s.position_id,s.source_tx_hash,s.remaining_tow,
-                 p.status,p.created_at,l.ledger_index
+      -- Consume exact acquired purchase tokens oldest-first, regardless of
+      -- whether a token belongs to a commitment or the uncommitted remainder.
+      -- For a single source purchase, allocated slices precede its remainder.
+      for v_slice in
+        select movement_kind,position_id,source_tx_hash,remaining_tow,
+               available_cost_xrp,position_status
+        from (
+          select 0 as movement_kind,s.position_id,s.source_tx_hash,
+                 s.remaining_tow,0::numeric as available_cost_xrp,
+                 p.status as position_status,l.ledger_index,l.acquired_at
           from public.tow_accounting_slices s
-          join public.tow_buy_positions p on p.id = s.position_id
+          join public.tow_buy_positions p on p.id=s.position_id
           join public.tow_accounting_lots l
-            on l.wallet_address = s.wallet_address
-           and l.source_tx_hash = s.source_tx_hash
-          where s.wallet_address = p_wallet and s.remaining_tow > 0
-          order by l.ledger_index,l.acquired_at,s.position_id
-        loop
-          exit when v_remaining <= 0;
-          v_take := least(v_remaining,v_slice.remaining_tow);
-          if v_slice.status in ('claimed','paid') then
+            on l.wallet_address=s.wallet_address
+           and l.source_tx_hash=s.source_tx_hash
+          where s.wallet_address=p_wallet and s.remaining_tow>0
+          union all
+          select 1 as movement_kind,null::uuid as position_id,
+                 l.source_tx_hash,l.available_tow as remaining_tow,
+                 l.available_cost_xrp,null::text as position_status,
+                 l.ledger_index,l.acquired_at
+          from public.tow_accounting_lots l
+          where l.wallet_address=p_wallet and l.available_tow>0
+        ) inventory
+        order by ledger_index,acquired_at,source_tx_hash,movement_kind,position_id
+      loop
+        exit when v_remaining <= 0.00000001;
+        v_take := least(v_remaining,v_slice.remaining_tow);
+        if v_slice.movement_kind = 0 then
+          if v_slice.position_status in ('claimed','paid') then
             raise exception 'Protected commitment consumed; manual review required';
           end if;
           update public.tow_accounting_slices
-            set remaining_tow = greatest(0,remaining_tow-v_take)
-          where position_id = v_slice.position_id
-            and source_tx_hash = v_slice.source_tx_hash;
+            set remaining_tow=greatest(0,remaining_tow-v_take)
+          where position_id=v_slice.position_id
+            and source_tx_hash=v_slice.source_tx_hash;
           update public.tow_buy_positions
-            set remaining_tow = (
+            set remaining_tow=(
               select coalesce(sum(remaining_tow),0)
               from public.tow_accounting_slices where position_id=v_slice.position_id
             )
           where id=v_slice.position_id;
-          if v_slice.status = 'alive' then
+          if v_slice.position_status='alive' then
             update public.tow_buy_positions
-            set status='disqualified',disqualified_at=v_event.event_at,
-                sell_tx_hash=v_event.tx_hash
-            where id=v_slice.position_id and status='alive';
-            v_disqualified := v_disqualified+1;
+              set status='disqualified',disqualified_at=v_event.event_at,
+                  sell_tx_hash=v_event.tx_hash
+              where id=v_slice.position_id and status='alive';
+            v_disqualified:=v_disqualified+1;
           end if;
-          v_remaining := v_remaining-v_take;
-        end loop;
-      end if;
-      -- Consume the remaining outgoing tokens from uncommitted FIFO lots.
-      for v_lot in
-        select * from public.tow_accounting_lots
-        where wallet_address=p_wallet and available_tow>0
-        order by ledger_index,acquired_at,source_tx_hash
-      loop
-        exit when v_remaining <= 0;
-        v_take := least(v_remaining,v_lot.available_tow);
-        v_cost := v_lot.available_cost_xrp*v_take/v_lot.available_tow;
-        update public.tow_accounting_lots
-          set available_tow=greatest(0,available_tow-v_take),
-              available_cost_xrp=greatest(0,available_cost_xrp-v_cost)
-        where wallet_address=p_wallet and source_tx_hash=v_lot.source_tx_hash;
-        v_remaining := v_remaining-v_take;
+        else
+          v_cost:=v_slice.available_cost_xrp*v_take/v_slice.remaining_tow;
+          update public.tow_accounting_lots
+            set available_tow=greatest(0,available_tow-v_take),
+                available_cost_xrp=greatest(0,available_cost_xrp-v_cost)
+          where wallet_address=p_wallet and source_tx_hash=v_slice.source_tx_hash;
+        end if;
+        v_remaining:=v_remaining-v_take;
       end loop;
       if v_remaining > 0.00000001 then
         raise exception 'Outgoing TOW exceeds known purchase inventory';
