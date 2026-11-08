@@ -42,7 +42,7 @@ def tow_balance(fields,wallet):
 
 def tow_movement(entry,wallet):
     meta=entry.get("meta") or entry.get("metaData") or {}
-    if meta.get("TransactionResult")!="tesSUCCESS": return None,"unconfirmed"
+    if meta.get("TransactionResult")!="tesSUCCESS": return Decimal(0),None # Validated failed transactions cannot change TOW balances
     delta=Decimal(0)
     for item in meta.get("AffectedNodes",[]):
         kind=next((k for k in ("ModifiedNode","CreatedNode","DeletedNode") if k in item),None)
@@ -65,7 +65,7 @@ def tow_movement(entry,wallet):
 
 for wallet,known in WALLETS.items():
     marker=None; hashes=set(); pages=0; earliest=None; latest=None; duplicate=0; exhausted=False; validated=0; failures=0
-    movement_count=0; inflows=Decimal(0); outflows=Decimal(0); unresolved=[]; movement_samples=[]
+    movement_count=0; inflows=Decimal(0); outflows=Decimal(0); unresolved=[]; movement_samples=[]; movement_records=[]
     while pages<500:
         args={"account":wallet,"ledger_index_min":-1,"ledger_index_max":-1,"forward":True,"limit":200,"binary":False}
         if marker is not None: args["marker"]=marker
@@ -91,10 +91,13 @@ for wallet,known in WALLETS.items():
                     movement_count+=1
                     if delta>0: inflows+=delta
                     else: outflows-=delta
+                    movement_records.append({"hash":h,"delta_tow":str(delta),"ledger":ledger})
                     if len(movement_samples)<10: movement_samples.append({"hash":h,"delta_tow":str(delta),"ledger":ledger})
         marker=result.get("marker")
         if marker is None: exhausted=True; break
     found=[h for h,w in KNOWN.items() if w==wallet and h in hashes]
+    if wallet=="rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA":
+        print(json.dumps({"wallet":wallet,"all_tow_movements":movement_records}),flush=True)
     print(json.dumps({"wallet":wallet,"tow_movement_count":movement_count,"tow_inflows":str(inflows),"tow_outflows":str(outflows),"net_tow_change":str(inflows-outflows),"stored_tow_event_count":known["stored"],"unresolved_metadata_count":len(unresolved),"unresolved_samples":unresolved[:5],"movement_samples":movement_samples,"tow_history_reconciled":exhausted and not unresolved and movement_count==known["stored"]}),flush=True)
     print(json.dumps({"wallet":wallet,"rpc":used_endpoint,"pages":pages,"pagination_exhausted":exhausted,"unique_account_transactions":len(hashes),"duplicate_hashes":duplicate,"validated_entries":validated,"not_validated_entries":failures,"earliest_account_ledger":earliest,"latest_account_ledger":latest,"stored_tow_event_count":known["stored"],"stored_checkpoint":known["checkpoint"],"known_purchase_hashes_found":found,"known_purchase_hashes_expected":[h for h,w in KNOWN.items() if w==wallet],"historical_balance_certified":False,"fifo_migration_authorized":False}),flush=True)
 
