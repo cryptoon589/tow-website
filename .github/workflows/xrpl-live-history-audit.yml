@@ -1,0 +1,16 @@
+name: XRPL live historical coverage audit
+on:
+  push:
+    branches:
+      - audit/xrpl-live-history-verification
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-public-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify XRPL account history independently (read-only)
+        run: python3 scripts/audit_xrpl_history.py
