@@ -3,6 +3,7 @@
 import json, urllib.request, time
 from decimal import Decimal
 from pathlib import Path
+REPORT={"schema_version":1,"source":"validated XRPL account_tx metadata","production_write_authorized":False,"wallets":[]}
 STORED_HASHES=json.loads(Path(__file__).with_name("tow_stored_event_hashes.json").read_text())
 RPC_ENDPOINTS=["https://s1.ripple.com:51234","https://s2.ripple.com:51234","https://xrplcluster.com"]
 WALLETS={
@@ -93,7 +94,18 @@ for wallet,known in WALLETS.items():
                     movement_count+=1
                     if delta>0: inflows+=delta
                     else: outflows-=delta
-                    movement_records.append({"hash":h,"delta_tow":str(delta),"ledger":ledger})
+                    xrp_changes=[]
+                    for affected in (entry.get("meta") or entry.get("metaData") or {}).get("AffectedNodes",[]):
+                        root=affected.get("ModifiedNode") or {}
+                        if root.get("LedgerEntryType")!="AccountRoot": continue
+                        final=root.get("FinalFields") or {}
+                        previous=root.get("PreviousFields") or {}
+                        if final.get("Account")==wallet and "Balance" in previous and "Balance" in final:
+                            xrp_changes.append((Decimal(str(final["Balance"]))-Decimal(str(previous["Balance"])))/Decimal(1000000))
+                    fee=Decimal(str(tx.get("Fee","0")))/Decimal(1000000) if tx.get("Account")==wallet else Decimal(0)
+                    xrp_ex_fee=xrp_changes[0]+fee if len(xrp_changes)==1 else None
+                    cost=(str(-xrp_ex_fee) if delta>0 and xrp_ex_fee is not None and xrp_ex_fee<0 and tx.get("Account")==wallet and tx.get("TransactionType") in ("Payment","OfferCreate") else None)
+                    movement_records.append({"hash":h,"delta_tow":str(delta),"ledger":ledger,"tx_type":tx.get("TransactionType"),"initiator":tx.get("Account"),"xrp_balance_delta":str(xrp_changes[0]) if len(xrp_changes)==1 else None,"network_fee_xrp":str(fee),"xrp_spent_excluding_fee":cost,"cost_basis_status":"candidate_direct_xrp_execution" if cost else "unresolved_or_nonpurchase","already_stored":h in STORED_HASHES[wallet],"tx_date":tx.get("date")})
                     if len(movement_samples)<10: movement_samples.append({"hash":h,"delta_tow":str(delta),"ledger":ledger})
         marker=result.get("marker")
         if marker is None: exhausted=True; break
@@ -102,6 +114,7 @@ for wallet,known in WALLETS.items():
     chain_hashes={item["hash"] for item in movement_records}
     missing=sorted(chain_hashes-stored_hashes)
     stored_without_tow=sorted(stored_hashes-chain_hashes)
+    REPORT["wallets"].append({"wallet":wallet,"account_history_exhausted":exhausted,"validated_entries":validated,"unvalidated_entries":failures,"metadata_issues":unresolved,"missing_count":len(missing),"stored_without_detected_delta":stored_without_tow,"movements":movement_records,"historical_balance_certified":False,"migration_authorized":False})
     print(json.dumps({"wallet":wallet,"missing_tow_movement_hashes":missing,"missing_count":len(missing),"stored_hashes_without_detected_tow_delta":stored_without_tow,"stored_without_detected_delta_count":len(stored_without_tow),"hash_set_reconciled":not missing and not stored_without_tow}),flush=True)
     if wallet=="rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA":
         print(json.dumps({"wallet":wallet,"all_tow_movements":movement_records}),flush=True)
@@ -110,3 +123,9 @@ for wallet,known in WALLETS.items():
 
 # An incomplete account_tx scan is evidence of an unresolved coverage gap,
 # not a successful historical verification. No database writes occur.
+
+# Export complete read-only transaction-level evidence as a downloadable CI artifact.
+# Never import this file into production without independent classification and balance reconciliation.
+output=Path("tow-reconciliation-evidence.json")
+output.write_text(json.dumps(REPORT,indent=2)+"\\n")
+print(json.dumps({"evidence_artifact":str(output),"wallets":len(REPORT["wallets"]),"movements":sum(len(w["movements"]) for w in REPORT["wallets"]),"production_write_authorized":False}),flush=True)
