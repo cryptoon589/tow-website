@@ -303,6 +303,15 @@ begin
     values(p_wallet,v_event.tx_hash);
     v_processed:=v_processed+1;
   end loop;
+  -- An already-verified holder can have no post-proof movement yet.
+  -- Their opening commitments must still begin at proof verification.
+  if not v_proof_started then
+    v_positions_created := v_positions_created +
+      public.tow_allocate_available_commitments(
+        p_wallet,v_player.proof_started_at,'OPENING_'||p_wallet);
+    insert into public.tow_accounting_initialized(wallet_address,initialized_at)
+      values(p_wallet,v_player.proof_started_at);
+  end if;
   return jsonb_build_object('ok',true,'positionsCreated',v_positions_created,
     'disqualified',v_disqualified,'processed',v_processed);
 end;
