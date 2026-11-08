@@ -118,6 +118,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Query live public XRPL account history without production credentials
         run: python3 scripts/audit_xrpl_history.py
+      - name: Upload complete reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tow-reconciliation-evidence
+          path: tow-reconciliation-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Independently verify Wallet 3 pre-existing TOW inventory
         run: python3 scripts/audit_tow_wallet3_opening.py
 
