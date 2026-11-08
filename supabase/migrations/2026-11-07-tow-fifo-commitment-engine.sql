@@ -26,6 +26,11 @@ create table if not exists public.tow_accounting_processed (
   tx_hash text not null,
   primary key(wallet_address,tx_hash)
 );
+create table if not exists public.tow_accounting_initialized (
+  wallet_address text primary key,
+  initialized_at timestamptz not null
+);
+alter table public.tow_accounting_initialized enable row level security;
 create index if not exists tow_accounting_slices_wallet_idx
   on public.tow_accounting_slices(wallet_address,position_id);
 alter table public.tow_accounting_lots enable row level security;
@@ -118,6 +123,7 @@ declare
   v_disqualified integer := 0;
   v_processed integer := 0;
   v_proof_started boolean := false;
+  v_last_processed_ledger bigint;
   v_has_transfer boolean;
 begin
   select * into v_player from public.tow_players
@@ -135,6 +141,8 @@ begin
   ) then
     raise exception 'LEGACY_POSITION_RECONCILIATION_REQUIRED';
   end if;
+  select exists(select 1 from public.tow_accounting_initialized
+    where wallet_address=p_wallet) into v_proof_started;
   -- Transfers/rewards cannot be assumed to be purchase-funded inventory.
   -- No partial application when provenance is ambiguous.
   select exists(
@@ -158,10 +166,22 @@ begin
     end if;
     -- Before processing the first post-proof movement, freeze the surviving
     -- pre-proof purchase inventory into independent commitments.
+    if not exists(select 1 from public.tow_accounting_processed
+                  where wallet_address=p_wallet and tx_hash=v_event.tx_hash) then
+      select max(e.ledger_index) into v_last_processed_ledger
+      from public.tow_accounting_processed p
+      join public.tow_wallet_events e on e.wallet_address=p.wallet_address
+       and e.tx_hash=p.tx_hash where p.wallet_address=p_wallet;
+      if v_last_processed_ledger is not null and v_event.ledger_index < v_last_processed_ledger then
+        raise exception 'OUT_OF_ORDER_LEDGER_REPLAY';
+      end if;
+    end if;
     if not v_proof_started and v_event.event_at >= v_player.proof_started_at then
       v_positions_created := v_positions_created +
         public.tow_allocate_available_commitments(
           p_wallet,v_player.proof_started_at,v_event.tx_hash);
+      insert into public.tow_accounting_initialized(wallet_address,initialized_at)
+      values(p_wallet,v_player.proof_started_at);
       v_proof_started := true;
     end if;
     if v_event.event_type = 'buy' then
@@ -201,6 +221,12 @@ begin
             set remaining_tow = greatest(0,remaining_tow-v_take)
           where position_id = v_slice.position_id
             and source_tx_hash = v_slice.source_tx_hash;
+          update public.tow_buy_positions
+            set remaining_tow = (
+              select coalesce(sum(remaining_tow),0)
+              from public.tow_accounting_slices where position_id=v_slice.position_id
+            )
+          where id=v_slice.position_id;
           if v_slice.status = 'alive' then
             update public.tow_buy_positions
             set status='disqualified',disqualified_at=v_event.event_at,
