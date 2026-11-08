@@ -4,7 +4,8 @@ const fs=require("node:fs");
 const path=require("node:path");
 const sql=fs.readFileSync(path.join(__dirname,"../supabase/migrations/2026-11-07-tow-legacy-position-reconciliation.sql"),"utf8");
 test("legacy reconciliation manifest retains existing position UUIDs",()=>{
-  assert.match(sql,/position_id uuid primary key references public\.tow_buy_positions\(id\)/);
+  assert.match(sql,/position_id uuid not null references public\.tow_buy_positions\(id\)/);
+  assert.match(sql,/primary key\(position_id,source_tx_hash\)/);
   assert.doesNotMatch(sql,/update public\.tow_buy_positions/);
   assert.doesNotMatch(sql,/delete from public\.tow_buy_positions/);
 });
