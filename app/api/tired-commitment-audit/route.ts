@@ -7,6 +7,7 @@ import { reconstructProofBaseline } from "@/lib/towProofBaseline";
 import { assessProofMigration } from "@/lib/towMigrationReadiness";
 import { previewVerifiedProof } from "@/lib/towUnifiedProofPreview";
 import { reconcileCommitmentIdentities } from "@/lib/towIdentityReconciliation";
+import { assessHistoryCoverage } from "@/lib/towHistoryCoverage";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,26 @@ export async function GET(request: NextRequest) {
       })),
       (unified?.lifecycle ?? lifecycle).commitments
     );
+    const historyCoverage = assessHistoryCoverage({
+      walletAddress: wallet,
+      firstAvailableLedger: null,
+      firstWalletLedger: null,
+      verificationLedger: null,
+      scannedFromLedger: null,
+      scannedThroughLedger: playerResult.data?.last_scanned_ledger == null
+        ? null : Number(playerResult.data.last_scanned_ledger),
+      rpcMarkerExhausted: false,
+      ledgerRangeValidated: false,
+      eventCountFromRpc: null,
+      eventCountStored: events.length,
+      tokenBalanceAtVerification: null,
+      reconstructedBalanceAtVerification: baseline
+        ? baseline.qualifyingTow + baseline.nonqualifyingTow : null,
+      unclassifiedTowMovements: 0,
+      timestampMismatches: events.filter((e) => e.timestampMismatchSeconds != null &&
+        Math.abs(e.timestampMismatchSeconds) > 60).length,
+      conflictingTxHashes: 0,
+    });
     const readiness = assessProofMigration({
       verified: Boolean(playerResult.data?.verified),
       proofStartedAt,
@@ -136,7 +157,7 @@ export async function GET(request: NextRequest) {
         ? null : Number(playerResult.data.last_scanned_ledger),
       eventsCount: events.length,
       // DB row limits and a ledger checkpoint cannot prove full historical coverage.
-      eventHistoryComplete: false,
+      eventHistoryComplete: historyCoverage.verifiedComplete,
       baselineComplete: Boolean(baseline?.complete),
       lifecycleComplete: lifecycle.complete,
       predictedAliveCount: (unified?.lifecycle ?? lifecycle).commitments.filter((p) => p.status === "alive").length,
@@ -152,6 +173,7 @@ export async function GET(request: NextRequest) {
       readOnly: true,
       migrationReadiness: readiness,
       identityReconciliation,
+      historyCoverage,
       wallet,
       player: playerResult.data,
       counts: {
