@@ -13,6 +13,8 @@ on:
       - "lib/towAccountTxCoverage.ts"
       - "lib/towLedgerMovementInspection.ts"
       - "app/api/tired-history-inspect/route.ts"
+      - "app/api/admin/mark-reward-sent/route.ts"
+      - "supabase/audits/**"
       - "tests/towCostBasis.test.cjs"
       - "tests/towCommitmentLifecycle.test.cjs"
       - "tests/towProofBaseline.test.cjs"
