@@ -8,13 +8,15 @@ const sync = fs.readFileSync(path.join(root, "app/api/tired-sync/route.ts"), "ut
 const migration = fs.readFileSync(path.join(root, "supabase/migrations/2026-11-07-tow-wallet-event-per-wallet-uniqueness.sql"), "utf8");
 const claimMigration = fs.readFileSync(path.join(root, "supabase/migrations/2026-11-07-tow-claimed-status-compatibility.sql"), "utf8");
 
-test("wallet event conflict key matches the staged composite uniqueness migration", () => {
-  assert.match(sync, /onConflict:\s*["']wallet_address,tx_hash["']/);
+test("atomic wallet event RPC and composite uniqueness migration agree", () => {
+  assert.match(sync, /rpc\("tow_ingest_wallet_events_atomic"/);
   assert.match(migration, /unique\s*\(wallet_address,\s*tx_hash\)/i);
   assert.match(migration, /drop constraint tow_wallet_events_tx_hash_key/i);
 });
-test("wallet event upserts cannot silently overwrite immutable history", () => {
-  assert.match(sync, /ignoreDuplicates:\s*true/);
+test("wallet event ingestion does not silently overwrite immutable history", () => {
+  const rpc = fs.readFileSync(path.join(root, "supabase/migrations/2026-11-07-tow-atomic-event-ingestion.sql"), "utf8");
+  assert.match(rpc, /Conflicting replay of existing transaction/);
+  assert.match(rpc, /for update/);
 });
 test("claim status compatibility explicitly includes claimed", () => {
   assert.match(claimMigration, /status in \('alive', 'claimed', 'disqualified', 'paid'\)/);
