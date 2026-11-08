@@ -155,10 +155,20 @@ begin
     select 1 from public.tow_wallet_events where wallet_address = p_wallet
     and (ledger_index is null or ledger_index <= 0 or event_at is null)
   ) then raise exception 'INCOMPLETE_LEDGER_ORDER'; end if;
+  -- Multiple movements can share a ledger. Require transaction ordering metadata
+  -- instead of sorting them arbitrarily by hash.
+  if exists(
+    select 1 from public.tow_wallet_events
+    where wallet_address=p_wallet
+    group by ledger_index having count(*)>1
+      and count(*) filter (
+        where raw_event->'meta'->>'TransactionIndex' is null
+      )>0
+  ) then raise exception 'MISSING_TRANSACTION_INDEX'; end if;
   for v_event in
     select * from public.tow_wallet_events
     where wallet_address = p_wallet
-    order by ledger_index,event_at,tx_hash
+    order by ledger_index,coalesce((raw_event->'meta'->>'TransactionIndex')::integer,0),tx_hash
   loop
     if exists(select 1 from public.tow_accounting_processed
               where wallet_address = p_wallet and tx_hash = v_event.tx_hash) then
