@@ -59,3 +59,27 @@ test("non-TOW trust line is not a TOW movement", () => {
   assert.equal(r.hasTowMovement, false);
   assert.equal(r.deltaTow, 0);
 });
+
+test("deleted trust line uses pre-delete balance rather than FinalFields as post-balance", () => {
+  const r = inspectTowDelta(entry({ DeletedNode: {
+    LedgerEntryType: "RippleState",
+    FinalFields: fields(0),
+    PreviousFields: { Balance: { value: "40", currency: "TOW" } },
+  } }), W, I, "TOW");
+  assert.equal(r.reliable, true);
+  assert.equal(r.deltaTow, -40);
+});
+test("deleted zero-balance trust line does not invent a transfer", () => {
+  const r = inspectTowDelta(entry({ DeletedNode: {
+    LedgerEntryType: "RippleState", FinalFields: fields(0),
+  } }), W, I, "TOW");
+  assert.equal(r.reliable, true);
+  assert.equal(r.deltaTow, 0);
+});
+test("deleted nonzero trust line without previous balance fails closed", () => {
+  const r = inspectTowDelta(entry({ DeletedNode: {
+    LedgerEntryType: "RippleState", FinalFields: fields(12),
+  } }), W, I, "TOW");
+  assert.equal(r.reliable, false);
+  assert.equal(r.deltaTow, null);
+});
