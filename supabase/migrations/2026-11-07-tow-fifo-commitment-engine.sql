@@ -67,7 +67,7 @@ begin
   loop
     select coalesce(sum(available_cost_xrp),0) into v_pool_cost
     from public.tow_accounting_lots where wallet_address=p_wallet;
-    exit when v_pool_cost < 49.99999999;
+    exit when v_pool_cost < 50;
     v_needed := 50;
     v_allocated := 0;
     select count(*)+1 into v_sequence from public.tow_buy_positions
@@ -76,7 +76,7 @@ begin
       wallet_address,buy_tx_hash,buy_value_xrp,tow_amount,max_reward_tow,
       status,created_at
     ) values (
-      p_wallet,p_trigger_hash||'_FIFO_'||v_sequence,
+      p_wallet,p_trigger_hash||'_FIFO_'||lpad(v_sequence::text,10,'0'),
       50,0,0,'alive',p_created_at
     ) returning id into v_position;
     for v_lot in
@@ -152,7 +152,17 @@ begin
       and proof_ledger is not null and checked_through_ledger is not null
       and first_wallet_ledger<=proof_ledger
       and checked_through_ledger>=proof_ledger
+      and checked_through_ledger>=coalesce(
+        (select max(ledger_index) from public.tow_wallet_events
+         where wallet_address=p_wallet),proof_ledger)
   ) then raise exception 'XRPL_HISTORY_COVERAGE_NOT_CERTIFIED'; end if;
+  if exists(
+    select 1 from public.tow_wallet_events
+    where wallet_address=p_wallet
+      and (event_at < v_player.proof_started_at and
+           ledger_index > (select proof_ledger from public.tow_accounting_coverage
+                           where wallet_address=p_wallet))
+  ) then raise exception 'PROOF_LEDGER_TIMESTAMP_CONFLICT'; end if;
   -- A legacy wallet must be mapped to its existing UUIDs before this engine
   -- may touch it. Never create replacement commitments over live positions.
   select count(*) into v_existing from public.tow_buy_positions
