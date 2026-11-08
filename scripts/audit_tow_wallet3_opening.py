@@ -58,6 +58,7 @@ for endpoint in ["https://s1.ripple.com:51234","https://s2.ripple.com:51234","ht
         if predecessor.get("validated") is not True or predecessor.get("hash")!=PREDECESSOR or predecessor_meta.get("TransactionResult")!="tesSUCCESS":
             raise ValueError("Prior TOW balance transaction not independently validated")
         previous_balances=[]
+        predecessor_movements=[]
         for node in predecessor_meta.get("AffectedNodes",[]):
             item=node.get("ModifiedNode") or node.get("CreatedNode") or node.get("DeletedNode")
             if not item or item.get("LedgerEntryType")!="RippleState":
@@ -66,9 +67,18 @@ for endpoint in ["https://s1.ripple.com:51234","https://s2.ripple.com:51234","ht
             after_previous=balance(final) if final.get("Balance") else None
             if after_previous is not None:
                 previous_balances.append(after_previous)
+                prior_fields=item.get("PreviousFields") or {}
+                if "Balance" in prior_fields:
+                    before_previous=balance({**final,"Balance":prior_fields["Balance"]})
+                    if before_previous is not None:
+                        predecessor_movements.append({"before_tow":before_previous,"after_tow":after_previous,"delta_tow":after_previous-before_previous})
+                elif node.get("CreatedNode"):
+                    predecessor_movements.append({"before_tow":0,"after_tow":after_previous,"delta_tow":after_previous})
         if not any(abs(value-EXPECTED_BEFORE)<0.000001 for value in previous_balances):
             raise ValueError("Predecessor did not establish expected prior TOW balance")
-        print(json.dumps({"predecessor_hash":PREDECESSOR,"validated":True,"transaction_type":predecessor_tx.get("TransactionType"),"ledger_index":predecessor.get("ledger_index"),"resulting_tow_balance":EXPECTED_BEFORE,"acquisition_cost_verified":False}),flush=True)
+        if len(predecessor_movements)!=1:
+            raise ValueError("Predecessor TOW movement not uniquely measurable")
+        print(json.dumps({"predecessor_hash":PREDECESSOR,"validated":True,"transaction_type":predecessor_tx.get("TransactionType"),"ledger_index":predecessor.get("ledger_index"),"tow_movement":predecessor_movements[0],"taker_gets":predecessor_tx.get("TakerGets"),"taker_pays":predecessor_tx.get("TakerPays"),"acquisition_cost_verified":False}),flush=True)
         print(json.dumps({"wallet":WALLET,"tx_hash":HASH,"validated":True,"prior_tow_balance":before,"after_tow_balance":after,"movement_tow":after-before,"unexplained_prior_inventory_confirmed":True,"historical_acquisition_cost_verified":False,"fifo_migration_authorized":False}),flush=True)
         break
     except Exception as exc:
