@@ -56,24 +56,35 @@ export function inspectTowDelta(
     if (wrapper?.LedgerEntryType !== "RippleState") continue;
     const after = wrapper?.FinalFields ?? wrapper?.NewFields;
     const before = wrapper?.PreviousFields;
+    // DeletedNode.FinalFields describe the state BEFORE deletion, not the
+    // post-transaction state. A deleted trust line has a zero ending balance.
     const afterValue = balanceForWallet(after, wallet, issuer, currency);
+    if (afterValue === null) continue;
+    matched++;
     const beforeValue = before ? balanceForWallet({
       ...after, ...before,
       LowLimit: before.LowLimit ?? after?.LowLimit,
       HighLimit: before.HighLimit ?? after?.HighLimit,
       Balance: before.Balance ?? after?.Balance,
     }, wallet, issuer, currency) : null;
-    if (afterValue === null) continue;
-    matched++;
     if (kind === "modified" && beforeValue === null) {
       warnings.push("Modified TOW trust line has no verifiable previous balance.");
       continue;
     }
-    if (kind === "deleted" && beforeValue === null) {
-      warnings.push("Deleted TOW trust line has no verifiable previous balance.");
+    if (kind === "deleted") {
+      if (beforeValue === null) {
+        // A zero-balance trust line can be deleted without any TOW transfer.
+        // Do not invent an outgoing movement from its FinalFields balance.
+        if (Math.abs(afterValue) > 1e-12) {
+          warnings.push("Deleted TOW trust line has nonzero balance without PreviousFields.");
+        }
+        continue;
+      }
+      delta -= beforeValue;
       continue;
     }
-    delta += kind === "created" ? afterValue : kind === "deleted" ? -beforeValue! : afterValue - beforeValue!;
+    delta += kind === "created" ? afterValue : afterValue - beforeValue!;
+
   }
   if (matched > 1) warnings.push("Multiple matching TOW trust line nodes in one transaction.");
   const reliable = warnings.length === 0;
