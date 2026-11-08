@@ -318,24 +318,27 @@ function getLedgerIndex(entry: any) {
   );
 }
 
-function getEventAt(entry: any) {
+function getEventAt(entry: any): string | null {
   const tx = getTxObject(entry);
-
-  const iso =
-    entry?.close_time_iso ??
-    entry?.closeTimeIso ??
-    tx?.date_iso ??
-    tx?.close_time_iso;
-
+  const iso = entry?.close_time_iso ?? entry?.closeTimeIso ??
+    tx?.date_iso ?? tx?.close_time_iso;
   if (iso) {
     const parsed = new Date(iso);
+    if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
+  }
 
-    if (Number.isFinite(parsed.getTime())) {
-      return parsed.toISOString();
+  // XRPL date is seconds since 2000-01-01T00:00:00Z.
+  const rippleSeconds = tx?.date ?? entry?.date;
+  if (rippleSeconds !== undefined && rippleSeconds !== null) {
+    const seconds = Number(rippleSeconds);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      const parsed = new Date((seconds + 946684800) * 1000);
+      if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
     }
   }
 
-  return new Date().toISOString();
+  // Never assign the scan time to an old ledger transaction.
+  return null;
 }
 
 function getCounterparty(entry: any, walletAddress: string) {
@@ -357,67 +360,55 @@ function buildSyncEventFromTx(input: {
   walletAddress: string;
   issuerAddress: string;
   currencyCode: string;
-}) {
-  const { entry, walletAddress, issuerAddress, currencyCode } =
-    input;
-
+}): SyncEvent | null {
+  const { entry, walletAddress, issuerAddress, currencyCode } = input;
+  const tx = getTxObject(entry);
   const meta = getTxMeta(entry);
-
-  if (!meta) return null;
-
-  const result =
-    meta?.TransactionResult ??
-    meta?.transactionResult;
-
-  if (result && result !== "tesSUCCESS") {
-    return null;
-  }
-
-  const towDelta = getTowDeltaFromMeta(
-    meta,
-    walletAddress,
-    issuerAddress,
-    currencyCode
-  );
-
-  if (!towDelta) return null;
-
-  const xrpDelta = getXrpDeltaFromMeta(
-    meta,
-    walletAddress
-  );
+  if (!meta || (meta.TransactionResult ?? meta.transactionResult) !== "tesSUCCESS") return null;
 
   const txHash = getTxHash(entry);
   const ledgerIndex = getLedgerIndex(entry);
+  const eventAt = getEventAt(entry);
+  if (!/^[A-Fa-f0-9]{64}$/.test(txHash) || !ledgerIndex || !eventAt) return null;
 
-  if (!txHash || !ledgerIndex) return null;
+  const towDelta = getTowDeltaFromMeta(meta, walletAddress, issuerAddress, currencyCode);
+  if (Math.abs(towDelta) < 0.000001) return null;
 
-  const towAmount = Math.abs(towDelta);
-  const xrpValue = Math.abs(xrpDelta);
+  const xrpDelta = getXrpDeltaFromMeta(meta, walletAddress);
+  const isSender = String(tx?.Account ?? "") === walletAddress;
+  const feeXrp = isSender ? dropsToXrp(tx?.Fee) : 0;
+  // Exclude the sender's transaction fee from XRP spent/received.
+  const tradeXrpDelta = Number((xrpDelta + feeXrp).toFixed(6));
+  const tolerance = 0.000001;
 
   let eventType: SyncEvent["eventType"];
+  let xrpValue = 0;
 
-  if (towDelta > 0) {
-    eventType = xrpDelta < 0 ? "buy" : "transfer_in";
+  // Only classify XRP-paired swaps as buys/sells. An OfferCreate
+  // exchanging TOW for another issued asset is not an XRP sale.
+  // This remains a conservative heuristic, not full DEX execution accounting.
+  const isTradeCandidate = tx?.TransactionType === "OfferCreate" ||
+    tx?.TransactionType === "Payment";
+  if (isTradeCandidate && towDelta > 0 && tradeXrpDelta < -tolerance) {
+    eventType = "buy";
+    xrpValue = -tradeXrpDelta;
+  } else if (isTradeCandidate && towDelta < 0 && tradeXrpDelta > tolerance) {
+    eventType = "sell";
+    xrpValue = tradeXrpDelta;
   } else {
-    eventType = xrpDelta > 0 ? "sell" : "transfer_out";
+    eventType = towDelta > 0 ? "transfer_in" : "transfer_out";
   }
 
   return {
     walletAddress,
-    txHash,
+    txHash: txHash.toUpperCase(),
     eventType,
-    xrpValue,
-    towAmount,
+    xrpValue: Number(xrpValue.toFixed(6)),
+    towAmount: Math.abs(towDelta),
     counterparty: getCounterparty(entry, walletAddress),
     ledgerIndex,
-    eventAt: getEventAt(entry),
-    rawEvent: {
-      tx: getTxObject(entry),
-      meta,
-      towDelta,
-      xrpDelta,
-    },
+    eventAt,
+    rawEvent: { tx, meta, towDelta, xrpDelta, tradeXrpDelta },
   };
 }
 
@@ -451,10 +442,7 @@ async function fetchAccountTransactions(input: {
       ledger_index_max: -1,
       binary: false,
       limit,
-      forward:
-        lastScannedLedger && lastScannedLedger > 0
-          ? true
-          : false,
+      forward: true,
     };
 
     if (marker) {
@@ -488,10 +476,16 @@ async function fetchAccountTransactions(input: {
     transactions.push(...pageTxs);
 
     marker = json?.result?.marker;
-
-    if (!marker) break;
-
     page += 1;
+    if (!marker) break;
+  }
+
+  // A ledger-only cursor cannot safely resume partway through a page range.
+  // Fail closed instead of skipping unseen transactions.
+  if (marker) {
+    throw new Error(
+      "XRPL history exceeds maxPages; checkpoint NOT advanced. Increase maxPages or implement persistent pagination before scanning this wallet."
+    );
   }
 
   return transactions;
@@ -616,6 +610,13 @@ export async function POST(request: NextRequest) {
       maxPages,
     });
 
+    txs.sort((a, b) =>
+      getLedgerIndex(a) - getLedgerIndex(b) ||
+      Number(getTxObject(a)?.date ?? 0) - Number(getTxObject(b)?.date ?? 0) ||
+      Number(getTxObject(a)?.TransactionIndex ?? getTxMeta(a)?.TransactionIndex ?? 0) -
+        Number(getTxObject(b)?.TransactionIndex ?? getTxMeta(b)?.TransactionIndex ?? 0)
+    );
+
     const events: SyncEvent[] = [];
     let highestLedgerSeen = lastScannedLedger ?? 0;
 
@@ -636,6 +637,15 @@ export async function POST(request: NextRequest) {
         ledgerIndex
       );
 
+      // Do not silently skip a TOW movement with an unknown timestamp.
+      // Otherwise the ledger cursor would advance past an unprocessed event.
+      const meta = getTxMeta(entry);
+      if (meta && (meta.TransactionResult ?? meta.transactionResult) === "tesSUCCESS" &&
+          Math.abs(getTowDeltaFromMeta(meta, walletAddress, issuerAddress, currencyCode)) > 0.000001 &&
+          !getEventAt(entry)) {
+        throw new Error(`Missing XRPL timestamp at ledger ${ledgerIndex}; checkpoint NOT advanced.`);
+      }
+
       const event = buildSyncEventFromTx({
         entry,
         walletAddress,
@@ -652,6 +662,11 @@ export async function POST(request: NextRequest) {
       request,
       events,
     });
+
+    if (syncResult?.ok !== true ||
+        (Array.isArray(syncResult?.results) && syncResult.results.some((r: any) => r.ok === false))) {
+      throw new Error("Sync returned failed events; checkpoint NOT advanced.");
+    }
 
     if (highestLedgerSeen > (lastScannedLedger ?? 0)) {
       const { error: updateError } = await supabase
