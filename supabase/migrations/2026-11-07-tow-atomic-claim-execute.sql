@@ -54,9 +54,13 @@ begin
   v_season := case when v_days >= 84 then 'Season 3 Survivor'
                    when v_days >= 56 then 'Season 2 Survivor'
                    else 'Season 1 Survivor' end;
-  -- 28 days unlocks 5%; +5% every 28 days, capped at 20%.
-  v_unlocked := least(v_position.tow_amount * 0.20,
-    v_position.tow_amount * (0.05 * floor(v_days::numeric / 28)));
+  -- Match calculateUnlockedRewardTow in main when no activity inputs are supplied:
+  -- survival 2.5% / 7% / 15% plus 0.25% loyalty per 28 days (max 1%).
+  v_unlocked := round(v_position.tow_amount * least(20::numeric,
+    (case when v_days >= 84 then 15::numeric
+          when v_days >= 56 then 7::numeric
+          else 2.5::numeric end) +
+    least(1::numeric, floor(v_days::numeric / 28) * 0.25::numeric)) / 100, 6);
   update public.tow_buy_positions
   set status = 'claimed', claimed_at = v_now, reward_status = 'pending_manual_payout'
   where id = v_position.id and status = 'alive';
