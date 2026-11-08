@@ -10,6 +10,7 @@ import { reconcileCommitmentIdentities } from "@/lib/towIdentityReconciliation";
 import { assessHistoryCoverage } from "@/lib/towHistoryCoverage";
 import { replayPurchaseLots } from "@/lib/towPurchaseLotInventory";
 import { allocateOpeningCommitments } from "@/lib/towOpeningCommitmentAllocation";
+import { reconcileOpeningIdentities } from "@/lib/towOpeningIdentityReport";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,9 @@ export async function GET(request: NextRequest) {
         )
       : null;
     const openingAllocation = baseline ? allocateOpeningCommitments(baseline.lots, MIN_QUALIFYING_BUY_XRP) : null;
+    const openingIdentityReport = openingAllocation
+      ? reconcileOpeningIdentities(storedPositions, openingAllocation.commitments)
+      : null;
     const unified = proofStartedAt
       ? previewVerifiedProof(
           movements.map((movement): ProofMovement => ({
@@ -183,6 +187,7 @@ export async function GET(request: NextRequest) {
       historyCoverage,
       purchaseLotInventory: { ...purchaseLots, safeToApply: false },
       openingAllocation: openingAllocation ? { ...openingAllocation, safeToApply: false } : null,
+      openingIdentityReport,
       wallet,
       player: playerResult.data,
       counts: {
