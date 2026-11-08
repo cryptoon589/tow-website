@@ -3,14 +3,14 @@
 -- migrate positions or certify any wallet's historical XRPL coverage.
 begin;
 create table if not exists public.tow_legacy_position_mappings (
-  position_id uuid primary key references public.tow_buy_positions(id),
+  position_id uuid not null references public.tow_buy_positions(id),
   wallet_address text not null,
   source_tx_hash text not null,
   source_tow numeric not null check(source_tow > 0),
   source_cost_xrp numeric not null check(source_cost_xrp > 0),
   reviewed_at timestamptz,
   review_note text,
-  unique(position_id,source_tx_hash)
+  primary key(position_id,source_tx_hash)
 );
 alter table public.tow_legacy_position_mappings enable row level security;
 create index if not exists tow_legacy_position_mappings_wallet_idx
@@ -24,10 +24,12 @@ declare
   v_missing integer;
   v_bad integer;
   v_overallocated integer;
+  v_invalid_positions integer;
+  v_mapped_positions integer;
 begin
   select count(*) into v_count from public.tow_buy_positions
     where wallet_address=p_wallet;
-  select count(*) into v_mapped from public.tow_legacy_position_mappings
+  select count(distinct position_id) into v_mapped from public.tow_legacy_position_mappings
     where wallet_address=p_wallet;
   select count(*) into v_bad
   from public.tow_legacy_position_mappings m
@@ -62,11 +64,25 @@ begin
       select 1 from public.tow_legacy_position_mappings m
       where m.position_id=p.id and m.wallet_address=p_wallet
     );
-  -- An exact one-row manifest is not sufficient proof of the original
+  -- Each commitment may span several purchases. Validate the complete
+  -- per-position cost and token sums, not each row independently.
+  select count(*) into v_invalid_positions from (
+    select p.id
+    from public.tow_buy_positions p
+    left join public.tow_legacy_position_mappings m
+      on m.position_id=p.id and m.wallet_address=p.wallet_address
+    where p.wallet_address=p_wallet
+    group by p.id,p.buy_value_xrp,p.tow_amount
+    having abs(coalesce(sum(m.source_cost_xrp),0)-p.buy_value_xrp)>0.00000001
+        or abs(coalesce(sum(m.source_tow),0)-p.tow_amount)>0.000001
+  ) mismatched;
+  -- An exact multi-lot manifest is not sufficient proof of the original
   -- per-commitment slice allocation; require independent verification.
   return jsonb_build_object(
     'safeToApply',false,'positionCount',v_count,'mappedCount',v_mapped,
-    'missingCount',v_missing,'invalidCount',v_bad,'overallocatedSources',v_overallocated,
+    'missingCount',v_missing,'invalidCount',v_bad,
+    'invalidPositionTotals',v_invalid_positions,
+    'overallocatedSources',v_overallocated,
     'requiresIndependentHistoryAndSliceVerification',true
   );
 end;
