@@ -39,9 +39,10 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
-  push:
-    branches:
-      - "fix/tow-commitment-audit"
+
+concurrency:
+  group: tow-accounting-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   accounting-tests:
