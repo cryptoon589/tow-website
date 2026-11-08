@@ -4,6 +4,7 @@ import { isValidXrplWallet, MIN_QUALIFYING_BUY_XRP } from "@/lib/towProof";
 import { reconcileCostBasis, type LedgerMovement } from "@/lib/towCostBasis";
 import { replayProofCommitments, type ProofMovement } from "@/lib/towCommitmentLifecycle";
 import { reconstructProofBaseline } from "@/lib/towProofBaseline";
+import { assessProofMigration } from "@/lib/towMigrationReadiness";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     const [playerResult, eventsResult, positionsResult] = await Promise.all([
       db.from("tow_players").select("verified,proof_started_at,last_scanned_ledger").eq("wallet_address", wallet).maybeSingle(),
       db.from("tow_wallet_events").select("tx_hash,event_type,xrp_value,tow_amount,ledger_index,event_at,raw_event").eq("wallet_address", wallet).order("ledger_index", { ascending: true }).limit(1000),
-      db.from("tow_buy_positions").select("id,buy_tx_hash,buy_value_xrp,tow_amount,remaining_tow,status,created_at,disqualified_at,sell_tx_hash,reward_status").eq("wallet_address", wallet).order("created_at", { ascending: true }).limit(1000),
+      db.from("tow_buy_positions").select("id,buy_tx_hash,buy_value_xrp,tow_amount,remaining_tow,status,created_at,disqualified_at,sell_tx_hash,reward_status,claimed_at,reward_sent_at,reward_tx_hash,unlocked_reward_tow").eq("wallet_address", wallet).order("created_at", { ascending: true }).limit(1000),
     ]);
     if (playerResult.error) throw playerResult.error;
     if (eventsResult.error) throw eventsResult.error;
@@ -106,9 +107,28 @@ export async function GET(request: NextRequest) {
       warnings.push("Some commitments have not been reconciled to remaining_tow.");
     if (events.some((event, index) => index > 0 && event.ledgerIndex === events[index - 1].ledgerIndex))
       warnings.push("Multiple transactions share a ledger; intra-ledger transaction order must be checked.");
+    const readiness = assessProofMigration({
+      verified: Boolean(playerResult.data?.verified),
+      proofStartedAt,
+      lastScannedLedger: playerResult.data?.last_scanned_ledger == null
+        ? null : Number(playerResult.data.last_scanned_ledger),
+      eventsCount: events.length,
+      // DB row limits and a ledger checkpoint cannot prove full historical coverage.
+      eventHistoryComplete: false,
+      baselineComplete: Boolean(baseline?.complete),
+      lifecycleComplete: lifecycle.complete,
+      predictedAliveCount: lifecycle.commitments.filter((p) => p.status === "alive").length,
+      predictedDisqualifiedCount: lifecycle.commitments.filter((p) => p.status === "disqualified").length,
+      positions: positions.map((p) => ({
+        ...p,
+        unlocked_reward_tow: Number(p.unlocked_reward_tow ?? 0),
+      })),
+      eventHistoryWarnings: warnings,
+    });
     return NextResponse.json({
       ok: true,
       readOnly: true,
+      migrationReadiness: readiness,
       wallet,
       player: playerResult.data,
       counts: {
