@@ -40,6 +40,7 @@ on:
       - "tests/towAtomicClaimCompatibility.test.cjs"
       - "tests/towAtomicFifoIntegration.test.cjs"
       - "tests/towLegacyMappingContract.test.cjs"
+      - "scripts/audit_xrpl_history.py"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
@@ -105,3 +106,13 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
       - name: Execute rollback-only lifecycle and atomicity fixture
         run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-lifecycle-integration-test.sql
+
+  independent-xrpl-history:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query live public XRPL account history without production credentials
+        run: python3 scripts/audit_xrpl_history.py
