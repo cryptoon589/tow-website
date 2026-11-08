@@ -29,7 +29,7 @@ def rpc(method,params):
     raise RuntimeError("All public XRPL endpoints failed: "+"; ".join(errors[-6:]))
 for wallet,known in WALLETS.items():
     marker=None; hashes=set(); pages=0; earliest=None; latest=None; duplicate=0; exhausted=False; validated=0; failures=0
-    while pages<100:
+    while pages<500:
         args={"account":wallet,"ledger_index_min":-1,"ledger_index_max":-1,"forward":True,"limit":200,"binary":False}
         if marker is not None: args["marker"]=marker
         result,used_endpoint=rpc("account_tx",args)
@@ -50,3 +50,6 @@ for wallet,known in WALLETS.items():
         if marker is None: exhausted=True; break
     found=[h for h,w in KNOWN.items() if w==wallet and h in hashes]
     print(json.dumps({"wallet":wallet,"rpc":used_endpoint,"pages":pages,"pagination_exhausted":exhausted,"unique_account_transactions":len(hashes),"duplicate_hashes":duplicate,"validated_entries":validated,"not_validated_entries":failures,"earliest_account_ledger":earliest,"latest_account_ledger":latest,"stored_tow_event_count":known["stored"],"stored_checkpoint":known["checkpoint"],"known_purchase_hashes_found":found,"known_purchase_hashes_expected":[h for h,w in KNOWN.items() if w==wallet],"historical_balance_certified":False,"fifo_migration_authorized":False}),flush=True)
+
+# An incomplete account_tx scan is evidence of an unresolved coverage gap,
+# not a successful historical verification. No database writes occur.
