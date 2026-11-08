@@ -18,9 +18,13 @@ test("SQL serializes claim, locks position, and revokes public execution",()=>{
  assert.match(migration,/revoke all on function public\.tow_execute_claim_atomic/);
  assert.match(migration,/grant execute on function public\.tow_execute_claim_atomic.*service_role/);
 });
-test("claim calculation matches main's survival and loyalty tiers",()=>{
- assert.match(migration,/when v_days >= 84 then 15/);
- assert.match(migration,/when v_days >= 56 then 7/);
+test("claim calculation matches survival, loyalty, activity, and 20% cap",()=>{
+ assert.match(migration,/when v_days\s*>=\s*84 then 15/);
+ assert.match(migration,/when v_days\s*>=\s*56 then 7/);
  assert.match(migration,/else 2\.5/);
- assert.match(migration,/floor\(v_days::numeric \/ 28\) \* 0\.25/);
+ assert.match(migration,/floor\(v_days::numeric\s*\/\s*28\)\s*\*\s*0\.25/);
+ assert.match(migration,/v_recent_raid_posts/);
+ assert.match(migration,/v_recent_game_runs/);
+ assert.match(migration,/v_activity_bonus/);
+ assert.match(migration,/least\(20::numeric,v_survival_bonus\+v_activity_bonus\)/);
 });
