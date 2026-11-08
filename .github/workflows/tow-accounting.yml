@@ -39,6 +39,7 @@ on:
       - "tests/towMainCompatibility.test.cjs"
       - "tests/towAtomicClaimCompatibility.test.cjs"
       - "tests/towAtomicFifoIntegration.test.cjs"
+      - "tests/towLegacyMappingContract.test.cjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
