@@ -99,3 +99,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-fifo-commitment-engine.sql
       - name: Execute rollback-only accounting integration fixture
         run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
+      - name: Execute rollback-only lifecycle and atomicity fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-lifecycle-integration-test.sql
