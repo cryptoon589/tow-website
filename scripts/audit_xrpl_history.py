@@ -127,5 +127,5 @@ for wallet,known in WALLETS.items():
 # Export complete read-only transaction-level evidence as a downloadable CI artifact.
 # Never import this file into production without independent classification and balance reconciliation.
 output=Path("tow-reconciliation-evidence.json")
-output.write_text(json.dumps(REPORT,indent=2)+"\\n")
+output.write_text(json.dumps(REPORT,indent=2)+"\n")
 print(json.dumps({"evidence_artifact":str(output),"wallets":len(REPORT["wallets"]),"movements":sum(len(w["movements"]) for w in REPORT["wallets"]),"production_write_authorized":False}),flush=True)
