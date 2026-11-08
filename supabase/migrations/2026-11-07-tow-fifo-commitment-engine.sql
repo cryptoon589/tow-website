@@ -32,6 +32,69 @@ alter table public.tow_accounting_lots enable row level security;
 alter table public.tow_accounting_slices enable row level security;
 alter table public.tow_accounting_processed enable row level security;
 
+create or replace function public.tow_allocate_available_commitments(
+  p_wallet text, p_created_at timestamptz, p_trigger_hash text
+) returns integer language plpgsql security definer set search_path = public as $allocate$
+declare
+  v_lot public.tow_accounting_lots%rowtype;
+  v_pool_cost numeric;
+  v_needed numeric;
+  v_cost numeric;
+  v_take numeric;
+  v_allocated numeric;
+  v_position uuid;
+  v_count integer := 0;
+  v_sequence integer;
+begin
+  loop
+    select coalesce(sum(available_cost_xrp),0) into v_pool_cost
+    from public.tow_accounting_lots where wallet_address=p_wallet;
+    exit when v_pool_cost < 49.99999999;
+    v_needed := 50;
+    v_allocated := 0;
+    select count(*)+1 into v_sequence from public.tow_buy_positions
+      where wallet_address=p_wallet;
+    insert into public.tow_buy_positions(
+      wallet_address,buy_tx_hash,buy_value_xrp,tow_amount,max_reward_tow,
+      status,created_at
+    ) values (
+      p_wallet,p_trigger_hash||'_FIFO_'||v_sequence,
+      50,0,0,'alive',p_created_at
+    ) returning id into v_position;
+    for v_lot in
+      select * from public.tow_accounting_lots
+      where wallet_address=p_wallet and available_cost_xrp>0
+      order by ledger_index,acquired_at,source_tx_hash
+    loop
+      exit when v_needed <= 0.00000001;
+      v_cost := least(v_needed,v_lot.available_cost_xrp);
+      v_take := v_lot.available_tow*v_cost/v_lot.available_cost_xrp;
+      insert into public.tow_accounting_slices(
+        position_id,wallet_address,source_tx_hash,original_tow,remaining_tow
+      ) values(v_position,p_wallet,v_lot.source_tx_hash,v_take,v_take);
+      update public.tow_accounting_lots
+      set available_tow=greatest(0,available_tow-v_take),
+          available_cost_xrp=greatest(0,available_cost_xrp-v_cost)
+      where wallet_address=p_wallet and source_tx_hash=v_lot.source_tx_hash;
+      v_allocated:=v_allocated+v_take;
+      v_needed:=v_needed-v_cost;
+    end loop;
+    if v_needed > 0.00000001 or v_allocated <= 0 then
+      raise exception 'Commitment allocation failed';
+    end if;
+    update public.tow_buy_positions
+    set tow_amount=v_allocated,max_reward_tow=round(v_allocated*0.2,6),
+        remaining_tow=v_allocated
+    where id=v_position;
+    v_count:=v_count+1;
+  end loop;
+  return v_count;
+end;
+$allocate$;
+revoke all on function public.tow_allocate_available_commitments(text,timestamptz,text)
+  from public,anon,authenticated;
+grant execute on function public.tow_allocate_available_commitments(text,timestamptz,text) to service_role;
+
 create or replace function public.tow_reconcile_wallet_atomic(p_wallet text)
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -92,6 +155,14 @@ begin
     if exists(select 1 from public.tow_accounting_processed
               where wallet_address = p_wallet and tx_hash = v_event.tx_hash) then
       continue;
+    end if;
+    -- Before processing the first post-proof movement, freeze the surviving
+    -- pre-proof purchase inventory into independent commitments.
+    if not v_proof_started and v_event.event_at >= v_player.proof_started_at then
+      v_positions_created := v_positions_created +
+        public.tow_allocate_available_commitments(
+          p_wallet,v_player.proof_started_at,v_event.tx_hash);
+      v_proof_started := true;
     end if;
     if v_event.event_type = 'buy' then
       if v_event.xrp_value <= 0 or v_event.tow_amount <= 0 then
@@ -161,52 +232,9 @@ begin
     else
       raise exception 'Unsupported event type %',v_event.event_type;
     end if;
-    -- The opening baseline is created at verification, never retrospectively
-    -- disqualified for sales that occurred before proof started.
     if v_event.event_at >= v_player.proof_started_at then
-      loop
-        select coalesce(sum(available_cost_xrp),0),
-               coalesce(sum(available_tow),0)
-          into v_pool_cost,v_pool_tow
-        from public.tow_accounting_lots where wallet_address=p_wallet;
-        exit when v_pool_cost < 49.99999999;
-        v_needed := 50;
-        v_allocated := 0;
-        v_sequence := v_positions_created+1;
-        insert into public.tow_buy_positions(
-          wallet_address,buy_tx_hash,buy_value_xrp,tow_amount,max_reward_tow,
-          status,created_at
-        ) values (
-          p_wallet, v_event.tx_hash||'_FIFO_'||v_sequence,
-          50,0,0,'alive',greatest(v_player.proof_started_at,v_event.event_at)
-        ) returning id into v_position;
-        for v_lot in
-          select * from public.tow_accounting_lots
-          where wallet_address=p_wallet and available_cost_xrp>0
-          order by ledger_index,acquired_at,source_tx_hash
-        loop
-          exit when v_needed <= 0.00000001;
-          v_cost := least(v_needed,v_lot.available_cost_xrp);
-          v_take := v_lot.available_tow*v_cost/v_lot.available_cost_xrp;
-          insert into public.tow_accounting_slices(
-            position_id,wallet_address,source_tx_hash,original_tow,remaining_tow
-          ) values(v_position,p_wallet,v_lot.source_tx_hash,v_take,v_take);
-          update public.tow_accounting_lots
-          set available_tow=greatest(0,available_tow-v_take),
-              available_cost_xrp=greatest(0,available_cost_xrp-v_cost)
-          where wallet_address=p_wallet and source_tx_hash=v_lot.source_tx_hash;
-          v_allocated := v_allocated+v_take;
-          v_needed := v_needed-v_cost;
-        end loop;
-        if v_needed > 0.00000001 or v_allocated <= 0 then
-          raise exception 'Commitment allocation failed';
-        end if;
-        update public.tow_buy_positions
-        set tow_amount=v_allocated,max_reward_tow=round(v_allocated*0.2,6),
-            remaining_tow=v_allocated
-        where id=v_position;
-        v_positions_created:=v_positions_created+1;
-      end loop;
+      v_positions_created := v_positions_created +
+        public.tow_allocate_available_commitments(p_wallet,v_event.event_at,v_event.tx_hash);
     end if;
     insert into public.tow_accounting_processed(wallet_address,tx_hash)
     values(p_wallet,v_event.tx_hash);
