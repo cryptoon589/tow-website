@@ -28,6 +28,8 @@ begin
  -- 35d: 2.5% survival + 1% raids + 0.2% games +
  -- 1% recent presence + 0.25% loyalty = 4.95%.
  if reward<>49.5 then raise exception 'Activity reward mismatch: %',reward; end if;
+ if (select unlocked_reward_tow from public.tow_buy_positions where id=pid)<>reward
+ then raise exception 'Position reward differs from archived reward'; end if;
  if (select status from public.tow_buy_positions where id=pid)<>'claimed'
  or (select status from public.tow_claim_requests where id=cid)<>'executed' then
  raise exception 'Claim state not atomic'; end if;
