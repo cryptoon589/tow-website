@@ -24,7 +24,7 @@ class ReconstructionTests(unittest.TestCase):
         self.assertEqual(report["remaining_tow"],"50")
         self.assertEqual(report["lots"][0]["remaining_tow"],"0")
         self.assertEqual(report["lots"][1]["remaining_tow"],"50")
-        self.assertEqual(report["lots"][1]["remaining_xrp"],"10.0")
+        self.assertEqual(fifo.decimal(report["lots"][1]["remaining_xrp"]),fifo.decimal("10"))
         self.assertFalse(report["safe_to_migrate"])
 
     def test_unknown_cost_survives_as_blocker(self):
