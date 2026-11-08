@@ -42,6 +42,7 @@ on:
       - "tests/towLegacyMappingContract.test.cjs"
       - "scripts/audit_xrpl_history.py"
       - "scripts/audit_tow_wallet3_opening.py"
+      - "scripts/audit_tow_wallet3_cost.py"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
@@ -119,3 +120,6 @@ jobs:
         run: python3 scripts/audit_xrpl_history.py
       - name: Independently verify Wallet 3 pre-existing TOW inventory
         run: python3 scripts/audit_tow_wallet3_opening.py
+
+      - name: Inspect XRP and TOW execution deltas of Wallet 3 historical trades
+        run: python3 scripts/audit_tow_wallet3_cost.py
