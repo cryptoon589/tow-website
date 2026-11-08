@@ -61,12 +61,12 @@ export function reconcileCommitmentIdentities(
     previewIds.add(row.id);
   }
 
-  // Require exact, uniquely identifying purchase tx + timestamp + original
+  // Require exact, uniquely identifying source purchase tx + timestamp + original
   // token amount + original cost + status. Never infer identity from order.
   for (const proposed of preview) {
     const candidates = stored.filter((row) =>
       !matchedStored.has(row.id) &&
-      row.buy_tx_hash.toUpperCase() === proposed.id.toUpperCase() &&
+      row.buy_tx_hash.toUpperCase() === proposed.sourceTxHash.toUpperCase() &&
       new Date(row.created_at).getTime() === new Date(proposed.createdAt).getTime() &&
       Math.abs(row.tow_amount - proposed.originalTow) <= EPS &&
       Math.abs(row.buy_value_xrp - proposed.costXrp) <= EPS &&
