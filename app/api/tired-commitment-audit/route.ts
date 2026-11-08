@@ -11,16 +11,9 @@ import { assessHistoryCoverage } from "@/lib/towHistoryCoverage";
 import { replayPurchaseLots } from "@/lib/towPurchaseLotInventory";
 import { allocateOpeningCommitments } from "@/lib/towOpeningCommitmentAllocation";
 import { reconcileOpeningIdentities } from "@/lib/towOpeningIdentityReport";
+import { xrplLedgerTimestamp, extractLedgerDatedMovements } from "@/lib/towLedgerEventTime";
 
 export const dynamic = "force-dynamic";
-
-function xrplTime(raw: any): string | null {
-  const tx = raw?.tx ?? raw?.tx_json ?? raw;
-  const seconds = Number(tx?.date);
-  if (!Number.isFinite(seconds) || seconds < 0 || tx?.date == null) return null;
-  const date = new Date((seconds + 946684800) * 1000);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +39,7 @@ export async function GET(request: NextRequest) {
     if (positionsResult.error) throw positionsResult.error;
     const proofStartedAt = playerResult.data?.proof_started_at ?? null;
     const events = (eventsResult.data ?? []).map((event) => {
-      const actualTime = xrplTime(event.raw_event);
+      const actualTime = xrplLedgerTimestamp(event.raw_event);
       const timestampMismatchSeconds = actualTime
         ? Math.round((new Date(event.event_at).getTime() - new Date(actualTime).getTime()) / 1000)
         : null;
@@ -69,15 +62,24 @@ export async function GET(request: NextRequest) {
       tow_amount: Number(position.tow_amount),
       remaining_tow: position.remaining_tow == null ? null : Number(position.remaining_tow),
     }));
-    const movements: LedgerMovement[] = (eventsResult.data ?? []).map((event) => ({
-      txHash: String(event.tx_hash),
-      ledgerIndex: Number(event.ledger_index),
-      transactionIndex: Number((event.raw_event as any)?.meta?.TransactionIndex ?? 0),
-      eventAt: xrplTime(event.raw_event),
-      type: event.event_type as LedgerMovement["type"],
-      xrpValue: Number(event.xrp_value),
-      towAmount: Number(event.tow_amount),
-    }));
+    const ledgerExtraction = extractLedgerDatedMovements((eventsResult.data ?? []).map((event) => ({
+      tx_hash: String(event.tx_hash),
+      event_type: String(event.event_type),
+      ledger_index: Number(event.ledger_index),
+      tow_amount: event.tow_amount,
+      xrp_value: event.xrp_value,
+      event_at: String(event.event_at),
+      raw_event: event.raw_event,
+    })));
+    // Missing XRPL timestamps must never be replaced by scanner/import times.
+    const movements: LedgerMovement[] = ledgerExtraction.movements.map((movement) => {
+      const original = (eventsResult.data ?? []).find((event) => event.tx_hash === movement.txHash);
+      return {
+        ...movement,
+        type: movement.type as LedgerMovement["type"],
+        transactionIndex: Number((original?.raw_event as any)?.meta?.TransactionIndex ?? 0),
+      };
+    });
     const costBasis = reconcileCostBasis(movements, MIN_QUALIFYING_BUY_XRP);
     const purchaseLots = replayPurchaseLots(movements.map((movement): ProofMovement => ({
       ...movement, eventAt: movement.eventAt ?? "",
@@ -128,6 +130,9 @@ export async function GET(request: NextRequest) {
       ...lifecycle.warnings,
       ...(baseline?.warnings ?? []),
     ];
+    if (ledgerExtraction.invalidHashes.length) warnings.push(
+      `${ledgerExtraction.invalidHashes.length} event(s) lack trustworthy XRPL timestamps or quantities; preview is incomplete.`
+    );
     if (events.length === 1000) warnings.push("Event query hit 1000 rows: audit may be incomplete.");
     if (positions.length === 1000) warnings.push("Position query hit 1000 rows: audit may be incomplete.");
     if (events.some((event) => event.xrplTime == null)) warnings.push("Some events have no verifiable XRPL timestamp.");
@@ -160,8 +165,9 @@ export async function GET(request: NextRequest) {
       reconstructedBalanceAtVerification: baseline
         ? baseline.qualifyingTow + baseline.nonqualifyingTow : null,
       unclassifiedTowMovements: 0,
-      timestampMismatches: events.filter((e) => e.timestampMismatchSeconds != null &&
-        Math.abs(e.timestampMismatchSeconds) > 60).length,
+      // Scanner/import timestamp drift is diagnostic only when the actual
+      // XRPL timestamp is present and used for all replay calculations.
+      timestampMismatches: ledgerExtraction.invalidHashes.length,
       conflictingTxHashes: 0,
     });
     const readiness = assessProofMigration({
@@ -172,8 +178,8 @@ export async function GET(request: NextRequest) {
       eventsCount: events.length,
       // DB row limits and a ledger checkpoint cannot prove full historical coverage.
       eventHistoryComplete: historyCoverage.verifiedComplete,
-      baselineComplete: Boolean(baseline?.complete),
-      lifecycleComplete: lifecycle.complete,
+      baselineComplete: ledgerExtraction.invalidHashes.length === 0 && Boolean(baseline?.complete),
+      lifecycleComplete: ledgerExtraction.invalidHashes.length === 0 && lifecycle.complete,
       predictedAliveCount: (unified?.lifecycle ?? lifecycle).commitments.filter((p) => p.status === "alive").length,
       predictedDisqualifiedCount: (unified?.lifecycle ?? lifecycle).commitments.filter((p) => p.status === "disqualified").length,
       positions: positions.map((p) => ({
@@ -209,6 +215,13 @@ export async function GET(request: NextRequest) {
         currentAlivePositions: positions.filter((p) => p.status === "alive").length,
         differenceFromStoredAlive: costBasis.qualifyingCommitments -
           positions.filter((p) => p.status === "alive").length,
+      },
+      ledgerTimestampAudit: {
+        totalEvents: events.length,
+        ledgerDatedEvents: ledgerExtraction.movements.length,
+        invalidHashes: ledgerExtraction.invalidHashes,
+        scannerTimestampDisagreements: ledgerExtraction.timestampDisagreements.length,
+        safeToApply: false,
       },
       events,
       positions,
