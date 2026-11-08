@@ -125,6 +125,11 @@ export function replayProofCommitments(
     } else if (event.type === "transfer_in" || event.type === "reward") {
       nonqualifyingTow += event.towAmount;
     } else if (event.type === "sell" || event.type === "transfer_out") {
+      if (proofTime !== null && proofTime !== undefined &&
+          new Date(event.eventAt).getTime() < proofTime) {
+        complete = false;
+        warnings.push(`Pre-verification outflow needs baseline reconstruction: ${hash}`);
+      }
       let remaining = event.towAmount;
       // Mixing qualifying and nonqualifying holdings is ambiguous without
       // wallet-specific provenance. Fail closed for automatic application.
