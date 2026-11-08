@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
     const costBasis = reconcileCostBasis(movements, MIN_QUALIFYING_BUY_XRP);
     const purchaseLots = replayPurchaseLots(movements.map((movement): ProofMovement => ({
       ...movement, eventAt: movement.eventAt ?? "",
+      transactionIndex: movement.transactionIndex ?? undefined,
     })));
     const lifecycle = replayProofCommitments(
       movements.map((movement): ProofMovement => ({
