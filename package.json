@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:cost-basis": "node --test tests/towCostBasis.test.cjs",
-    "test:accounting": "node --test tests/towCostBasis.test.cjs tests/towCommitmentLifecycle.test.cjs tests/towProofBaseline.test.cjs tests/towMigrationReadiness.test.cjs tests/towUnifiedProofPreview.test.cjs tests/towIdentityReconciliation.test.cjs tests/towHistoryCoverage.test.cjs tests/towAccountTxCoverage.test.cjs tests/towLedgerMovementInspection.test.cjs tests/towSchemaApiCompatibility.test.cjs tests/towPurchaseLotInventory.test.cjs tests/towOpeningCommitmentAllocation.test.cjs tests/towOpeningIdentityReport.test.cjs tests/towMainCompatibility.test.cjs tests/towAtomicClaimCompatibility.test.cjs tests/towAtomicFifoIntegration.test.cjs tests/towLegacyMappingContract.test.cjs"
+    "test:accounting": "node --test tests/towCostBasis.test.cjs tests/towCommitmentLifecycle.test.cjs tests/towProofBaseline.test.cjs tests/towMigrationReadiness.test.cjs tests/towUnifiedProofPreview.test.cjs tests/towIdentityReconciliation.test.cjs tests/towHistoryCoverage.test.cjs tests/towAccountTxCoverage.test.cjs tests/towLedgerMovementInspection.test.cjs tests/towSchemaApiCompatibility.test.cjs tests/towPurchaseLotInventory.test.cjs tests/towOpeningCommitmentAllocation.test.cjs tests/towOpeningIdentityReport.test.cjs tests/towMainCompatibility.test.cjs tests/towAtomicClaimCompatibility.test.cjs tests/towAtomicFifoIntegration.test.cjs tests/towLegacyMappingContract.test.cjs tests/towLegacyProvenanceDiagnostic.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",
