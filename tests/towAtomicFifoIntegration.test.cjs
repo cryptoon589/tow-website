@@ -23,7 +23,7 @@ test("opening inventory is allocated before first post-proof movement",()=>{
 });
 test("sell consumption is ordered across committed and uncommitted tokens",()=>{
  assert.match(sql,/union all/);
- assert.match(sql,/order by ledger_index,acquired_at,source_tx_hash,movement_kind,position_id/);
+ assert.match(sql,/order by ledger_index,acquired_at,source_tx_hash,movement_kind,commitment_order/);
  assert.match(sql,/if v_slice.position_status='alive'/);
  assert.match(sql,/status='disqualified'/);
 });
