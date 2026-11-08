@@ -53,16 +53,26 @@ export async function POST(request: Request) {
       ...event, txHash: String(event.txHash).toUpperCase(),
       xrpValue: Number(event.xrpValue), towAmount: Number(event.towAmount),
     }));
-    // The RPC is a single transaction: no partial batches, no overwritten
-    // ledger records, and no position mutations.
-    const { data, error } = await supabase.rpc("tow_ingest_wallet_events_atomic", {
+    const hasCommitmentMovements = normalized.some(event => event.eventType !== "reward");
+    const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true";
+    // FIFO is opt-in until complete historical ledger coverage and existing
+    // UUID reconciliation are verified. Never activate it by default.
+    const rpcName = hasCommitmentMovements && fifoEnabled
+      ? "tow_ingest_and_reconcile_wallet_atomic"
+      : "tow_ingest_wallet_events_atomic";
+    const { data, error } = await supabase.rpc(rpcName, {
       p_wallet: wallet, p_events: normalized,
     });
-    if (error) throw error;
-    // IMPORTANT: never acknowledge a commitment-affecting movement as fully
-    // processed until the FIFO commitment reconciliation is also atomic.
-    // The scanner consequently does not advance its ledger checkpoint.
-    if (normalized.some(event => event.eventType !== "reward")) {
+    if (error) {
+      const message = String(error.message ?? "");
+      if (/LEGACY_POSITION_RECONCILIATION_REQUIRED|MIXED_PROVENANCE_REQUIRES_REVIEW|INCOMPLETE_LEDGER_ORDER|MISSING_TRANSACTION_INDEX|OUT_OF_ORDER_LEDGER_REPLAY/.test(message)) {
+        return NextResponse.json({
+          error: message, code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
+        }, { status: 409 });
+      }
+      throw error;
+    }
+    if (hasCommitmentMovements && !fifoEnabled) {
       return NextResponse.json({
         error: "Events durably staged; commitment reconciliation is not enabled.",
         code: "TOW_ACCOUNTING_MIGRATION_REQUIRED",
@@ -71,7 +81,7 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
     return NextResponse.json({
-      ok: true, positionsCreated: 0, disqualified: 0,
+      ok: true, positionsCreated: data?.positionsCreated ?? 0, disqualified: data?.disqualified ?? 0,
       newCommitments: [], disqualifiedCommitments: [],
       results: normalized.map(event => ({
         walletAddress: wallet, txHash: event.txHash,
