@@ -14,6 +14,8 @@ on:
       - "lib/towLedgerMovementInspection.ts"
       - "app/api/tired-history-inspect/route.ts"
       - "app/api/admin/mark-reward-sent/route.ts"
+      - "app/api/tired-sync/route.ts"
+      - "supabase/migrations/**"
       - "supabase/audits/**"
       - "tests/towCostBasis.test.cjs"
       - "tests/towCommitmentLifecycle.test.cjs"
