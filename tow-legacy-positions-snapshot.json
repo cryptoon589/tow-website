@@ -1,0 +1,26 @@
+[
+  {
+    "id": "4aecdbd8-060b-4e2e-9519-5073ce72744c",
+    "wallet_address": "r4QqFdgZWoHhJwzhLs2dhR7pgGMfg1cSGf",
+    "buy_tx_hash": "E335FB2BB0A30D7E4E274A95B4510121010F57CF0F7D946B8F8D17F6B9D2861F_1",
+    "status": "alive",
+    "tow_amount": "1273395.797394",
+    "sell_tx_hash": null
+  },
+  {
+    "id": "fb392daa-ac44-4344-bd7e-73b36bf01782",
+    "wallet_address": "r4QqFdgZWoHhJwzhLs2dhR7pgGMfg1cSGf",
+    "buy_tx_hash": "E335FB2BB0A30D7E4E274A95B4510121010F57CF0F7D946B8F8D17F6B9D2861F_2",
+    "status": "alive",
+    "tow_amount": "1273395.797394",
+    "sell_tx_hash": null
+  },
+  {
+    "id": "899cf10a-23e5-4d6c-9441-478d364a25f1",
+    "wallet_address": "rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA",
+    "buy_tx_hash": "85BE409C3D76E62FBB6238895775D3D57692F0D4CA2DFC52D32C4B291A066055_1",
+    "status": "disqualified",
+    "tow_amount": "1672320.691679",
+    "sell_tx_hash": "57FDC84E6EA1D5D469893586DC943B79CE23252F78CE36E7E73AECF225E99E1A"
+  }
+]
