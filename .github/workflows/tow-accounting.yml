@@ -38,6 +38,7 @@ on:
       - "tests/towOpeningIdentityReport.test.cjs"
       - "tests/towMainCompatibility.test.cjs"
       - "tests/towAtomicClaimCompatibility.test.cjs"
+      - "tests/towAtomicFifoIntegration.test.cjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
