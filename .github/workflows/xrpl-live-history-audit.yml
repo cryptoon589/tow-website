@@ -2,7 +2,10 @@ name: XRPL live historical coverage audit
 on:
   push:
     branches:
-      - audit/xrpl-live-history-verification
+      - main
+    paths:
+      - scripts/audit_xrpl_history.py
+      - .github/workflows/xrpl-live-history-audit.yml
   workflow_dispatch:
 permissions:
   contents: read
