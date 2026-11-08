@@ -16,7 +16,7 @@ test("legacy position UUIDs are protected until source lots reconciled",()=>{
  assert.match(sql,/references public\.tow_buy_positions\(id\)/);
 });
 test("opening inventory is allocated before first post-proof movement",()=>{
- const open=sql.indexOf("if not v_proof_started and v_event.event_at >= v_player.proof_started_at");
+ const open=sql.indexOf("if not v_proof_started and v_event.ledger_index > v_proof_ledger");
  const buy=sql.indexOf("if v_event.event_type = 'buy' then");
  assert.ok(open>=0&&buy>open);
  assert.match(sql,/tow_accounting_initialized/);
@@ -54,5 +54,6 @@ test("commitments 10+ retain numeric FIFO ordering",()=>{
 test("certified history must extend through every staged ledger event",()=>{
  assert.match(sql,/checked_through_ledger>=coalesce\(/);
  assert.match(sql,/select max\(ledger_index\) from public\.tow_wallet_events/);
- assert.match(sql,/PROOF_LEDGER_TIMESTAMP_CONFLICT/);
+ assert.match(sql,/v_event\.ledger_index > v_proof_ledger/);
+ assert.doesNotMatch(sql,/v_event\.event_at >= v_player\.proof_started_at/);
 });
