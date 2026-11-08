@@ -6,6 +6,7 @@ import { replayProofCommitments, type ProofMovement } from "@/lib/towCommitmentL
 import { reconstructProofBaseline } from "@/lib/towProofBaseline";
 import { assessProofMigration } from "@/lib/towMigrationReadiness";
 import { previewVerifiedProof } from "@/lib/towUnifiedProofPreview";
+import { reconcileCommitmentIdentities } from "@/lib/towIdentityReconciliation";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +122,13 @@ export async function GET(request: NextRequest) {
       warnings.push("Some commitments have not been reconciled to remaining_tow.");
     if (events.some((event, index) => index > 0 && event.ledgerIndex === events[index - 1].ledgerIndex))
       warnings.push("Multiple transactions share a ledger; intra-ledger transaction order must be checked.");
+    const identityReconciliation = reconcileCommitmentIdentities(
+      positions.map((p) => ({
+        ...p,
+        unlocked_reward_tow: Number(p.unlocked_reward_tow ?? 0),
+      })),
+      (unified?.lifecycle ?? lifecycle).commitments
+    );
     const readiness = assessProofMigration({
       verified: Boolean(playerResult.data?.verified),
       proofStartedAt,
@@ -143,6 +151,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       readOnly: true,
       migrationReadiness: readiness,
+      identityReconciliation,
       wallet,
       player: playerResult.data,
       counts: {
