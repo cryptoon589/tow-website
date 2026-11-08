@@ -62,3 +62,40 @@ jobs:
       - run: npm ci
       - run: npm run test:accounting
       - run: npx tsc --noEmit
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: tow_accounting_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tow_accounting_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test-only
+      PGDATABASE: tow_accounting_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable PostgreSQL schema
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-disposable-postgres-schema.sql
+      - name: Apply wallet event uniqueness migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-wallet-event-per-wallet-uniqueness.sql
+      - name: Apply atomic ingestion migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-event-ingestion.sql
+      - name: Apply FIFO accounting migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-fifo-commitment-engine.sql
+      - name: Execute rollback-only accounting integration fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
