@@ -97,6 +97,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-event-ingestion.sql
       - name: Apply FIFO accounting migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-fifo-commitment-engine.sql
+      - name: Apply atomic claim migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-claim-execute.sql
+      - name: Execute rollback-only claim integration fixture
+        run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-atomic-claim-integration-test.sql
       - name: Execute rollback-only accounting integration fixture
         run: psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
       - name: Execute rollback-only lifecycle and atomicity fixture
