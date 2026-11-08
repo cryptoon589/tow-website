@@ -273,4 +273,23 @@ $$;
 revoke all on function public.tow_reconcile_wallet_atomic(text)
   from public,anon,authenticated;
 grant execute on function public.tow_reconcile_wallet_atomic(text) to service_role;
+-- Ingestion and reconciliation share one PostgreSQL transaction. A failed
+-- allocation rolls back all new events and position changes.
+create or replace function public.tow_ingest_and_reconcile_wallet_atomic(
+  p_wallet text,p_events jsonb
+) returns jsonb language plpgsql security definer set search_path = public as $combined$
+declare
+  v_ingest jsonb;
+  v_reconcile jsonb;
+begin
+  v_ingest := public.tow_ingest_wallet_events_atomic(p_wallet,p_events);
+  v_reconcile := public.tow_reconcile_wallet_atomic(p_wallet);
+  return v_reconcile || jsonb_build_object(
+    'recorded',v_ingest->'recorded','duplicates',v_ingest->'duplicates');
+end;
+$combined$;
+revoke all on function public.tow_ingest_and_reconcile_wallet_atomic(text,jsonb)
+  from public,anon,authenticated;
+grant execute on function public.tow_ingest_and_reconcile_wallet_atomic(text,jsonb)
+  to service_role;
 commit;
