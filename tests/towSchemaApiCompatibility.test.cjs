@@ -9,7 +9,8 @@ const migration = fs.readFileSync(path.join(root, "supabase/migrations/2026-11-0
 const claimMigration = fs.readFileSync(path.join(root, "supabase/migrations/2026-11-07-tow-claimed-status-compatibility.sql"), "utf8");
 
 test("atomic wallet event RPC and composite uniqueness migration agree", () => {
-  assert.match(sync, /rpc\("tow_ingest_wallet_events_atomic"/);
+  assert.match(sync, /"tow_ingest_wallet_events_atomic"/);
+  assert.match(sync, /"tow_ingest_and_reconcile_wallet_atomic"/);
   assert.match(migration, /unique\s*\(wallet_address,\s*tx_hash\)/i);
   assert.match(migration, /drop constraint tow_wallet_events_tx_hash_key/i);
 });
