@@ -47,7 +47,7 @@ def reconstruct(wallet):
     remaining=sum((lot["remaining_tow"] for lot in lots),ZERO)
     expected=total_received-total_sent
     active_unknown=[lot["hash"] for lot in lots if lot["remaining_tow"]>0 and lot["original_xrp"] is None]
-    safe=(wallet["account_history_exhausted"] and wallet["unvalidated_entries"]==0 and
+    evidence_complete=(wallet["account_history_exhausted"] and wallet["unvalidated_entries"]==0 and
           not wallet["metadata_issues"] and not outflow_shortfall and not active_unknown and
           abs(remaining-expected)<=decimal("0.00000001") and wallet["missing_count"]==0 and
           not wallet["stored_without_detected_delta"])
@@ -58,7 +58,7 @@ def reconstruct(wallet):
             "lots":[{**lot,"remaining_tow":str(lot["remaining_tow"]),
                       "remaining_xrp":str(lot["remaining_xrp"]) if lot["remaining_xrp"] is not None else None}
                      for lot in lots],
-            "historical_balance_certified":False,"safe_to_migrate":safe}
+            "historical_balance_certified":False,"evidence_complete":evidence_complete,"safe_to_migrate":False}
 
 def main():
     source=json.loads(SOURCE.read_text())
