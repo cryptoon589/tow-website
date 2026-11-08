@@ -1,6 +1,7 @@
 name: TOW commitment accounting checks
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "lib/towCostBasis.ts"
@@ -44,6 +45,8 @@ on:
       - "scripts/audit_tow_wallet3_opening.py"
       - "scripts/audit_tow_wallet3_cost.py"
       - "scripts/prepare_tow_fifo_migration.py"
+      - "scripts/audit_tow_legacy_positions.py"
+      - "tow-legacy-positions-snapshot.json"
       - "tests/test_tow_fifo_migration.py"
       - "package.json"
       - "package-lock.json"
@@ -123,6 +126,8 @@ jobs:
         run: python3 scripts/audit_xrpl_history.py
       - name: Reconstruct FIFO inventory from complete XRPL evidence (dry run only)
         run: python3 scripts/prepare_tow_fifo_migration.py
+      - name: Audit legacy positions against verified XRPL provenance
+        run: python3 scripts/audit_tow_legacy_positions.py
       - name: Upload complete reconciliation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -131,6 +136,7 @@ jobs:
           path: |
             tow-reconciliation-evidence.json
             tow-fifo-migration-dry-run.json
+            tow-legacy-position-reconciliation.json
           if-no-files-found: warn
           retention-days: 30
       - name: Independently verify Wallet 3 pre-existing TOW inventory
