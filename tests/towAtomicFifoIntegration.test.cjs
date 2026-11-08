@@ -46,3 +46,13 @@ test("opening commitments initialize even if there were no post-proof movements"
  assert.match(sql,/if not v_proof_started then/);
  assert.match(sql,/p_wallet,v_player.proof_started_at,'OPENING_'/);
 });
+
+test("commitments 10+ retain numeric FIFO ordering",()=>{
+ assert.match(sql,/lpad\(v_sequence::text,10,'0'\)/);
+ assert.match(sql,/order by ledger_index,acquired_at,source_tx_hash,movement_kind,commitment_order/);
+});
+test("certified history must extend through every staged ledger event",()=>{
+ assert.match(sql,/checked_through_ledger>=coalesce\(/);
+ assert.match(sql,/select max\(ledger_index\) from public\.tow_wallet_events/);
+ assert.match(sql,/PROOF_LEDGER_TIMESTAMP_CONFLICT/);
+});
