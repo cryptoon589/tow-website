@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet, MIN_QUALIFYING_BUY_XRP } from "@/lib/towProof";
 import { reconcileCostBasis, type LedgerMovement } from "@/lib/towCostBasis";
+import { replayProofCommitments, type ProofMovement } from "@/lib/towCommitmentLifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,15 @@ export async function GET(request: NextRequest) {
       towAmount: Number(event.tow_amount),
     }));
     const costBasis = reconcileCostBasis(movements, MIN_QUALIFYING_BUY_XRP);
-    const warnings: string[] = [...costBasis.warnings];
+    const lifecycle = replayProofCommitments(
+      movements.map((movement): ProofMovement => ({
+        ...movement,
+        eventAt: movement.eventAt ?? "",
+        transactionIndex: movement.transactionIndex ?? undefined,
+      })),
+      MIN_QUALIFYING_BUY_XRP
+    );
+    const warnings: string[] = [...costBasis.warnings, ...lifecycle.warnings];
     if (events.length === 1000) warnings.push("Event query hit 1000 rows: audit may be incomplete.");
     if (positions.length === 1000) warnings.push("Position query hit 1000 rows: audit may be incomplete.");
     if (events.some((event) => event.xrplTime == null)) warnings.push("Some events have no verifiable XRPL timestamp.");
@@ -92,6 +101,7 @@ export async function GET(request: NextRequest) {
         disqualified: positions.filter((p) => p.status === "disqualified").length,
       },
       warnings,
+      lifecycle: { ...lifecycle, safeToApply: false },
       costBasis: {
         ...costBasis,
         safeToApply: false,
