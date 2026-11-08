@@ -23,6 +23,7 @@ declare
   v_mapped integer;
   v_missing integer;
   v_bad integer;
+  v_overallocated integer;
 begin
   select count(*) into v_count from public.tow_buy_positions
     where wallet_address=p_wallet;
@@ -44,6 +45,18 @@ begin
       or coalesce(p.unlocked_reward_tow,0)>0
       or m.source_tow>e.tow_amount
       or m.source_cost_xrp>e.xrp_value);
+  -- Two different UUIDs may point to one purchase, but their combined
+  -- source-token and original-XRP slices cannot exceed that purchase.
+  select count(*) into v_overallocated from (
+    select m.source_tx_hash
+    from public.tow_legacy_position_mappings m
+    join public.tow_wallet_events e on e.wallet_address=m.wallet_address
+      and upper(e.tx_hash)=upper(m.source_tx_hash)
+    where m.wallet_address=p_wallet
+    group by m.source_tx_hash,e.tow_amount,e.xrp_value
+    having sum(m.source_tow)>e.tow_amount+0.00000001
+        or sum(m.source_cost_xrp)>e.xrp_value+0.00000001
+  ) overallocated;
   select count(*) into v_missing from public.tow_buy_positions p
     where p.wallet_address=p_wallet and not exists (
       select 1 from public.tow_legacy_position_mappings m
@@ -53,7 +66,7 @@ begin
   -- per-commitment slice allocation; require independent verification.
   return jsonb_build_object(
     'safeToApply',false,'positionCount',v_count,'mappedCount',v_mapped,
-    'missingCount',v_missing,'invalidCount',v_bad,
+    'missingCount',v_missing,'invalidCount',v_bad,'overallocatedSources',v_overallocated,
     'requiresIndependentHistoryAndSliceVerification',true
   );
 end;
