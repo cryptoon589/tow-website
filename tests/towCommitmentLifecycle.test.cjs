@@ -92,3 +92,20 @@ test("duplicate events cannot create duplicate commitments", () => {
   assert.equal(r.complete, false);
   assert.equal(r.commitments.length, 1);
 });
+
+test("pre-verification acquisition begins streak at verification", () => {
+  const started = "2026-11-01T00:00:00.000Z";
+  const r = replayProofCommitments([tx("a", 1, "buy", 50, 500)], 50, started);
+  assert.equal(r.complete, true);
+  assert.equal(r.commitments[0].createdAt, started);
+  assert.equal(r.commitments[0].acquiredBeforeProof, true);
+});
+
+test("historical sells are flagged for baseline reconstruction", () => {
+  const r = replayProofCommitments([
+    tx("a", 1, "buy", 100, 1000),
+    tx("b", 2, "sell", 20, 100),
+  ], 50, "2026-11-01T00:00:00.000Z");
+  assert.equal(r.complete, false);
+  assert.ok(r.warnings.some((warning) => warning.includes("Pre-verification outflow")));
+});
