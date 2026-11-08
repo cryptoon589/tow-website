@@ -116,6 +116,10 @@ export function reconcileCostBasis(
       // Consume known nonqualifying tokens first to avoid falsely reducing
       // reward eligibility for transferred-in holdings.
       let remaining = event.towAmount;
+      if (unqualifiedBalance > EPS && lots.some((lot) => lot.remainingTow > EPS)) {
+        complete = false;
+        warnings.push(`Mixed acquired and transferred holdings at ${hash}; allocation requires a declared policy and wallet reconciliation`);
+      }
       const nonqualifyingUsed = Math.min(remaining, unqualifiedBalance);
       unqualifiedBalance -= nonqualifyingUsed;
       remaining -= nonqualifyingUsed;
