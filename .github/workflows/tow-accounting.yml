@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "lib/towCostBasis.ts"
+      - "lib/towCommitmentLifecycle.ts"
       - "tests/towCostBasis.test.cjs"
+      - "tests/towCommitmentLifecycle.test.cjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/tow-accounting.yml"
@@ -24,5 +26,5 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: npm run test:cost-basis
+      - run: npm run test:accounting
       - run: npx tsc --noEmit
