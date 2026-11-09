@@ -46,6 +46,8 @@ on:
       - "scripts/audit_tow_wallet3_cost.py"
       - "scripts/prepare_tow_fifo_migration.py"
       - "scripts/prepare_tow_event_import.py"
+      - "scripts/tow_inflow_provenance_review.py"
+      - "tests/test_tow_inflow_provenance_review.py"
       - "tests/test_tow_event_import.py"
       - "scripts/audit_tow_legacy_positions.py"
       - "tow-legacy-positions-snapshot.json"
@@ -75,6 +77,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: python3 -m unittest discover -s tests -p test_tow_fifo_migration.py
       - run: python3 -m unittest discover -s tests -p test_tow_event_import.py
+      - run: python3 -m unittest discover -s tests -p test_tow_inflow_provenance_review.py
       - run: python3 -m unittest discover -s tests -p test_tow_legacy_positions.py
 
   postgres-integration:
@@ -133,6 +136,8 @@ jobs:
         run: python3 scripts/prepare_tow_fifo_migration.py
       - name: Prepare review-only historical event staging manifest
         run: python3 scripts/prepare_tow_event_import.py
+      - name: Classify missing TOW inflows without certifying purchases
+        run: python3 scripts/tow_inflow_provenance_review.py
       - name: Audit legacy positions against verified XRPL provenance
         run: python3 scripts/audit_tow_legacy_positions.py
       - name: Upload complete reconciliation evidence
@@ -144,6 +149,7 @@ jobs:
             tow-reconciliation-evidence.json
             tow-fifo-migration-dry-run.json
             tow-event-import-staging.json
+            tow-inflow-provenance-review.json
             tow-legacy-position-reconciliation.json
           if-no-files-found: warn
           retention-days: 30
