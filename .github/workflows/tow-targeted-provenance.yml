@@ -1,0 +1,27 @@
+name: TOW targeted transaction provenance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify_tow_targeted_txs.py'
+      - '.github/workflows/tow-targeted-provenance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  targeted-provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch six specific validated XRPL transactions
+        run: python3 scripts/verify_tow_targeted_txs.py
+      - name: Upload review-only transaction metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tow-targeted-tx-provenance
+          path: tow-targeted-tx-provenance.json
+          if-no-files-found: warn
