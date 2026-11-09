@@ -8,10 +8,10 @@ spec=importlib.util.spec_from_file_location("fifo",Path(__file__).resolve().pare
 fifo=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fifo)
 
-def event(hash,ledger,delta,cost=None):
+def event(hash,ledger,delta,cost=None,certified=False):
     return {"hash":hash,"ledger":ledger,"delta_tow":str(delta),
             "xrp_spent_excluding_fee":str(cost) if cost is not None else None,
-            "cost_basis_status":"candidate_direct_xrp_execution" if cost is not None else "unresolved_or_nonpurchase"}
+            "cost_basis_status":("certified_direct_xrp_execution" if certified else "candidate_direct_xrp_execution") if cost is not None else "unresolved_or_nonpurchase"}
 
 def wallet(events,missing=0):
     return {"wallet":"rTest","movements":events,"account_history_exhausted":True,
@@ -32,6 +32,17 @@ class ReconstructionTests(unittest.TestCase):
         self.assertEqual(report["unpriced_surviving_lots"],["a"])
         self.assertFalse(report["evidence_complete"])
 
+    def test_observed_xrp_debit_is_not_certified_cost(self):
+        report=fifo.reconstruct(wallet([event("a",1,100,50)]))
+        self.assertEqual(report["unpriced_surviving_lots"],[])
+        self.assertEqual(report["uncertified_surviving_lots"],["a"])
+        self.assertFalse(report["evidence_complete"])
+
+    def test_certified_cost_can_pass_inventory_evidence_only(self):
+        report=fifo.reconstruct(wallet([event("a",1,100,50,certified=True)]))
+        self.assertTrue(report["evidence_complete"])
+        self.assertFalse(report["safe_to_migrate"])
+
     def test_outflow_shortfall_is_blocker(self):
         report=fifo.reconstruct(wallet([event("a",1,5,1),event("b",2,-10)]))
         self.assertEqual(report["outflow_shortfalls"][0]["uncovered_tow"],"5")
@@ -44,7 +55,7 @@ class ReconstructionTests(unittest.TestCase):
 
     def test_even_complete_inventory_cannot_auto_migrate(self):
         report=fifo.reconstruct(wallet([event("a",1,100,10)]))
-        self.assertTrue(report["evidence_complete"])
+        self.assertFalse(report["evidence_complete"])
         self.assertFalse(report["safe_to_migrate"])
 
 if __name__=="__main__":
