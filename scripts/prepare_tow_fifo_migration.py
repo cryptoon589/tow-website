@@ -15,6 +15,7 @@ def reconstruct(wallet):
     events=sorted(wallet["movements"],key=lambda e:(e["ledger"],e["hash"]))
     lots=[]
     unknown_cost=[]
+    uncertified_cost=[]
     outflow_shortfall=[]
     total_received=ZERO
     total_sent=ZERO
@@ -29,6 +30,8 @@ def reconstruct(wallet):
                          "remaining_xrp":cost_value,"classification":event["cost_basis_status"]})
             if cost_value is None:
                 unknown_cost.append(event["hash"])
+            if event["cost_basis_status"] != "certified_direct_xrp_execution":
+                uncertified_cost.append(event["hash"])
         elif amount<0:
             needed=-amount
             total_sent+=needed
@@ -47,14 +50,15 @@ def reconstruct(wallet):
     remaining=sum((lot["remaining_tow"] for lot in lots),ZERO)
     expected=total_received-total_sent
     active_unknown=[lot["hash"] for lot in lots if lot["remaining_tow"]>0 and lot["original_xrp"] is None]
+    active_uncertified=[lot["hash"] for lot in lots if lot["remaining_tow"]>0 and lot["classification"] != "certified_direct_xrp_execution"]
     evidence_complete=(wallet["account_history_exhausted"] and wallet["unvalidated_entries"]==0 and
-          not wallet["metadata_issues"] and not outflow_shortfall and not active_unknown and
+          not wallet["metadata_issues"] and not outflow_shortfall and not active_unknown and not active_uncertified and
           abs(remaining-expected)<=decimal("0.00000001") and wallet["missing_count"]==0 and
           not wallet["stored_without_detected_delta"])
     return {"wallet":wallet["wallet"],"movement_count":len(events),"missing_database_events":wallet["missing_count"],
             "received_tow":str(total_received),"sent_tow":str(total_sent),"remaining_tow":str(remaining),
             "net_ledger_movement":str(expected),"unpriced_incoming_hashes":unknown_cost,
-            "unpriced_surviving_lots":active_unknown,"outflow_shortfalls":outflow_shortfall,
+            "unpriced_surviving_lots":active_unknown,"uncertified_surviving_lots":active_uncertified,"uncertified_incoming_hashes":uncertified_cost,"outflow_shortfalls":outflow_shortfall,
             "lots":[{**lot,"remaining_tow":str(lot["remaining_tow"]),
                       "remaining_xrp":str(lot["remaining_xrp"]) if lot["remaining_xrp"] is not None else None}
                      for lot in lots],
@@ -72,6 +76,7 @@ def main():
         print(json.dumps({"wallet":w["wallet"],"movements":w["movement_count"],
                           "missing_database_events":w["missing_database_events"],
                           "unpriced_surviving_lots":len(w["unpriced_surviving_lots"]),
+                          "uncertified_surviving_lots":len(w["uncertified_surviving_lots"]),
                           "outflow_shortfalls":len(w["outflow_shortfalls"]),
                           "remaining_tow":w["remaining_tow"],"safe_to_migrate":w["safe_to_migrate"]}),flush=True)
     print(json.dumps({"dry_run_artifact":str(DEST),"production_write_authorized":False}),flush=True)
