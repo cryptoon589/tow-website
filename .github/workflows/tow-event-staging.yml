@@ -1,0 +1,17 @@
+name: TOW read-only event staging checks
+on:
+  pull_request:
+    paths:
+      - "scripts/prepare_tow_event_import.py"
+      - "tests/test_tow_event_import.py"
+      - ".github/workflows/tow-event-staging.yml"
+  workflow_dispatch:
+jobs:
+  staging-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run read-only staging regression tests
+        run: python3 -m unittest discover -s tests -p test_tow_event_import.py
