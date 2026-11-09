@@ -46,6 +46,7 @@ on:
       - "scripts/audit_tow_wallet3_cost.py"
       - "scripts/prepare_tow_fifo_migration.py"
       - "scripts/prepare_tow_event_import.py"
+      - "tests/test_tow_event_import.py"
       - "scripts/audit_tow_legacy_positions.py"
       - "tow-legacy-positions-snapshot.json"
       - "tests/test_tow_legacy_positions.py"
@@ -74,6 +75,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: python3 -m unittest discover -s tests -p test_tow_fifo_migration.py
       - run: python3 -m unittest discover -s tests -p test_tow_legacy_positions.py
+      - run: python3 -m unittest discover -s tests -p test_tow_event_import.py
 
   postgres-integration:
     runs-on: ubuntu-latest
