@@ -28,9 +28,9 @@ begin
   ) values(w,true,now(),100,101,102,true,'TEST FIXTURE ONLY');
   buy_event := jsonb_build_object(
     'walletAddress',w,'txHash',buy_hash,'eventType','buy',
-    'xrpValue',100,'towAmount',1000,'ledgerIndex',100,
+    'xrpValue',100.000012,'towAmount',1000,'ledgerIndex',100,
     'eventAt','2026-01-01T00:00:00Z',
-    'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','0'),'meta',jsonb_build_object('TransactionIndex',0))
+    'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','12'),'meta',jsonb_build_object('TransactionIndex',0))
   );
   sell_event := jsonb_build_object(
     'walletAddress',w,'txHash',sell_hash,'eventType','sell',
