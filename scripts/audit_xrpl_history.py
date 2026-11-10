@@ -140,5 +140,5 @@ output.write_text(json.dumps(REPORT,indent=2)+"\n")
 print(json.dumps({"evidence_artifact":str(output),"wallets":len(REPORT["wallets"]),"movements":sum(len(w["movements"]) for w in REPORT["wallets"]),"production_write_authorized":False}),flush=True)
 
 raw_output=Path("tow-missing-raw-metadata.json")
-raw_output.write_text(json.dumps(RAW_MISSING,indent=2)+"\\n")
+raw_output.write_text(json.dumps(RAW_MISSING,indent=2)+"\n")
 print(json.dumps({"raw_metadata_artifact":str(raw_output),"missing_transactions":sum(len(w["transactions"]) for w in RAW_MISSING["wallets"]),"production_write_authorized":False}),flush=True)
