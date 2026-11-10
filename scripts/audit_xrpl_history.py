@@ -120,6 +120,9 @@ for wallet,known in WALLETS.items():
     missing=sorted(chain_hashes-stored_hashes)
     stored_without_tow=sorted(stored_hashes-chain_hashes)
     RAW_MISSING["wallets"].append({"wallet":wallet,"transactions":raw_missing,"scan_exhausted":exhausted,"metadata_issues":unresolved})
+    # Persist each completed wallet immediately: an RPC timeout on a later wallet
+    # must not discard earlier validated execution evidence.
+    Path("tow-missing-raw-metadata.json").write_text(json.dumps(RAW_MISSING,indent=2)+"\n")
     REPORT["wallets"].append({"wallet":wallet,"account_history_exhausted":exhausted,"validated_entries":validated,"unvalidated_entries":failures,"metadata_issues":unresolved,"missing_count":len(missing),"stored_without_detected_delta":stored_without_tow,"movements":movement_records,"historical_balance_certified":False,"migration_authorized":False})
     print(json.dumps({"wallet":wallet,"missing_tow_movement_hashes":missing,"missing_count":len(missing),"stored_hashes_without_detected_tow_delta":stored_without_tow,"stored_without_detected_delta_count":len(stored_without_tow),"hash_set_reconciled":not missing and not stored_without_tow}),flush=True)
     if wallet=="rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA":
