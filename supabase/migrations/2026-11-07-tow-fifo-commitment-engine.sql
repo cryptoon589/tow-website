@@ -244,6 +244,138 @@ begin
       if v_event.xrp_value <= 0 or v_event.tow_amount <= 0 then
         raise exception 'Invalid buy %',v_event.tx_hash;
       end if;
+      -- Stored xrp_value includes the submitting account's network fee.
+      -- Only actual XRP spent acquiring TOW contributes to a 50 XRP threshold.
+      -- Fail closed when fee metadata is absent or malformed.
+      if v_event.raw_event->'tx'->>'Fee' is null
+         or (v_event.raw_event->'tx'->>'Fee') !~ '^[0-9]+
+        wallet_address,source_tx_hash,acquired_at,ledger_index,
+        available_tow,available_cost_xrp
+      ) values (
+        p_wallet,v_event.tx_hash,v_event.event_at,v_event.ledger_index,
+        v_event.tow_amount,v_cost
+      );
+    elsif v_event.event_type in ('sell','transfer_out') then
+      v_remaining := v_event.tow_amount;
+      if v_remaining <= 0 then raise exception 'Invalid outgoing amount'; end if;
+      -- Consume exact acquired purchase tokens oldest-first, regardless of
+      -- whether a token belongs to a commitment or the uncommitted remainder.
+      -- For a single source purchase, allocated slices precede its remainder.
+      for v_slice in
+        select movement_kind,position_id,source_tx_hash,remaining_tow,
+               available_cost_xrp,position_status
+        from (
+          select 0 as movement_kind,s.position_id,s.source_tx_hash,
+                 s.remaining_tow,0::numeric as available_cost_xrp,
+                 p.status as position_status,l.ledger_index,l.acquired_at,
+                 p.buy_tx_hash as commitment_order
+          from public.tow_accounting_slices s
+          join public.tow_buy_positions p on p.id=s.position_id
+          join public.tow_accounting_lots l
+            on l.wallet_address=s.wallet_address
+           and l.source_tx_hash=s.source_tx_hash
+          where s.wallet_address=p_wallet and s.remaining_tow>0
+          union all
+          select 1 as movement_kind,null::uuid as position_id,
+                 l.source_tx_hash,l.available_tow as remaining_tow,
+                 l.available_cost_xrp,null::text as position_status,
+                 l.ledger_index,l.acquired_at,
+                 null::text as commitment_order
+          from public.tow_accounting_lots l
+          where l.wallet_address=p_wallet and l.available_tow>0
+        ) inventory
+        order by ledger_index,acquired_at,source_tx_hash,movement_kind,commitment_order
+      loop
+        exit when v_remaining <= 0.00000001;
+        v_take := least(v_remaining,v_slice.remaining_tow);
+        if v_slice.movement_kind = 0 then
+          if v_slice.position_status in ('claimed','paid') then
+            raise exception 'Protected commitment consumed; manual review required';
+          end if;
+          update public.tow_accounting_slices
+            set remaining_tow=greatest(0,remaining_tow-v_take)
+          where position_id=v_slice.position_id
+            and source_tx_hash=v_slice.source_tx_hash;
+          update public.tow_buy_positions
+            set remaining_tow=(
+              select coalesce(sum(remaining_tow),0)
+              from public.tow_accounting_slices where position_id=v_slice.position_id
+            )
+          where id=v_slice.position_id;
+          if v_slice.position_status='alive' then
+            update public.tow_buy_positions
+              set status='disqualified',disqualified_at=v_event.event_at,
+                  sell_tx_hash=v_event.tx_hash
+              where id=v_slice.position_id and status='alive';
+            v_disqualified:=v_disqualified+1;
+          end if;
+        else
+          v_cost:=v_slice.available_cost_xrp*v_take/v_slice.remaining_tow;
+          update public.tow_accounting_lots
+            set available_tow=greatest(0,available_tow-v_take),
+                available_cost_xrp=greatest(0,available_cost_xrp-v_cost)
+          where wallet_address=p_wallet and source_tx_hash=v_slice.source_tx_hash;
+        end if;
+        v_remaining:=v_remaining-v_take;
+      end loop;
+      if v_remaining > 0.00000001 then
+        raise exception 'Outgoing TOW exceeds known purchase inventory';
+      end if;
+    else
+      raise exception 'Unsupported event type %',v_event.event_type;
+    end if;
+    if v_event.ledger_index > v_proof_ledger then
+      v_positions_created := v_positions_created +
+        public.tow_allocate_available_commitments(p_wallet,greatest(v_player.proof_started_at,v_event.event_at),v_event.tx_hash);
+    end if;
+    insert into public.tow_accounting_processed(wallet_address,tx_hash)
+    values(p_wallet,v_event.tx_hash);
+    v_processed:=v_processed+1;
+  end loop;
+  -- An already-verified holder can have no post-proof movement yet.
+  -- Their opening commitments must still begin at proof verification.
+  if not v_proof_started then
+    v_positions_created := v_positions_created +
+      public.tow_allocate_available_commitments(
+        p_wallet,v_player.proof_started_at,'OPENING_'||p_wallet);
+    insert into public.tow_accounting_initialized(wallet_address,initialized_at)
+      values(p_wallet,v_player.proof_started_at);
+  end if;
+  return jsonb_build_object('ok',true,'positionsCreated',v_positions_created,
+    'disqualified',v_disqualified,'processed',v_processed);
+end;
+$$;
+revoke all on function public.tow_reconcile_wallet_atomic(text)
+  from public,anon,authenticated;
+grant execute on function public.tow_reconcile_wallet_atomic(text) to service_role;
+-- Ingestion and reconciliation share one PostgreSQL transaction. A failed
+-- allocation rolls back all new events and position changes.
+create or replace function public.tow_ingest_and_reconcile_wallet_atomic(
+  p_wallet text,p_events jsonb
+) returns jsonb language plpgsql security definer set search_path = public as $combined$
+declare
+  v_ingest jsonb;
+  v_reconcile jsonb;
+begin
+  v_ingest := public.tow_ingest_wallet_events_atomic(p_wallet,p_events);
+  v_reconcile := public.tow_reconcile_wallet_atomic(p_wallet);
+  return v_reconcile || jsonb_build_object(
+    'recorded',v_ingest->'recorded','duplicates',v_ingest->'duplicates');
+end;
+$combined$;
+revoke all on function public.tow_ingest_and_reconcile_wallet_atomic(text,jsonb)
+  from public,anon,authenticated;
+grant execute on function public.tow_ingest_and_reconcile_wallet_atomic(text,jsonb)
+  to service_role;
+commit;
+ then
+        raise exception 'BUY_NETWORK_FEE_NOT_VERIFIED %',v_event.tx_hash;
+      end if;
+      v_cost := v_event.xrp_value -
+        ((v_event.raw_event->'tx'->>'Fee')::numeric / 1000000);
+      if v_cost <= 0 then
+        raise exception 'BUY_NET_XRP_COST_INVALID %',v_event.tx_hash;
+      end if;
       insert into public.tow_accounting_lots(
         wallet_address,source_tx_hash,acquired_at,ledger_index,
         available_tow,available_cost_xrp
