@@ -1,0 +1,17 @@
+name: TOW fee-aware commitment tests
+on:
+  pull_request:
+    paths:
+      - 'scripts/reconcile_tow_fee_aware_commitments.py'
+      - 'tests/test_tow_fee_aware_commitments.py'
+      - '.github/workflows/tow-fee-aware-commitment-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tests -p 'test_tow_fee_aware_commitments.py' -v
