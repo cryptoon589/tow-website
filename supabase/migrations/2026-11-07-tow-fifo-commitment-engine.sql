@@ -248,7 +248,16 @@ begin
       -- Only actual XRP spent acquiring TOW contributes to a 50 XRP threshold.
       -- Fail closed when fee metadata is absent or malformed.
       if v_event.raw_event->'tx'->>'Fee' is null
-         or (v_event.raw_event->'tx'->>'Fee') !~ '^[0-9]+
+         or (v_event.raw_event->'tx'->>'Fee') !~ '^[0-9]+'
+         or (v_event.raw_event->'tx'->>'Fee') ~ '[^0-9]' then
+        raise exception 'BUY_NETWORK_FEE_NOT_VERIFIED %',v_event.tx_hash;
+      end if;
+      v_cost := v_event.xrp_value -
+        ((v_event.raw_event->'tx'->>'Fee')::numeric / 1000000);
+      if v_cost <= 0 then
+        raise exception 'BUY_NET_XRP_COST_INVALID %',v_event.tx_hash;
+      end if;
+      insert into public.tow_accounting_lots(
         wallet_address,source_tx_hash,acquired_at,ledger_index,
         available_tow,available_cost_xrp
       ) values (
