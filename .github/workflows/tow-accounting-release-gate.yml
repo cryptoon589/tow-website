@@ -1,0 +1,65 @@
+name: TOW accounting release gate (no XRPL scans)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tow-accounting-release-gate.yml'
+      - 'lib/tow**'
+      - 'supabase/audits/**'
+      - 'supabase/migrations/**'
+      - 'tests/tow**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  application-accounting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:accounting
+      - run: npx tsc --noEmit
+      - name: Offline provenance and migration regression tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_tow_*.py' -v
+  postgres-atomicity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: tow_accounting_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tow_accounting_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test-only
+      PGDATABASE: tow_accounting_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build disposable test database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-disposable-postgres-schema.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-wallet-event-per-wallet-uniqueness.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-event-ingestion.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-fifo-commitment-engine.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/2026-11-07-tow-atomic-claim-execute.sql
+      - name: Rollback-only claim, FIFO, and lifecycle integration tests
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-atomic-claim-integration-test.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-isolated-integration-test.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/audits/tow-fifo-lifecycle-integration-test.sql
