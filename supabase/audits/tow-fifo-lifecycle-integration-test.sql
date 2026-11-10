@@ -29,6 +29,7 @@ begin
   -- qualifying inventory. No pre-proof disqualification is allowed.
   v := public.tow_ingest_and_reconcile_wallet_atomic(w,jsonb_build_array(
     jsonb_build_object('walletAddress',w,'txHash',h1,'eventType','buy',
+      'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','0')),
       'xrpValue',80,'towAmount',800,'ledgerIndex',10,
       'eventAt','2026-01-10T00:00:00Z'),
     jsonb_build_object('walletAddress',w,'txHash',h2,'eventType','sell',
@@ -41,9 +42,11 @@ begin
   -- Two small post-proof purchases accumulate to another 50 XRP commitment.
   v := public.tow_ingest_and_reconcile_wallet_atomic(w,jsonb_build_array(
     jsonb_build_object('walletAddress',w,'txHash',h3,'eventType','buy',
+      'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','0')),
       'xrpValue',20,'towAmount',200,'ledgerIndex',14,
       'eventAt','2026-01-03T00:00:00Z'),
     jsonb_build_object('walletAddress',w,'txHash',h4,'eventType','buy',
+      'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','0')),
       'xrpValue',30,'towAmount',300,'ledgerIndex',15,
       'eventAt','2026-01-06T00:00:00Z')
   ));
@@ -62,6 +65,7 @@ begin
   -- New buy qualifies independently; it cannot revive the disqualified one.
   v := public.tow_ingest_and_reconcile_wallet_atomic(w,jsonb_build_array(
     jsonb_build_object('walletAddress',w,'txHash',h6,'eventType','buy',
+      'rawEvent',jsonb_build_object('tx',jsonb_build_object('Fee','0')),
       'xrpValue',50,'towAmount',500,'ledgerIndex',17,
       'eventAt','2026-01-08T00:00:00Z')
   ));
