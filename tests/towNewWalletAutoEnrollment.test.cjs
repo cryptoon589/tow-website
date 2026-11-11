@@ -19,3 +19,14 @@ test("automatic FIFO still requires independently certified ledger coverage", ()
   assert.match(certify, /eligibleForCertification !== true/);
   assert.match(certify, /tow_certify_new_wallet_atomic/);
 });
+
+test("wallet scanner invokes independent certification only after durable sync and checkpoint", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  const sync = scan.indexOf("const syncResult = await syncEvents");
+  const checkpoint = scan.indexOf("last_scanned_ledger: highestLedgerSeen");
+  const cert = scan.indexOf('/api/tired-certify-wallet');
+  assert.ok(sync >= 0 && checkpoint > sync && cert > checkpoint);
+  assert.match(scan, /TOW_ENABLE_NEW_WALLET_AUTO_ENROLLMENT === "true"/);
+  assert.match(scan, /TOW_ENABLE_CERTIFICATE_ISSUANCE === "true"/);
+  assert.match(scan, /certificationStatus = response.ok \? "certified" : "not_eligible"/);
+});
