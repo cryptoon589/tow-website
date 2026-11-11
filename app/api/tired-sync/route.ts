@@ -60,6 +60,29 @@ export async function POST(request: Request) {
       .split(",").map(value => value.trim()).filter(Boolean));
     const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true" &&
       pilotWallets.has(wallet);
+    if (fifoEnabled && hasCommitmentMovements) {
+      // Pilot admission is fail-closed. An allowlist entry is NOT a history certificate.
+      const { data: coverage, error: coverageError } = await supabase
+        .from("tow_accounting_coverage")
+        .select("verified_complete,balance_verified,first_wallet_ledger,proof_ledger,checked_through_ledger")
+        .eq("wallet_address", wallet)
+        .maybeSingle();
+      if (coverageError) throw coverageError;
+      const newestEventLedger = Math.max(...normalized.map(event => event.ledgerIndex));
+      if (!coverage?.verified_complete || !coverage?.balance_verified ||
+          !Number.isSafeInteger(Number(coverage.first_wallet_ledger)) ||
+          !Number.isSafeInteger(Number(coverage.proof_ledger)) ||
+          !Number.isSafeInteger(Number(coverage.checked_through_ledger)) ||
+          Number(coverage.first_wallet_ledger) <= 0 ||
+          Number(coverage.first_wallet_ledger) > Number(coverage.proof_ledger) ||
+          Number(coverage.checked_through_ledger) < newestEventLedger ||
+          Number(coverage.checked_through_ledger) < Number(coverage.proof_ledger)) {
+        return NextResponse.json({
+          error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
+          code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
+        }, { status: 409 });
+      }
+    }
     // FIFO is opt-in until complete historical ledger coverage and existing
     // UUID reconciliation are verified. Never activate it by default.
     const rpcName = hasCommitmentMovements && fifoEnabled
