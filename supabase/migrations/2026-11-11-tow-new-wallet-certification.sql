@@ -5,7 +5,8 @@ create or replace function public.tow_certify_new_wallet_atomic(
   p_first_wallet_ledger bigint,
   p_proof_ledger bigint,
   p_checked_through_ledger bigint,
-  p_expected_event_count integer
+  p_expected_event_count integer,
+  p_expected_proof_started_at timestamptz
 ) returns jsonb
 language plpgsql security definer set search_path = public
 as $$
@@ -16,7 +17,8 @@ begin
   -- Serialize against wallet event ingestion and player updates where possible.
   perform pg_advisory_xact_lock(hashtextextended(p_wallet, 0));
   select * into v_player from public.tow_players where wallet_address = p_wallet for update;
-  if not found or not coalesce(v_player.verified,false) or v_player.proof_started_at is null then
+  if not found or not coalesce(v_player.verified,false) or v_player.proof_started_at is null or
+     p_expected_proof_started_at is distinct from v_player.proof_started_at then
     raise exception 'PLAYER_PROOF_NOT_VERIFIED';
   end if;
   if exists (select 1 from public.tow_buy_positions where wallet_address = p_wallet) or
@@ -55,6 +57,6 @@ begin
   return jsonb_build_object('certified',true);
 end;
 $$;
-revoke all on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer)
+revoke all on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer,timestamptz)
   from public,anon,authenticated;
 grant execute on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer) to service_role;
