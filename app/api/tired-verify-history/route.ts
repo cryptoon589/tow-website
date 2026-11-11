@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet } from "@/lib/towProof";
 import { scanCompleteTowHistory } from "@/lib/towCompleteHistoryScanner";
 import { compareTowMovements } from "@/lib/towHistoryMovementReconciliation";
+import { attestProofLedgerAndBalance } from "@/lib/towHistoricalProofAttestation";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +53,27 @@ export async function POST(request: NextRequest) {
     if (scan.firstWalletLedger === null || scan.firstAvailableLedger === null ||
         scan.firstAvailableLedger > scan.firstWalletLedger)
       blockers.push("EARLIEST_WALLET_LEDGER_NOT_PROVEN");
-    // Neither an account_tx scan nor a stored proof timestamp establishes
-    // an independent historical balance or an exact proof-start ledger.
-    blockers.push("HISTORICAL_TOKEN_BALANCE_NOT_INDEPENDENTLY_VERIFIED");
-    blockers.push("PROOF_START_LEDGER_NOT_INDEPENDENTLY_VERIFIED");
+    let historicalProof: Awaited<ReturnType<typeof attestProofLedgerAndBalance>> | null = null;
+    try {
+      if (!scan.scannedThroughLedger || !playerResult.data.proof_started_at)
+        throw new Error("Proof timestamp or validated ledger unavailable");
+      historicalProof = await attestProofLedgerAndBalance({
+        rpcUrl, wallet, issuer, currency,
+        proofStartedAt: playerResult.data.proof_started_at,
+        verificationLedger: scan.scannedThroughLedger,
+      });
+      if (scan.firstAvailableLedger === null || scan.firstAvailableLedger > historicalProof.proofLedger)
+        blockers.push("HISTORY_DOES_NOT_COVER_PROOF_LEDGER");
+      const reconstructed = scan.movements
+        .filter(m => m.ledgerIndex <= historicalProof!.proofLedger)
+        .reduce((sum, m) => sum + m.deltaTow, 0);
+      if (Math.abs(reconstructed - historicalProof.tokenBalanceAtProof) > 0.000001)
+        blockers.push("HISTORICAL_BALANCE_RECONSTRUCTION_MISMATCH");
+      if (scan.movements.some(m => m.ledgerIndex === historicalProof!.proofLedger + 1))
+        blockers.push("PROOF_BOUNDARY_LEDGER_REQUIRES_ORDER_REVIEW");
+    } catch {
+      blockers.push("INDEPENDENT_HISTORICAL_PROOF_ATTESTATION_FAILED");
+    }
     return NextResponse.json({ wallet, certified: false, blockers,
       history: { firstAvailableLedger: scan.firstAvailableLedger,
         firstWalletLedger: scan.firstWalletLedger,
@@ -63,7 +81,7 @@ export async function POST(request: NextRequest) {
         transactionCount: scan.transactionCount,
         rpcTowMovements: comparison.rpcCount, storedTowMovements: comparison.storedCount,
         movementsMatch: comparison.matches },
-      existingPositionCount: positionsResult.count ?? 0 });
+      historicalProof, existingPositionCount: positionsResult.count ?? 0 });
   } catch (error) {
     return NextResponse.json({ error: "Verification failed closed", details: String(error) }, { status: 409 });
   }
