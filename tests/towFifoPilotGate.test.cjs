@@ -12,3 +12,11 @@ test("FIFO requires both feature switch and explicit wallet enrollment", () => {
 test("unenrolled wallets remain on staging RPC", () => {
   assert.match(source, /: "tow_ingest_wallet_events_atomic"/);
 });
+
+test("pilot admission requires certified full-history and balance evidence", () => {
+  assert.match(source, /\.from\("tow_accounting_coverage"\)/);
+  assert.match(source, /!coverage\?\.verified_complete \|\| !coverage\?\.balance_verified/);
+  assert.match(source, /Number\(coverage\.checked_through_ledger\) < newestEventLedger/);
+  assert.match(source, /XRPL_HISTORY_COVERAGE_NOT_CERTIFIED/);
+  assert.match(source, /status: 409/);
+});
