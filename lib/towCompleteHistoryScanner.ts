@@ -55,6 +55,17 @@ export async function scanCompleteTowHistory(input: {
       seen.add(hash);
       transactions++;
       firstWalletLedger = firstWalletLedger === null ? ledger : Math.min(firstWalletLedger, ledger);
+      const meta = entry.meta ?? entry.metaData ?? entry.metadata;
+      const resultCode = String(meta.TransactionResult ?? meta.transaction_result ?? "");
+      if (resultCode !== "tesSUCCESS") {
+        if (!resultCode.startsWith("tec") || (Array.isArray(meta.AffectedNodes) && meta.AffectedNodes.some(
+          (node: any) => {
+            const item = node.ModifiedNode ?? node.CreatedNode ?? node.DeletedNode;
+            return item?.LedgerEntryType === "RippleState";
+          }
+        ))) throw new Error("Unexpected failed XRPL transaction metadata: " + hash);
+        continue;
+      }
       const inspection = inspectTowDelta(entry, input.wallet, input.issuer, input.currency);
       if (!inspection.reliable) throw new Error(`Unverifiable XRPL metadata for ${hash}: ${inspection.warnings.join("; ")}`);
       if (Math.abs(inspection.deltaTow ?? 0) > 0.000001)
