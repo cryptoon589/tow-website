@@ -5,10 +5,10 @@ const ts = require("typescript");
 const vm = require("node:vm");
 const source = fs.readFileSync("lib/towCertificationEvidence.ts", "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-const exports = {};
+const moduleExports = {};
 const coverage = { assessHistoryCoverage: () => ({ blockers: [], balanceDifference: 0 }) };
-vm.runInNewContext(compiled, { exports, require: () => coverage });
-const evaluate = exports.evaluateCertificationEvidence;
+vm.runInNewContext(compiled, { exports: moduleExports, require: () => coverage });
+const evaluate = moduleExports.evaluateCertificationEvidence;
 const valid = { proofVerified:true, existingLegacyPositions:0, legacyPositionsReconciled:false,
   validatedTransactionCount:2, unvalidatedTransactionCount:0, duplicateTransactionHashes:0,
   proofLedgerIndependentlyVerified:true, tokenBalanceIndependentlyVerified:true, eventCountFromRpc:2 };
