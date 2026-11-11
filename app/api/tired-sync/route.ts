@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         .eq("wallet_address", wallet)
         .maybeSingle();
       if (coverageError) throw coverageError;
-      const newestEventLedger = Math.max(...normalized.map(event => event.ledgerIndex));
+      const newestEventLedger = Math.max(...normalized.map(event => Number(event.ledgerIndex)));
       if (!coverage?.verified_complete || !coverage?.balance_verified ||
           !Number.isSafeInteger(Number(coverage.first_wallet_ledger)) ||
           !Number.isSafeInteger(Number(coverage.proof_ledger)) ||
