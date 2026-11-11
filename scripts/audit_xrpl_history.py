@@ -4,6 +4,7 @@ import json, urllib.request, time
 from decimal import Decimal
 from pathlib import Path
 REPORT={"schema_version":1,"source":"validated XRPL account_tx metadata","production_write_authorized":False,"wallets":[]}
+RAW_MISSING={"schema_version":1,"source":"validated XRPL account_tx raw tx/meta","production_write_authorized":False,"wallets":[]}
 STORED_HASHES=json.loads(Path(__file__).with_name("tow_stored_event_hashes.json").read_text())
 RPC_ENDPOINTS=["https://s1.ripple.com:51234","https://s2.ripple.com:51234","https://xrplcluster.com"]
 WALLETS={
@@ -68,7 +69,7 @@ def tow_movement(entry,wallet):
 
 for wallet,known in WALLETS.items():
     marker=None; hashes=set(); pages=0; earliest=None; latest=None; duplicate=0; exhausted=False; validated=0; failures=0
-    movement_count=0; inflows=Decimal(0); outflows=Decimal(0); unresolved=[]; movement_samples=[]; movement_records=[]
+    movement_count=0; inflows=Decimal(0); outflows=Decimal(0); unresolved=[]; movement_samples=[]; movement_records=[]; raw_missing=[]
     while pages<500:
         args={"account":wallet,"ledger_index_min":-1,"ledger_index_max":-1,"forward":True,"limit":200,"binary":False}
         if marker is not None: args["marker"]=marker
@@ -106,6 +107,10 @@ for wallet,known in WALLETS.items():
                     xrp_ex_fee=xrp_changes[0]+fee if len(xrp_changes)==1 else None
                     cost=(str(-xrp_ex_fee) if delta>0 and xrp_ex_fee is not None and xrp_ex_fee<0 and tx.get("Account")==wallet and tx.get("TransactionType") in ("Payment","OfferCreate") else None)
                     movement_records.append({"hash":h,"delta_tow":str(delta),"ledger":ledger,"tx_type":tx.get("TransactionType"),"initiator":tx.get("Account"),"xrp_balance_delta":str(xrp_changes[0]) if len(xrp_changes)==1 else None,"network_fee_xrp":str(fee),"xrp_spent_excluding_fee":cost,"cost_basis_status":"candidate_direct_xrp_execution" if cost else "unresolved_or_nonpurchase","already_stored":h in STORED_HASHES[wallet],"tx_date":tx.get("date")})
+                    if h not in STORED_HASHES[wallet]:
+                        raw_missing.append({"hash":h,"ledger":ledger,"validated":entry.get("validated"),
+                            "tx":tx,"meta":entry.get("meta") or entry.get("metaData"),
+                            "observed_tow_delta":str(delta)})
                     if len(movement_samples)<10: movement_samples.append({"hash":h,"delta_tow":str(delta),"ledger":ledger})
         marker=result.get("marker")
         if marker is None: exhausted=True; break
@@ -114,6 +119,10 @@ for wallet,known in WALLETS.items():
     chain_hashes={item["hash"] for item in movement_records}
     missing=sorted(chain_hashes-stored_hashes)
     stored_without_tow=sorted(stored_hashes-chain_hashes)
+    RAW_MISSING["wallets"].append({"wallet":wallet,"transactions":raw_missing,"scan_exhausted":exhausted,"metadata_issues":unresolved})
+    # Persist each completed wallet immediately: an RPC timeout on a later wallet
+    # must not discard earlier validated execution evidence.
+    Path("tow-missing-raw-metadata.json").write_text(json.dumps(RAW_MISSING,indent=2)+"\n")
     REPORT["wallets"].append({"wallet":wallet,"account_history_exhausted":exhausted,"validated_entries":validated,"unvalidated_entries":failures,"metadata_issues":unresolved,"missing_count":len(missing),"stored_without_detected_delta":stored_without_tow,"movements":movement_records,"historical_balance_certified":False,"migration_authorized":False})
     print(json.dumps({"wallet":wallet,"missing_tow_movement_hashes":missing,"missing_count":len(missing),"stored_hashes_without_detected_tow_delta":stored_without_tow,"stored_without_detected_delta_count":len(stored_without_tow),"hash_set_reconciled":not missing and not stored_without_tow}),flush=True)
     if wallet=="rJbdxTe76fYoZFuLKJfJSAU7nMwxH9y4EA":
@@ -129,3 +138,7 @@ for wallet,known in WALLETS.items():
 output=Path("tow-reconciliation-evidence.json")
 output.write_text(json.dumps(REPORT,indent=2)+"\n")
 print(json.dumps({"evidence_artifact":str(output),"wallets":len(REPORT["wallets"]),"movements":sum(len(w["movements"]) for w in REPORT["wallets"]),"production_write_authorized":False}),flush=True)
+
+raw_output=Path("tow-missing-raw-metadata.json")
+raw_output.write_text(json.dumps(RAW_MISSING,indent=2)+"\n")
+print(json.dumps({"raw_metadata_artifact":str(raw_output),"missing_transactions":sum(len(w["transactions"]) for w in RAW_MISSING["wallets"]),"production_write_authorized":False}),flush=True)

@@ -147,6 +147,7 @@ jobs:
           name: tow-reconciliation-evidence
           path: |
             tow-reconciliation-evidence.json
+            tow-missing-raw-metadata.json
             tow-fifo-migration-dry-run.json
             tow-event-import-staging.json
             tow-inflow-provenance-review.json
