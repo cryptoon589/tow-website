@@ -29,7 +29,7 @@ export async function attestProofLedgerAndBalance(input: {
   async function closeMs(index: number) {
     if (cache.has(index)) return cache.get(index)!;
     const result = await rpc(input.rpcUrl, "ledger", { ledger_index: index, transactions: false, expand: false }, fetcher);
-    if (result?.validated !== true || Number(result?.ledger?.ledger_index) !== index)
+    if (result?.validated !== true || Number(result?.ledger?.ledger_index ?? result?.ledger?.seqNum) !== index)
       throw new Error("Requested ledger is not independently validated");
     const close = Number(result.ledger.close_time);
     if (!Number.isSafeInteger(close) || close < 0) throw new Error("Invalid ledger close time");
