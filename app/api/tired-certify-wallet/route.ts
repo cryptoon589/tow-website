@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     p_proof_ledger: evidence.historicalProof.proofLedger,
     p_checked_through_ledger: evidence.history.checkedThroughLedger,
     p_expected_event_count: evidence.history.storedTowMovements,
+    p_expected_proof_started_at: evidence.proofStartedAt,
   });
   if (error || !data?.certified)
     return NextResponse.json({ error: "Atomic certification rejected", details: error?.message ?? data }, { status: 409 });
