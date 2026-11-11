@@ -11,6 +11,7 @@ test("live verification never writes a certificate or mutates accounting", () =>
   assert.match(source, /certified: false/);
 });
 test("independent historical balance and proof ledger are required", () => {
-  assert.match(source, /HISTORICAL_TOKEN_BALANCE_NOT_INDEPENDENTLY_VERIFIED/);
-  assert.match(source, /PROOF_START_LEDGER_NOT_INDEPENDENTLY_VERIFIED/);
+  assert.match(source, /attestProofLedgerAndBalance\(/);
+  assert.match(source, /HISTORICAL_BALANCE_RECONSTRUCTION_MISMATCH/);
+  assert.match(source, /INDEPENDENT_HISTORICAL_PROOF_ATTESTATION_FAILED/);
 });
