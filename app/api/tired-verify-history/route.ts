@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { isValidXrplWallet } from "@/lib/towProof";
 import { scanCompleteTowHistory } from "@/lib/towCompleteHistoryScanner";
 import { compareTowMovements } from "@/lib/towHistoryMovementReconciliation";
+import { verifyHistoricalTowBalance } from "@/lib/towHistoricalBalanceVerification";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +53,23 @@ export async function POST(request: NextRequest) {
     if (scan.firstWalletLedger === null || scan.firstAvailableLedger === null ||
         scan.firstAvailableLedger > scan.firstWalletLedger)
       blockers.push("EARLIEST_WALLET_LEDGER_NOT_PROVEN");
-    // Neither an account_tx scan nor a stored proof timestamp establishes
-    // an independent historical balance or an exact proof-start ledger.
-    blockers.push("HISTORICAL_TOKEN_BALANCE_NOT_INDEPENDENTLY_VERIFIED");
-    blockers.push("PROOF_START_LEDGER_NOT_INDEPENDENTLY_VERIFIED");
+    let historicalBalance: Awaited<ReturnType<typeof verifyHistoricalTowBalance>> | null = null;
+    if (playerResult.data.proof_started_at && scan.firstWalletLedger && scan.scannedThroughLedger) {
+      try {
+        historicalBalance = await verifyHistoricalTowBalance({ rpcUrl, wallet, issuer, currency,
+          proofStartedAt: playerResult.data.proof_started_at,
+          firstLedger: scan.firstWalletLedger, lastLedger: scan.scannedThroughLedger });
+        const reconstructed = scan.movements
+          .filter(m => m.ledgerIndex <= historicalBalance!.balanceLedger)
+          .reduce((sum, m) => sum + m.deltaTow, 0);
+        if (Math.abs(reconstructed - historicalBalance.tokenBalanceAtVerification) > 0.000001)
+          blockers.push("HISTORICAL_BALANCE_RECONSTRUCTION_MISMATCH");
+        if (scan.movements.some(m => m.ledgerIndex === historicalBalance!.proofLedger))
+          blockers.push("PROOF_LEDGER_TRANSACTION_ORDER_REQUIRES_REVIEW");
+      } catch {
+        blockers.push("HISTORICAL_TOKEN_BALANCE_OR_PROOF_LEDGER_UNAVAILABLE");
+      }
+    } else blockers.push("PROOF_START_LEDGER_NOT_INDEPENDENTLY_VERIFIED");
     return NextResponse.json({ wallet, certified: false, blockers,
       history: { firstAvailableLedger: scan.firstAvailableLedger,
         firstWalletLedger: scan.firstWalletLedger,
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
         transactionCount: scan.transactionCount,
         rpcTowMovements: comparison.rpcCount, storedTowMovements: comparison.storedCount,
         movementsMatch: comparison.matches },
-      existingPositionCount: positionsResult.count ?? 0 });
+      existingPositionCount: positionsResult.count ?? 0, historicalBalance });
   } catch (error) {
     return NextResponse.json({ error: "Verification failed closed", details: String(error) }, { status: 409 });
   }
