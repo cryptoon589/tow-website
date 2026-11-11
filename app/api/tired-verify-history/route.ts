@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     } catch {
       blockers.push("INDEPENDENT_HISTORICAL_PROOF_ATTESTATION_FAILED");
     }
-    return NextResponse.json({ wallet, certified: false, blockers,
+    return NextResponse.json({ wallet, certified: false, eligibleForCertification: blockers.length === 0, blockers,
       history: { firstAvailableLedger: scan.firstAvailableLedger,
         firstWalletLedger: scan.firstWalletLedger,
         checkedThroughLedger: scan.scannedThroughLedger,
