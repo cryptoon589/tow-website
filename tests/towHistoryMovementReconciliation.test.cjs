@@ -5,7 +5,7 @@ const ts = require("typescript");
 const vm = require("node:vm");
 const moduleExports = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync("lib/towHistoryMovementReconciliation.ts","utf8"),
- {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:moduleExports});
+ {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:moduleExports});
 const compare = moduleExports.compareTowMovements;
 const hash = "A".repeat(64);
 const rpc = [{hash,ledgerIndex:123,deltaTow:12}];
