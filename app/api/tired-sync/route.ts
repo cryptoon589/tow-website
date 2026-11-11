@@ -54,7 +54,12 @@ export async function POST(request: Request) {
       xrpValue: Number(event.xrpValue), towAmount: Number(event.towAmount),
     }));
     const hasCommitmentMovements = normalized.some(event => event.eventType !== "reward");
-    const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true";
+    // A global FIFO flag must never activate accounting for every wallet.
+    // Explicitly enroll only wallets with independently certified history.
+    const pilotWallets = new Set((process.env.TOW_FIFO_PILOT_WALLETS ?? "")
+      .split(",").map(value => value.trim()).filter(Boolean));
+    const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true" &&
+      pilotWallets.has(wallet);
     // FIFO is opt-in until complete historical ledger coverage and existing
     // UUID reconciliation are verified. Never activate it by default.
     const rpcName = hasCommitmentMovements && fifoEnabled
