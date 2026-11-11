@@ -19,7 +19,7 @@ export function evaluateCertificationEvidence(e: CertificationEvidence) {
   if (!e.proofLedgerIndependentlyVerified) blockers.push("Proof-start ledger is not independently verified.");
   if (!e.tokenBalanceIndependentlyVerified) blockers.push("Verification-time token balance is not independently verified.");
   if (!Number.isSafeInteger(e.validatedTransactionCount) || e.validatedTransactionCount < 0 ||
-      e.validatedTransactionCount !== e.eventCountFromRpc + (e.validatedTransactionCount - e.eventCountFromRpc)) {
+      e.validatedTransactionCount < (e.eventCountFromRpc ?? 0)) {
     blockers.push("Invalid validated transaction count.");
   }
   if (e.unvalidatedTransactionCount !== 0) blockers.push("Unvalidated XRPL transactions present.");
