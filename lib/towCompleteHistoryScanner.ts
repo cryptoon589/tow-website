@@ -10,6 +10,8 @@ export async function scanCompleteTowHistory(input: {
   if (!Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 1000)
     throw new Error("Invalid page cap");
   let marker: unknown;
+  let previousLedger = 0;
+  let fixedMaxLedger: number | null = null;
   let firstAvailableLedger: number | null = null;
   let scannedThroughLedger: number | null = null;
   let firstWalletLedger: number | null = null;
@@ -36,6 +38,8 @@ export async function scanCompleteTowHistory(input: {
     const max = Number(result.ledger_index_max);
     if (!Number.isSafeInteger(min) || min <= 0 || !Number.isSafeInteger(max) || max < min)
       throw new Error("XRPL RPC did not attest its validated ledger range");
+    if (fixedMaxLedger === null) fixedMaxLedger = max;
+    else if (max !== fixedMaxLedger) throw new Error("XRPL RPC ledger upper bound changed during pagination");
     if (firstAvailableLedger === null) firstAvailableLedger = min;
     else if (min !== firstAvailableLedger) throw new Error("XRPL RPC ledger coverage changed during scan");
     if (scannedThroughLedger !== null && max < scannedThroughLedger)
@@ -50,6 +54,8 @@ export async function scanCompleteTowHistory(input: {
         throw new Error("Missing or duplicate XRPL transaction hash");
       if (!Number.isSafeInteger(ledger) || ledger < min || ledger > max)
         throw new Error("XRPL transaction outside validated ledger range");
+      if (ledger < previousLedger) throw new Error("XRPL forward pagination ledger order regressed");
+      previousLedger = ledger;
       if (!entry.meta && !entry.metaData && !entry.metadata)
         throw new Error("XRPL transaction metadata missing");
       seen.add(hash);
