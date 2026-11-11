@@ -59,4 +59,4 @@ end;
 $$;
 revoke all on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer,timestamptz)
   from public,anon,authenticated;
-grant execute on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer) to service_role;
+grant execute on function public.tow_certify_new_wallet_atomic(text,bigint,bigint,bigint,integer,timestamptz) to service_role;
