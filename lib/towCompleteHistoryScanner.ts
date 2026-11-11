@@ -20,7 +20,7 @@ export async function scanCompleteTowHistory(input: {
   let transactions = 0;
   for (let page = 0; page < maxPages; page++) {
     const params: Record<string, unknown> = {
-      account: input.wallet, ledger_index_min: -1, ledger_index_max: -1,
+      account: input.wallet, ledger_index_min: -1, ledger_index_max: fixedMaxLedger ?? -1,
       forward: true, binary: false, limit: 200,
     };
     if (marker !== undefined) params.marker = marker;
