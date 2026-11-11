@@ -16,3 +16,8 @@ test("scanner rejects incomplete or inconsistent history", () => {
 test("scanner has no database writes or certificate issuance", () => {
   assert.doesNotMatch(source, /supabase|\.insert\(|\.upsert\(|\.update\(|verified_complete\s*:\s*true/);
 });
+
+test("scanner requires stable ledger snapshot and monotonic transaction order", () => {
+  assert.match(source, /max !== fixedMaxLedger/);
+  assert.match(source, /ledger < previousLedger/);
+});
