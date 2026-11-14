@@ -423,23 +423,13 @@ function buildSyncEventFromTx(input: {
     throw new Error(`AMBIGUOUS_TOW_XRP_MOVEMENT ${txHash}: mixed TOW/XRP movement requires verified execution provenance; checkpoint NOT advanced.`);
   }
 
+  // Both verified trade types were rejected above, and mixed XRP/TOW
+  // movements are rejected as ambiguous. Only zero-XRP movements reach
+  // this branch. Do not retain unreachable buy/sell heuristics that could
+  // accidentally be re-enabled without independent execution provenance.
   let eventType: SyncEvent["eventType"];
-  let xrpValue = 0;
-
-  // Only classify XRP-paired swaps as buys/sells. An OfferCreate
-  // exchanging TOW for another issued asset is not an XRP sale.
-  // This remains a conservative heuristic, not full DEX execution accounting.
-  const isTradeCandidate = tx?.TransactionType === "OfferCreate" ||
-    tx?.TransactionType === "Payment";
-  if (isTradeCandidate && towDelta > 0 && tradeXrpDelta < -tolerance) {
-    eventType = "buy";
-    xrpValue = -tradeXrpDelta;
-  } else if (isTradeCandidate && towDelta < 0 && tradeXrpDelta > tolerance) {
-    eventType = "sell";
-    xrpValue = tradeXrpDelta;
-  } else {
-    eventType = towDelta > 0 ? "transfer_in" : "transfer_out";
-  }
+  eventType = towDelta > 0 ? "transfer_in" : "transfer_out";
+  const xrpValue = 0;
 
   return {
     walletAddress,
