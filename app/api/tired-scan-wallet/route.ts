@@ -400,6 +400,14 @@ function buildSyncEventFromTx(input: {
     }
   }
 
+  // A wallet AccountRoot XRP balance change is not proof of the XRP leg of
+  // a TOW trade. Path payments, partial DEX fills, reserve changes and
+  // third-party offers can change balances independently. Until execution
+  // metadata is reconciled, never invent a FIFO XRP cost from this delta.
+  if (tx?.TransactionType === "OfferCreate" || tx?.TransactionType === "Payment") {
+    throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: cannot infer FIFO XRP cost from AccountRoot delta; checkpoint NOT advanced.`);
+  }
+
   const xrpDelta = getXrpDeltaFromMeta(meta, walletAddress);
   const isSender = String(tx?.Account ?? "") === walletAddress;
   const feeXrp = isSender ? dropsToXrp(tx?.Fee) : 0;

@@ -52,3 +52,11 @@ test("renewal SQL keeps proof identity, monotonic coverage, and legacy guards", 
   assert.match(sql, /p_expected_proof_started_at is distinct from v_player\.proof_started_at/);
   assert.match(sql, /p_expected_event_count <> v_count/);
 });
+
+test("scanner never assigns FIFO XRP cost from an unverified AccountRoot trade delta", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /UNVERIFIED_TOW_TRADE_PROVENANCE/);
+  assert.match(scan, /tx\?\.TransactionType === "OfferCreate"/);
+  assert.match(scan, /tx\?\.TransactionType === "Payment"/);
+  assert.ok(scan.indexOf("UNVERIFIED_TOW_TRADE_PROVENANCE") < scan.indexOf("const xrpDelta = getXrpDeltaFromMeta"));
+});
