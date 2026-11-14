@@ -445,8 +445,8 @@ function buildSyncEventFromTx(input: {
       !Object.prototype.hasOwnProperty.call(tx, "DeliverMin") &&
       !Object.prototype.hasOwnProperty.call(tx, "DeliverMax") &&
       !hasExecutionNodes &&
-      tx?.Flags !== undefined && tx?.Flags !== null &&
-      Number(tx.Flags) === 0 &&
+      (tx?.Flags === undefined || tx?.Flags === null ||
+        (typeof tx.Flags === "number" && tx.Flags === 0)) &&
       Math.abs(towDelta - (destination === walletAddress ? value : -value)) < 0.000001;
     if (!direct) {
       throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: not a proven direct TOW transfer; checkpoint NOT advanced.`);
