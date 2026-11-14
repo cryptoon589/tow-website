@@ -377,6 +377,29 @@ function buildSyncEventFromTx(input: {
   const towDelta = inspection.deltaTow ?? 0;
   if (Math.abs(towDelta) < 0.000001) return null;
 
+  // An AMM transaction or an issued-asset DEX fill can move TOW without
+  // exchanging XRP directly. Treating these as zero-cost transfers would
+  // corrupt FIFO cost basis; stop the scan before advancing its cursor.
+  const txType = String(tx?.TransactionType ?? "");
+  if (txType.startsWith("AMM") || txType === "OfferCreate" ||
+      txType === "OfferCancel" || txType === "Payment") {
+    const affected = Array.isArray(meta?.AffectedNodes) ? meta.AffectedNodes : [];
+    const hasOffer = affected.some((node: any) => {
+      const item = node?.ModifiedNode ?? node?.CreatedNode ?? node?.DeletedNode;
+      return item?.LedgerEntryType === "Offer";
+    });
+    const hasAmm = affected.some((node: any) => {
+      const item = node?.ModifiedNode ?? node?.CreatedNode ?? node?.DeletedNode;
+      return item?.LedgerEntryType === "AMM";
+    });
+    if (txType.startsWith("AMM") || hasAmm) {
+      throw new Error(`Unsupported AMM TOW movement ${txHash}: requires independently verified trade provenance; checkpoint NOT advanced.`);
+    }
+    if (hasOffer && txType !== "OfferCreate" && txType !== "Payment") {
+      throw new Error(`Unsupported DEX TOW movement ${txHash}: checkpoint NOT advanced.`);
+    }
+  }
+
   const xrpDelta = getXrpDeltaFromMeta(meta, walletAddress);
   const isSender = String(tx?.Account ?? "") === walletAddress;
   const feeXrp = isSender ? dropsToXrp(tx?.Fee) : 0;
