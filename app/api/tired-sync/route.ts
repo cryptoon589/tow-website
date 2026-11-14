@@ -73,6 +73,7 @@ export async function POST(request: Request) {
     }
     const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true" &&
       (pilotWallets.has(wallet) || eligibleNewWallet);
+    let certifiedForBatch = false;
     if (fifoEnabled && hasCommitmentMovements) {
       // Pilot admission is fail-closed. An allowlist entry is NOT a history certificate.
       const { data: coverage, error: coverageError } = await supabase
@@ -82,8 +83,21 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (coverageError) throw coverageError;
       const newestEventLedger = Math.max(...normalized.map(event => Number(event.ledgerIndex)));
-      if (!coverage?.verified_complete || !coverage?.balance_verified ||
-          !Number.isSafeInteger(Number(coverage.first_wallet_ledger)) ||
+      // First enrollment must durably stage history before independent
+      // certification can compare it. Do not reconcile an uncertified wallet.
+      // For an already certified wallet, stale coverage remains fail-closed:
+      // never advance the scan cursor without reconciled accounting.
+      if (!coverage?.verified_complete || !coverage?.balance_verified) {
+        // Never stage through this enrollment exception for legacy/pilot wallets.
+        // Their existing commitments require independent reconciliation.
+        if (!eligibleNewWallet) {
+          return NextResponse.json({
+            error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
+            code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
+          }, { status: 409 });
+        }
+        certifiedForBatch = false;
+      } else if (!Number.isSafeInteger(Number(coverage.first_wallet_ledger)) ||
           !Number.isSafeInteger(Number(coverage.proof_ledger)) ||
           !Number.isSafeInteger(Number(coverage.checked_through_ledger)) ||
           Number(coverage.first_wallet_ledger) <= 0 ||
@@ -94,11 +108,13 @@ export async function POST(request: Request) {
           error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
           code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
         }, { status: 409 });
+      } else {
+        certifiedForBatch = true;
       }
     }
     // FIFO is opt-in until complete historical ledger coverage and existing
     // UUID reconciliation are verified. Never activate it by default.
-    const rpcName = hasCommitmentMovements && fifoEnabled
+    const rpcName = hasCommitmentMovements && fifoEnabled && certifiedForBatch
       ? "tow_ingest_and_reconcile_wallet_atomic"
       : "tow_ingest_wallet_events_atomic";
     const { data, error } = await supabase.rpc(rpcName, {
@@ -117,7 +133,7 @@ export async function POST(request: Request) {
     // Returning HTTP 409 here made the scanner retry the same ledger range
     // forever and prevented its checkpoint from advancing. The scanner may
     // advance only after every event in the batch has been stored atomically.
-    const stagedOnly = !fifoEnabled || !hasCommitmentMovements;
+    const stagedOnly = !fifoEnabled || !hasCommitmentMovements || !certifiedForBatch;
     return NextResponse.json({
       ok: true,
       accountingStatus: stagedOnly ? "staged_not_reconciled" : "reconciled",
