@@ -443,12 +443,12 @@ function buildSyncEventFromTx(input: {
       !tx?.SendMax && !tx?.Paths && !tx?.DeliverMin &&
       !tx?.DeliverMax && !tx?.InvoiceID &&
       !hasExecutionNodes &&
-      !(Number(tx?.Flags ?? 0) & 0x00030000) &&
+      Number(tx?.Flags ?? 0) === 0 &&
       Math.abs(towDelta - (destination === walletAddress ? value : -value)) < 0.000001;
     if (!direct) {
       throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: not a proven direct TOW transfer; checkpoint NOT advanced.`);
     }
-  } else if (txType !== "TrustSet") {
+  } else {
     // Do not classify arbitrary new XRPL transaction types as transfers.
     throw new Error(`UNSUPPORTED_TOW_TRANSACTION_TYPE ${txHash}: checkpoint NOT advanced.`);
   }
