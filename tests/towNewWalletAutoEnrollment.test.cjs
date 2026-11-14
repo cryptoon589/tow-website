@@ -40,3 +40,15 @@ test("stale coverage stages eligible new wallets without reconciling, while pilo
   assert.match(sync, /certifiedForBatch = false;/);
   assert.match(sync, /fifoEnabled && certifiedForBatch/);
 });
+
+test("renewal SQL keeps proof identity, monotonic coverage, and legacy guards", () => {
+  const sql = fs.readFileSync("supabase/migrations/2026-11-14-tow-safe-certification-renewal.sql", "utf8");
+  assert.match(sql, /tow_certify_new_wallet_atomic/);
+  assert.match(sql, /c\.first_wallet_ledger = p_first_wallet_ledger/);
+  assert.match(sql, /c\.proof_ledger = p_proof_ledger/);
+  assert.match(sql, /c\.checked_through_ledger <= p_checked_through_ledger/);
+  assert.match(sql, /CERTIFICATION_RENEWAL_REQUIRES_REVIEW/);
+  assert.match(sql, /EXISTING_ACCOUNTING_OR_LEGACY_POSITIONS/);
+  assert.match(sql, /p_expected_proof_started_at is distinct from v_player\.proof_started_at/);
+  assert.match(sql, /p_expected_event_count <> v_count/);
+});
