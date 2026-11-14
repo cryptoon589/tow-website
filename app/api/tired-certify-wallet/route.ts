@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
   if (!isValidXrplWallet(wallet))
     return NextResponse.json({ error: "Invalid wallet" }, { status: 400 });
   const pilotWallets = (process.env.TOW_FIFO_PILOT_WALLETS ?? "").split(",").map(x => x.trim());
-  if (!pilotWallets.includes(wallet))
+  const automaticEnrollment = process.env.TOW_ENABLE_NEW_WALLET_AUTO_ENROLLMENT === "true";
+  if (!automaticEnrollment && !pilotWallets.includes(wallet))
     return NextResponse.json({ error: "Wallet not explicitly allowlisted" }, { status: 403 });
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,6 +47,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Certification evidence incomplete", blockers: evidence.blockers ?? [] }, { status: 409 });
 
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  if (automaticEnrollment && !pilotWallets.includes(wallet)) {
+    const cutoff = process.env.TOW_NEW_WALLET_CUTOFF;
+    const cutoffMs = cutoff ? Date.parse(cutoff) : NaN;
+    const proofMs = Date.parse(String(evidence.proofStartedAt ?? ""));
+    if (!Number.isFinite(cutoffMs) || !Number.isFinite(proofMs) || proofMs < cutoffMs)
+      return NextResponse.json({ error: "Wallet predates automatic enrollment cutoff" }, { status: 403 });
+  }
   // A DB-side function must atomically recheck the wallet has no legacy positions,
   // and prevent concurrent proof/event mutations before recording certification.
   const { data, error } = await db.rpc("tow_certify_new_wallet_atomic", {

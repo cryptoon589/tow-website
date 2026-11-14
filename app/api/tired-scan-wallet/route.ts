@@ -702,9 +702,32 @@ export async function POST(request: NextRequest) {
       if (updateError) throw updateError;
     }
 
+    // Optional automatic certification after durable event ingestion and cursor update.
+    // The certificate endpoint independently rescans history and refuses legacy
+    // wallets, incomplete coverage, or failed balance attestation.
+    let certificationStatus = "disabled";
+    if (process.env.TOW_ENABLE_NEW_WALLET_AUTO_ENROLLMENT === "true" &&
+        process.env.TOW_ENABLE_CERTIFICATE_ISSUANCE === "true") {
+      try {
+        const response = await fetch(`${getBaseUrl(request)}/api/tired-certify-wallet`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tow-sync-secret": process.env.TOW_SYNC_SECRET ?? "",
+          },
+          body: JSON.stringify({ wallet: walletAddress }),
+          cache: "no-store",
+        });
+        certificationStatus = response.ok ? "certified" : "not_eligible";
+      } catch {
+        certificationStatus = "verification_unavailable";
+      }
+    }
+
     return NextResponse.json({
   ok: true,
   walletAddress,
+  certificationStatus,
   lastScannedLedger,
   highestLedgerSeen:
     highestLedgerSeen || lastScannedLedger,

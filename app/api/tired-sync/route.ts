@@ -58,8 +58,21 @@ export async function POST(request: Request) {
     // Explicitly enroll only wallets with independently certified history.
     const pilotWallets = new Set((process.env.TOW_FIFO_PILOT_WALLETS ?? "")
       .split(",").map(value => value.trim()).filter(Boolean));
+    const autoEnrollment = process.env.TOW_ENABLE_NEW_WALLET_AUTO_ENROLLMENT === "true";
+    const cutoff = process.env.TOW_NEW_WALLET_CUTOFF;
+    const cutoffMs = cutoff ? Date.parse(cutoff) : NaN;
+    let eligibleNewWallet = false;
+    if (autoEnrollment && Number.isFinite(cutoffMs)) {
+      const { data: player, error: playerError } = await supabase
+        .from("tow_players").select("verified,proof_started_at")
+        .eq("wallet_address", wallet).maybeSingle();
+      if (playerError) throw playerError;
+      eligibleNewWallet = player?.verified === true &&
+        Number.isFinite(Date.parse(String(player.proof_started_at ?? ""))) &&
+        Date.parse(String(player.proof_started_at)) >= cutoffMs;
+    }
     const fifoEnabled = process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true" &&
-      pilotWallets.has(wallet);
+      (pilotWallets.has(wallet) || eligibleNewWallet);
     if (fifoEnabled && hasCommitmentMovements) {
       // Pilot admission is fail-closed. An allowlist entry is NOT a history certificate.
       const { data: coverage, error: coverageError } = await supabase
