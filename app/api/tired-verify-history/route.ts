@@ -98,7 +98,11 @@ export async function POST(request: NextRequest) {
         transactionCount: scan.transactionCount,
         rpcTowMovements: comparison.rpcCount, storedTowMovements: comparison.storedCount,
         movementsMatch: comparison.matches },
-      historicalProof, existingPositionCount: positionsResult.count ?? 0 });
+      historicalProof, existingPositionCount: positionsResult.count ?? 0,
+      renewalEligible: previouslyCertifiedAndInitialized && historicalProof !== null &&
+        Number(coverage?.proof_ledger) === historicalProof.proofLedger &&
+        Number(coverage?.first_wallet_ledger) === scan.firstWalletLedger &&
+        Number(coverage?.checked_through_ledger) <= scan.scannedThroughLedger });
   } catch (error) {
     return NextResponse.json({ error: "Verification failed closed", details: String(error) }, { status: 409 });
   }
