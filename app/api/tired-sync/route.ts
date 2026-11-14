@@ -88,6 +88,14 @@ export async function POST(request: Request) {
       // For an already certified wallet, stale coverage remains fail-closed:
       // never advance the scan cursor without reconciled accounting.
       if (!coverage?.verified_complete || !coverage?.balance_verified) {
+        // Never stage through this enrollment exception for legacy/pilot wallets.
+        // Their existing commitments require independent reconciliation.
+        if (!eligibleNewWallet) {
+          return NextResponse.json({
+            error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
+            code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
+          }, { status: 409 });
+        }
         certifiedForBatch = false;
       } else if (!Number.isSafeInteger(Number(coverage.first_wallet_ledger)) ||
           !Number.isSafeInteger(Number(coverage.proof_ledger)) ||
