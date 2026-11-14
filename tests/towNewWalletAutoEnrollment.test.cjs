@@ -60,3 +60,10 @@ test("scanner never assigns FIFO XRP cost from an unverified AccountRoot trade d
   assert.match(scan, /tx\?\.TransactionType === "Payment"/);
   assert.ok(scan.indexOf("UNVERIFIED_TOW_TRADE_PROVENANCE") < scan.indexOf("const xrpDelta = getXrpDeltaFromMeta"));
 });
+
+test("scanner fails closed for mixed TOW/XRP movements outside known trade types", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /AMBIGUOUS_TOW_XRP_MOVEMENT/);
+  assert.match(scan, /Math\.abs\(tradeXrpDelta\) > tolerance/);
+  assert.ok(scan.indexOf("AMBIGUOUS_TOW_XRP_MOVEMENT") < scan.indexOf('eventType = towDelta > 0 ? "transfer_in" : "transfer_out"'));
+});
