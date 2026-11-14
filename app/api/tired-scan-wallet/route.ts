@@ -451,6 +451,26 @@ function buildSyncEventFromTx(input: {
     if (!direct) {
       throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: not a proven direct TOW transfer; checkpoint NOT advanced.`);
     }
+    // Sender must have an independently observable, fee-only XRP balance
+    // change. Missing PreviousFields must never be interpreted as zero cost.
+    if (sender === walletAddress) {
+      const senderRoots = affected.filter((node: any) => {
+        const item = node?.ModifiedNode;
+        return item?.LedgerEntryType === "AccountRoot" &&
+          String(item?.FinalFields?.Account ?? "") === sender;
+      });
+      const parseDrops = (v: unknown): bigint | null =>
+        typeof v === "string" && /^(0|[1-9][0-9]*)$/.test(v)
+          ? BigInt(v) : null;
+      const root = senderRoots.length === 1 ? senderRoots[0].ModifiedNode : null;
+      const before = parseDrops(root?.PreviousFields?.Balance);
+      const after = parseDrops(root?.FinalFields?.Balance);
+      const fee = parseDrops(tx?.Fee);
+      if (before === null || after === null || fee === null ||
+          before - after !== fee) {
+        throw new Error(`UNVERIFIED_DIRECT_PAYMENT_XRP_FEE ${txHash}: sender fee-only balance change not proven; checkpoint NOT advanced.`);
+      }
+    }
   } else {
     // Do not classify arbitrary new XRPL transaction types as transfers.
     throw new Error(`UNSUPPORTED_TOW_TRANSACTION_TYPE ${txHash}: checkpoint NOT advanced.`);
