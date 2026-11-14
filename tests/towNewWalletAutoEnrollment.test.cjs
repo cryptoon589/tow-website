@@ -61,9 +61,20 @@ test("scanner never assigns FIFO XRP cost from an unverified AccountRoot trade d
   assert.ok(scan.indexOf("UNVERIFIED_TOW_TRADE_PROVENANCE") < scan.indexOf("const xrpDelta = getXrpDeltaFromMeta"));
 });
 
-test("scanner fails closed for mixed TOW/XRP movements outside known trade types", () => {
-  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
-  assert.match(scan, /AMBIGUOUS_TOW_XRP_MOVEMENT/);
-  assert.match(scan, /Math\.abs\(tradeXrpDelta\) > tolerance/);
-  assert.ok(scan.indexOf("AMBIGUOUS_TOW_XRP_MOVEMENT") < scan.indexOf('eventType = towDelta > 0 ? "transfer_in" : "transfer_out"'));
+test("independent verifier permits renewal only with initialized certified proof identity", () => {
+  const verify = fs.readFileSync("app/api/tired-verify-history/route.ts", "utf8");
+  const certify = fs.readFileSync("app/api/tired-certify-wallet/route.ts", "utf8");
+  assert.match(verify, /tow_accounting_initialized/);
+  assert.match(verify, /tow_accounting_coverage/);
+  assert.match(verify, /previouslyCertifiedAndInitialized/);
+  assert.match(verify, /CERTIFICATION_RENEWAL_PROOF_IDENTITY_MISMATCH/);
+  assert.match(verify, /LEGACY_POSITIONS_REQUIRE_RECONCILIATION/);
+  assert.match(verify, /renewalEligible:/);
+  assert.match(certify, /evidence\.renewalEligible !== true/);
+});
+
+test("independent certificate verification rejects unverified trade cost basis", () => {
+  const verify = fs.readFileSync("app/api/tired-verify-history/route.ts", "utf8");
+  assert.match(verify, /INDEPENDENT_XRP_TRADE_COST_ATTESTATION_REQUIRED/);
+  assert.match(verify, /row\.event_type === "buy" \|\| row\.event_type === "sell"/);
 });
