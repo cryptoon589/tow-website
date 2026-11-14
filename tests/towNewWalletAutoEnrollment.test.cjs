@@ -72,3 +72,9 @@ test("independent verifier permits renewal only with initialized certified proof
   assert.match(verify, /renewalEligible:/);
   assert.match(certify, /evidence\.renewalEligible !== true/);
 });
+
+test("independent certificate verification rejects unverified trade cost basis", () => {
+  const verify = fs.readFileSync("app/api/tired-verify-history/route.ts", "utf8");
+  assert.match(verify, /INDEPENDENT_XRP_TRADE_COST_ATTESTATION_REQUIRED/);
+  assert.match(verify, /row\.event_type === "buy" \|\| row\.event_type === "sell"/);
+});
