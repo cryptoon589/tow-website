@@ -427,8 +427,8 @@ function buildSyncEventFromTx(input: {
   // movements are rejected as ambiguous. Only zero-XRP movements reach
   // this branch. Do not retain unreachable buy/sell heuristics that could
   // accidentally be re-enabled without independent execution provenance.
-  const eventType: SyncEvent["eventType"] =
-    towDelta > 0 ? "transfer_in" : "transfer_out";
+  let eventType: SyncEvent["eventType"];
+  eventType = towDelta > 0 ? "transfer_in" : "transfer_out";
   const xrpValue = 0;
 
   return {
