@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       !Number.isSafeInteger(evidence.historicalProof.proofLedger) ||
       !Number.isSafeInteger(evidence.history.checkedThroughLedger) ||
       !Number.isSafeInteger(evidence.history.firstWalletLedger) ||
-      evidence.existingPositionCount !== 0)
+      (evidence.existingPositionCount !== 0 && evidence.renewalEligible !== true))
     return NextResponse.json({ error: "Certification evidence incomplete", blockers: evidence.blockers ?? [] }, { status: 409 });
 
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
