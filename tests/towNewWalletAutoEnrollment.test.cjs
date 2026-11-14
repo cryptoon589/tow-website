@@ -105,3 +105,9 @@ test("direct TOW payment requires delivered amount metadata matching requested i
   assert.match(scan, /deliveredMatches/);
   assert.match(scan, /Math\.abs\(deliveredValue - value\)/);
 });
+
+test("direct TOW payment rejects failed executions and issuer endpoints", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /meta\?\.TransactionResult === "tesSUCCESS"/);
+  assert.match(scan, /sender !== issuerAddress && destination !== issuerAddress/);
+});
