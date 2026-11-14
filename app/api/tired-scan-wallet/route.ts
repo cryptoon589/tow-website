@@ -434,12 +434,24 @@ function buildSyncEventFromTx(input: {
     const sender = String(tx?.Account ?? "");
     const destination = String(tx?.Destination ?? "");
     const value = Number(amount?.value);
+    // A successful Payment must actually deliver the claimed issued amount.
+    // Reject unavailable or contradictory delivery metadata rather than
+    // treating a requested Amount as proof of execution.
+    const delivered = meta?.delivered_amount ?? meta?.DeliveredAmount;
+    const deliveredValue = Number(delivered?.value);
+    const deliveredMatches = delivered && typeof delivered === "object" &&
+      currenciesMatch(delivered.currency, currencyCode) &&
+      String(delivered.issuer ?? "") === issuerAddress &&
+      Number.isFinite(deliveredValue) && deliveredValue > 0 &&
+      Math.abs(deliveredValue - value) < 0.000001;
     const direct = sender && destination && sender !== destination &&
       (sender === walletAddress || destination === walletAddress) &&
+      sender !== issuerAddress && destination !== issuerAddress &&
+      meta?.TransactionResult === "tesSUCCESS" &&
       typeof amount === "object" && amount !== null &&
       currenciesMatch(amount.currency, currencyCode) &&
       String(amount.issuer ?? "") === issuerAddress &&
-      Number.isFinite(value) && value > 0 &&
+      Number.isFinite(value) && value > 0 && deliveredMatches &&
       !Object.prototype.hasOwnProperty.call(tx, "SendMax") &&
       !Object.prototype.hasOwnProperty.call(tx, "Paths") &&
       !Object.prototype.hasOwnProperty.call(tx, "DeliverMin") &&
@@ -450,6 +462,26 @@ function buildSyncEventFromTx(input: {
       Math.abs(towDelta - (destination === walletAddress ? value : -value)) < 0.000001;
     if (!direct) {
       throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: not a proven direct TOW transfer; checkpoint NOT advanced.`);
+    }
+    // Sender must have an independently observable, fee-only XRP balance
+    // change. Missing PreviousFields must never be interpreted as zero cost.
+    if (sender === walletAddress) {
+      const senderRoots = affected.filter((node: any) => {
+        const item = node?.ModifiedNode;
+        return item?.LedgerEntryType === "AccountRoot" &&
+          String(item?.FinalFields?.Account ?? "") === sender;
+      });
+      const parseDrops = (v: unknown): bigint | null =>
+        typeof v === "string" && /^(0|[1-9][0-9]*)$/.test(v)
+          ? BigInt(v) : null;
+      const root = senderRoots.length === 1 ? senderRoots[0].ModifiedNode : null;
+      const before = parseDrops(root?.PreviousFields?.Balance);
+      const after = parseDrops(root?.FinalFields?.Balance);
+      const fee = parseDrops(tx?.Fee);
+      if (before === null || after === null || fee === null ||
+          before - after !== fee) {
+        throw new Error(`UNVERIFIED_DIRECT_PAYMENT_XRP_FEE ${txHash}: sender fee-only balance change not proven; checkpoint NOT advanced.`);
+      }
     }
   } else {
     // Do not classify arbitrary new XRPL transaction types as transfers.

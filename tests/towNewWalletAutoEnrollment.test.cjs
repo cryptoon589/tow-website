@@ -87,3 +87,27 @@ test("certificate issuance rejects incoming inventory without replay provenance"
   assert.match(verify, /INCOMING_TOW_INVENTORY_PROVENANCE_REQUIRED/);
   assert.match(verify, /row\.event_type === "transfer_in" \|\| row\.event_type === "reward"/);
 });
+
+test("direct TOW payment requires exact fee-only sender AccountRoot proof", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /UNVERIFIED_DIRECT_PAYMENT_XRP_FEE/);
+  assert.match(scan, /root\?\.PreviousFields\?\.Balance/);
+  assert.match(scan, /root\?\.FinalFields\?\.Balance/);
+  assert.match(scan, /before - after !== fee/);
+  assert.match(scan, /BigInt\(v\)/);
+  assert.match(scan, /senderRoots\.length === 1/);
+});
+
+test("direct TOW payment requires delivered amount metadata matching requested issued token", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /meta\?\.delivered_amount \?\? meta\?\.DeliveredAmount/);
+  assert.match(scan, /currenciesMatch\(delivered\.currency, currencyCode\)/);
+  assert.match(scan, /deliveredMatches/);
+  assert.match(scan, /Math\.abs\(deliveredValue - value\)/);
+});
+
+test("direct TOW payment rejects failed executions and issuer endpoints", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /meta\?\.TransactionResult === "tesSUCCESS"/);
+  assert.match(scan, /sender !== issuerAddress && destination !== issuerAddress/);
+});
