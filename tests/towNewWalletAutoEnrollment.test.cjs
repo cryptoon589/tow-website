@@ -33,3 +33,10 @@ test("wallet scanner invokes independent certification only after durable sync a
   assert.match(scan, /"certified_accounting_disabled"/);
   assert.match(scan, /"not_eligible"/);
 });
+
+test("stale coverage stages eligible new wallets without reconciling, while pilots remain blocked", () => {
+  assert.match(sync, /if \(!eligibleNewWallet\) \{[\s\S]*?XRPL_HISTORY_COVERAGE_NOT_CERTIFIED/);
+  assert.match(sync, /For automatically enrolled new wallets, stage the next ledger range/);
+  assert.match(sync, /certifiedForBatch = false;/);
+  assert.match(sync, /fifoEnabled && certifiedForBatch/);
+});
