@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
     }));
     const comparison = compareTowMovements(scan.movements, stored);
     const blockers = [...comparison.blockers];
+    // TOW delta matching does not independently attest XRP consideration.
+    // Until DEX execution-cost verification exists, reject staged trade costs.
+    if (storedRows.some(row => row.event_type === "buy" || row.event_type === "sell"))
+      blockers.push("INDEPENDENT_XRP_TRADE_COST_ATTESTATION_REQUIRED");
     if (!playerResult.data.verified || !playerResult.data.proof_started_at)
       blockers.push("PLAYER_PROOF_NOT_VERIFIED");
     // Existing positions are permissible ONLY for a previously initialized,
