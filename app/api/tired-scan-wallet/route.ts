@@ -415,6 +415,14 @@ function buildSyncEventFromTx(input: {
   const tradeXrpDelta = Number((xrpDelta + feeXrp).toFixed(6));
   const tolerance = 0.000001;
 
+  // A non-DEX transaction that moves both TOW and XRP is not necessarily a
+  // zero-cost transfer. A wallet may receive TOW and pay XRP in one transaction
+  // through a future XRPL transaction type. Preserve FIFO integrity by
+  // refusing to classify mixed-asset movements without execution provenance.
+  if (Math.abs(tradeXrpDelta) > tolerance) {
+    throw new Error(`AMBIGUOUS_TOW_XRP_MOVEMENT ${txHash}: mixed TOW/XRP movement requires verified execution provenance; checkpoint NOT advanced.`);
+  }
+
   let eventType: SyncEvent["eventType"];
   let xrpValue = 0;
 
