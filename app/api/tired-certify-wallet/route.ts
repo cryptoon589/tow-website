@@ -66,5 +66,27 @@ export async function POST(request: NextRequest) {
   });
   if (error || !data?.certified)
     return NextResponse.json({ error: "Atomic certification rejected", details: error?.message ?? data }, { status: 409 });
-  return NextResponse.json({ wallet, certified: true, proofLedger: evidence.historicalProof.proofLedger });
+  // Reconcile the complete, independently certified staged history atomically.
+  // Never claim FIFO is initialized merely because a certificate was issued.
+  // A failed replay leaves the certificate intact for an explicit safe retry.
+  if (process.env.TOW_ENABLE_FIFO_ACCOUNTING === "true") {
+    const { data: replay, error: replayError } = await db.rpc("tow_reconcile_wallet_atomic", {
+      p_wallet: wallet,
+    });
+    if (replayError) {
+      return NextResponse.json({
+        wallet, certified: true, accountingStatus: "replay_failed",
+        error: "FIFO_REPLAY_REQUIRES_REVIEW",
+        details: replayError.message,
+      }, { status: 409 });
+    }
+    return NextResponse.json({
+      wallet, certified: true, accountingStatus: "reconciled",
+      proofLedger: evidence.historicalProof.proofLedger, replay,
+    });
+  }
+  return NextResponse.json({
+    wallet, certified: true, accountingStatus: "not_enabled",
+    proofLedger: evidence.historicalProof.proofLedger,
+  });
 }
