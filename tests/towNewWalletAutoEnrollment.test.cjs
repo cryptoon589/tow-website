@@ -87,3 +87,13 @@ test("certificate issuance rejects incoming inventory without replay provenance"
   assert.match(verify, /INCOMING_TOW_INVENTORY_PROVENANCE_REQUIRED/);
   assert.match(verify, /row\.event_type === "transfer_in" \|\| row\.event_type === "reward"/);
 });
+
+test("direct TOW payment requires exact fee-only sender AccountRoot proof", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /UNVERIFIED_DIRECT_PAYMENT_XRP_FEE/);
+  assert.match(scan, /root\?\.PreviousFields\?\.Balance/);
+  assert.match(scan, /root\?\.FinalFields\?\.Balance/);
+  assert.match(scan, /before - after !== fee/);
+  assert.match(scan, /BigInt\(v\)/);
+  assert.match(scan, /senderRoots\.length === 1/);
+});
