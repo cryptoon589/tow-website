@@ -28,5 +28,8 @@ test("wallet scanner invokes independent certification only after durable sync a
   assert.ok(sync >= 0 && checkpoint > sync && cert > checkpoint);
   assert.match(scan, /TOW_ENABLE_NEW_WALLET_AUTO_ENROLLMENT === "true"/);
   assert.match(scan, /TOW_ENABLE_CERTIFICATE_ISSUANCE === "true"/);
-  assert.match(scan, /certificationStatus = response.ok \? "certified" : "not_eligible"/);
+  assert.match(scan, /certificationResult\?\.accountingStatus === "reconciled"/);
+  assert.match(scan, /"certified_replay_failed"/);
+  assert.match(scan, /"certified_accounting_disabled"/);
+  assert.match(scan, /"not_eligible"/);
 });
