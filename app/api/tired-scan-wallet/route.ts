@@ -434,12 +434,22 @@ function buildSyncEventFromTx(input: {
     const sender = String(tx?.Account ?? "");
     const destination = String(tx?.Destination ?? "");
     const value = Number(amount?.value);
+    // A successful Payment must actually deliver the claimed issued amount.
+    // Reject unavailable or contradictory delivery metadata rather than
+    // treating a requested Amount as proof of execution.
+    const delivered = meta?.delivered_amount ?? meta?.DeliveredAmount;
+    const deliveredValue = Number(delivered?.value);
+    const deliveredMatches = delivered && typeof delivered === "object" &&
+      currenciesMatch(delivered.currency, currencyCode) &&
+      String(delivered.issuer ?? "") === issuerAddress &&
+      Number.isFinite(deliveredValue) && deliveredValue > 0 &&
+      Math.abs(deliveredValue - value) < 0.000001;
     const direct = sender && destination && sender !== destination &&
       (sender === walletAddress || destination === walletAddress) &&
       typeof amount === "object" && amount !== null &&
       currenciesMatch(amount.currency, currencyCode) &&
       String(amount.issuer ?? "") === issuerAddress &&
-      Number.isFinite(value) && value > 0 &&
+      Number.isFinite(value) && value > 0 && deliveredMatches &&
       !Object.prototype.hasOwnProperty.call(tx, "SendMax") &&
       !Object.prototype.hasOwnProperty.call(tx, "Paths") &&
       !Object.prototype.hasOwnProperty.call(tx, "DeliverMin") &&
