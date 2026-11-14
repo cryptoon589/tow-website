@@ -104,10 +104,17 @@ export async function POST(request: Request) {
           Number(coverage.first_wallet_ledger) > Number(coverage.proof_ledger) ||
           Number(coverage.checked_through_ledger) < newestEventLedger ||
           Number(coverage.checked_through_ledger) < Number(coverage.proof_ledger)) {
-        return NextResponse.json({
-          error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
-          code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
-        }, { status: 409 });
+        // For automatically enrolled new wallets, stage the next ledger range
+        // without applying FIFO. The scanner then independently re-verifies
+        // full history before any staged movement can be reconciled.
+        // Pilot-only / legacy wallets remain blocked.
+        if (!eligibleNewWallet) {
+          return NextResponse.json({
+            error: "XRPL_HISTORY_COVERAGE_NOT_CERTIFIED",
+            code: "TOW_ACCOUNTING_REVIEW_REQUIRED",
+          }, { status: 409 });
+        }
+        certifiedForBatch = false;
       } else {
         certifiedForBatch = true;
       }
