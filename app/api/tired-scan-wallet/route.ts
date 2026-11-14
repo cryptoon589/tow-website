@@ -741,7 +741,14 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({ wallet: walletAddress }),
           cache: "no-store",
         });
-        certificationStatus = response.ok ? "certified" : "not_eligible";
+        const certificationResult = await response.json().catch(() => null);
+        certificationStatus = response.ok && certificationResult?.certified === true
+          ? (certificationResult?.accountingStatus === "reconciled"
+              ? "reconciled"
+              : "certified_accounting_disabled")
+          : certificationResult?.accountingStatus === "replay_failed"
+            ? "certified_replay_failed"
+            : "not_eligible";
       } catch {
         certificationStatus = "verification_unavailable";
       }
