@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
     // Until DEX execution-cost verification exists, reject staged trade costs.
     if (storedRows.some(row => row.event_type === "buy" || row.event_type === "sell"))
       blockers.push("INDEPENDENT_XRP_TRADE_COST_ATTESTATION_REQUIRED");
+    // The atomic FIFO reconciler has no transfer_in branch. Certifying such
+    // a wallet would issue a certificate that can never replay successfully.
+    // Block issuance until incoming inventory provenance is implemented.
+    if (storedRows.some(row => row.event_type === "transfer_in" || row.event_type === "reward"))
+      blockers.push("INCOMING_TOW_INVENTORY_PROVENANCE_REQUIRED");
     if (!playerResult.data.verified || !playerResult.data.proof_started_at)
       blockers.push("PLAYER_PROOF_NOT_VERIFIED");
     // Existing positions are permissible ONLY for a previously initialized,
