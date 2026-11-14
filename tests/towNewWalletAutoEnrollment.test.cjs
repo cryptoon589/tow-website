@@ -97,3 +97,11 @@ test("direct TOW payment requires exact fee-only sender AccountRoot proof", () =
   assert.match(scan, /BigInt\(v\)/);
   assert.match(scan, /senderRoots\.length === 1/);
 });
+
+test("direct TOW payment requires delivered amount metadata matching requested issued token", () => {
+  const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
+  assert.match(scan, /meta\?\.delivered_amount \?\? meta\?\.DeliveredAmount/);
+  assert.match(scan, /currenciesMatch\(delivered\.currency, currencyCode\)/);
+  assert.match(scan, /deliveredMatches/);
+  assert.match(scan, /Math\.abs\(deliveredValue - value\)/);
+});
