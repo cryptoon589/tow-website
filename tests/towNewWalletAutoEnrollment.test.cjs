@@ -53,12 +53,15 @@ test("renewal SQL keeps proof identity, monotonic coverage, and legacy guards", 
   assert.match(sql, /p_expected_event_count <> v_count/);
 });
 
-test("scanner never assigns FIFO XRP cost from an unverified AccountRoot trade delta", () => {
+test("scanner only permits constrained direct TOW payments and never invents trade cost", () => {
   const scan = fs.readFileSync("app/api/tired-scan-wallet/route.ts", "utf8");
   assert.match(scan, /UNVERIFIED_TOW_TRADE_PROVENANCE/);
-  assert.match(scan, /tx\?\.TransactionType === "OfferCreate"/);
-  assert.match(scan, /tx\?\.TransactionType === "Payment"/);
-  assert.ok(scan.indexOf("UNVERIFIED_TOW_TRADE_PROVENANCE") < scan.indexOf("const xrpDelta = getXrpDeltaFromMeta"));
+  assert.match(scan, /txType === "OfferCreate"/);
+  assert.match(scan, /txType === "Payment"/);
+  assert.match(scan, /hasExecutionNodes/);
+  assert.match(scan, /Math\.abs\(towDelta - \(destination === walletAddress \? value : -value\)\)/);
+  assert.match(scan, /AMBIGUOUS_TOW_XRP_MOVEMENT/);
+  assert.ok(scan.indexOf('txType === "OfferCreate"') < scan.indexOf("const xrpDelta = getXrpDeltaFromMeta"));
 });
 
 test("independent verifier permits renewal only with initialized certified proof identity", () => {

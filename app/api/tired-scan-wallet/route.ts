@@ -400,14 +400,6 @@ function buildSyncEventFromTx(input: {
     }
   }
 
-  // A wallet AccountRoot XRP balance change is not proof of the XRP leg of
-  // a TOW trade. Path payments, partial DEX fills, reserve changes and
-  // third-party offers can change balances independently. Until execution
-  // metadata is reconciled, never invent a FIFO XRP cost from this delta.
-  if (tx?.TransactionType === "OfferCreate" || tx?.TransactionType === "Payment") {
-    throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: cannot infer FIFO XRP cost from AccountRoot delta; checkpoint NOT advanced.`);
-  }
-
   const xrpDelta = getXrpDeltaFromMeta(meta, walletAddress);
   const isSender = String(tx?.Account ?? "") === walletAddress;
   const feeXrp = isSender ? dropsToXrp(tx?.Fee) : 0;
@@ -421,6 +413,47 @@ function buildSyncEventFromTx(input: {
   // refusing to classify mixed-asset movements without execution provenance.
   if (Math.abs(tradeXrpDelta) > tolerance) {
     throw new Error(`AMBIGUOUS_TOW_XRP_MOVEMENT ${txHash}: mixed TOW/XRP movement requires verified execution provenance; checkpoint NOT advanced.`);
+  }
+
+  // Narrowly admit plain issued-TOW Payments as transfers, not trades.
+  // A direct Payment must identify both parties, deliver TOW from our
+  // issuer, and contain no path/SendMax/partial-payment features or
+  // affected Offer/AMM nodes. The actual wallet TOW delta must match
+  // the stated Amount, and the only XRP balance movement may be the fee.
+  // All OfferCreate and routed/ambiguous Payments still fail closed.
+  if (txType === "OfferCreate") {
+    throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: execution cost not attested; checkpoint NOT advanced.`);
+  }
+  if (txType === "Payment") {
+    const amount = tx?.Amount;
+    const affected = Array.isArray(meta?.AffectedNodes) ? meta.AffectedNodes : [];
+    const hasExecutionNodes = affected.some((node: any) => {
+      const item = node?.ModifiedNode ?? node?.CreatedNode ?? node?.DeletedNode;
+      return item?.LedgerEntryType === "Offer" || item?.LedgerEntryType === "AMM";
+    });
+    const sender = String(tx?.Account ?? "");
+    const destination = String(tx?.Destination ?? "");
+    const value = Number(amount?.value);
+    const direct = sender && destination && sender !== destination &&
+      (sender === walletAddress || destination === walletAddress) &&
+      typeof amount === "object" && amount !== null &&
+      currenciesMatch(amount.currency, currencyCode) &&
+      String(amount.issuer ?? "") === issuerAddress &&
+      Number.isFinite(value) && value > 0 &&
+      !Object.prototype.hasOwnProperty.call(tx, "SendMax") &&
+      !Object.prototype.hasOwnProperty.call(tx, "Paths") &&
+      !Object.prototype.hasOwnProperty.call(tx, "DeliverMin") &&
+      !Object.prototype.hasOwnProperty.call(tx, "DeliverMax") &&
+      !hasExecutionNodes &&
+      (tx?.Flags === undefined || tx?.Flags === null ||
+        (typeof tx.Flags === "number" && tx.Flags === 0)) &&
+      Math.abs(towDelta - (destination === walletAddress ? value : -value)) < 0.000001;
+    if (!direct) {
+      throw new Error(`UNVERIFIED_TOW_TRADE_PROVENANCE ${txHash}: not a proven direct TOW transfer; checkpoint NOT advanced.`);
+    }
+  } else {
+    // Do not classify arbitrary new XRPL transaction types as transfers.
+    throw new Error(`UNSUPPORTED_TOW_TRANSACTION_TYPE ${txHash}: checkpoint NOT advanced.`);
   }
 
   // Both verified trade types were rejected above, and mixed XRP/TOW
