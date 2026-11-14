@@ -78,3 +78,9 @@ test("independent certificate verification rejects unverified trade cost basis",
   assert.match(verify, /INDEPENDENT_XRP_TRADE_COST_ATTESTATION_REQUIRED/);
   assert.match(verify, /row\.event_type === "buy" \|\| row\.event_type === "sell"/);
 });
+
+test("certificate issuance rejects incoming inventory without replay provenance", () => {
+  const verify = fs.readFileSync("app/api/tired-verify-history/route.ts", "utf8");
+  assert.match(verify, /INCOMING_TOW_INVENTORY_PROVENANCE_REQUIRED/);
+  assert.match(verify, /row\.event_type === "transfer_in" \|\| row\.event_type === "reward"/);
+});
