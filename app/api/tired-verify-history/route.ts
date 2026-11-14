@@ -25,12 +25,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Verification service not configured" }, { status: 503 });
   try {
     const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-    const [playerResult, storedResult, positionsResult] = await Promise.all([
+    const [playerResult, storedResult, positionsResult, initializedResult, coverageResult] = await Promise.all([
       db.from("tow_players").select("verified,proof_started_at").eq("wallet_address", wallet).maybeSingle(),
       db.from("tow_wallet_events").select("*").eq("wallet_address", wallet).order("ledger_index", { ascending: true }).limit(10001),
       db.from("tow_buy_positions").select("id", { count: "exact", head: true }).eq("wallet_address", wallet),
+      db.from("tow_accounting_initialized").select("wallet_address").eq("wallet_address", wallet).maybeSingle(),
+      db.from("tow_accounting_coverage").select("verified_complete,balance_verified,first_wallet_ledger,proof_ledger,checked_through_ledger,notes").eq("wallet_address", wallet).maybeSingle(),
     ]);
-    if (playerResult.error || storedResult.error || positionsResult.error)
+    if (playerResult.error || storedResult.error || positionsResult.error || initializedResult.error || coverageResult.error)
       throw new Error("Database verification lookup failed");
     if (!playerResult.data)
       return NextResponse.json({ error: "Wallet is not registered" }, { status: 404 });
@@ -48,7 +50,17 @@ export async function POST(request: NextRequest) {
     const blockers = [...comparison.blockers];
     if (!playerResult.data.verified || !playerResult.data.proof_started_at)
       blockers.push("PLAYER_PROOF_NOT_VERIFIED");
-    if ((positionsResult.count ?? 0) > 0)
+    // Existing positions are permissible ONLY for a previously initialized,
+    // independently certified new wallet. The atomic DB renewal function
+    // rechecks coverage identity and rejects any positions lacking FIFO slices.
+    const coverage = coverageResult.data;
+    const previouslyCertifiedAndInitialized = Boolean(
+      initializedResult.data &&
+      coverage?.verified_complete === true &&
+      coverage?.balance_verified === true &&
+      coverage?.notes === "Independent XRPL verification; new-wallet pilot"
+    );
+    if ((positionsResult.count ?? 0) > 0 && !previouslyCertifiedAndInitialized)
       blockers.push("LEGACY_POSITIONS_REQUIRE_RECONCILIATION");
     if (scan.firstWalletLedger === null || scan.firstAvailableLedger === null ||
         scan.firstAvailableLedger > scan.firstWalletLedger)
@@ -74,6 +86,11 @@ export async function POST(request: NextRequest) {
     } catch {
       blockers.push("INDEPENDENT_HISTORICAL_PROOF_ATTESTATION_FAILED");
     }
+    if ((positionsResult.count ?? 0) > 0 && historicalProof &&
+        (Number(coverage?.proof_ledger) !== historicalProof.proofLedger ||
+         Number(coverage?.first_wallet_ledger) !== scan.firstWalletLedger ||
+         Number(coverage?.checked_through_ledger) > scan.scannedThroughLedger))
+      blockers.push("CERTIFICATION_RENEWAL_PROOF_IDENTITY_MISMATCH");
     return NextResponse.json({ wallet, proofStartedAt: playerResult.data.proof_started_at, certified: false, eligibleForCertification: blockers.length === 0, blockers,
       history: { firstAvailableLedger: scan.firstAvailableLedger,
         firstWalletLedger: scan.firstWalletLedger,
