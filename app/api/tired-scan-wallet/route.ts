@@ -440,8 +440,10 @@ function buildSyncEventFromTx(input: {
       currenciesMatch(amount.currency, currencyCode) &&
       String(amount.issuer ?? "") === issuerAddress &&
       Number.isFinite(value) && value > 0 &&
-      !tx?.SendMax && !tx?.Paths && !tx?.DeliverMin &&
-      !tx?.DeliverMax && !tx?.InvoiceID &&
+      !Object.prototype.hasOwnProperty.call(tx, "SendMax") &&
+      !Object.prototype.hasOwnProperty.call(tx, "Paths") &&
+      !Object.prototype.hasOwnProperty.call(tx, "DeliverMin") &&
+      !Object.prototype.hasOwnProperty.call(tx, "DeliverMax") &&
       !hasExecutionNodes &&
       Number(tx?.Flags ?? 0) === 0 &&
       Math.abs(towDelta - (destination === walletAddress ? value : -value)) < 0.000001;
