@@ -446,6 +446,8 @@ function buildSyncEventFromTx(input: {
       Math.abs(deliveredValue - value) < 0.000001;
     const direct = sender && destination && sender !== destination &&
       (sender === walletAddress || destination === walletAddress) &&
+      sender !== issuerAddress && destination !== issuerAddress &&
+      meta?.TransactionResult === "tesSUCCESS" &&
       typeof amount === "object" && amount !== null &&
       currenciesMatch(amount.currency, currencyCode) &&
       String(amount.issuer ?? "") === issuerAddress &&
