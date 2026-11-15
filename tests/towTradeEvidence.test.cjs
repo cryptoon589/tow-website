@@ -12,11 +12,11 @@ const wallet = "rFixtureWallet";
 const hash = "A".repeat(64);
 const make = (before,after,fee="12",sender=wallet)=>({
  txHash:hash,walletAddress:wallet,towDelta:10,
- tx:{Account:sender,Fee:fee},
+ tx:{Account:sender,Fee:fee,TransactionType:"OfferCreate"},
  meta:{TransactionResult:"tesSUCCESS",AffectedNodes:[{ModifiedNode:{
  LedgerEntryType:"AccountRoot",FinalFields:{Account:wallet,Balance:after},
  PreviousFields:before===undefined?{}:{Balance:before}
- }}]}
+ }},{ModifiedNode:{LedgerEntryType:"Offer",FinalFields:{Account:wallet}}}]}
 });
 test("buy excludes transaction fee and remains uncertified",()=>{
  const r=assess(make("100000000","94999988"));
@@ -50,3 +50,17 @@ test("failed transaction fails",()=>{
 });
 test("missing fee on sender fails",()=>{const v=make("100000000","95000000");delete v.tx.Fee;assert.throws(()=>assess(v),/INVALID_XRP_DROPS_EVIDENCE/);});
 test("oversized XRP delta fails",()=>assert.throws(()=>assess(make("99999999999999999999","1")),/XRP_DELTA_OUT_OF_SAFE_RANGE/));
+
+test("no execution node fails even with plausible XRP and TOW deltas",()=>{
+ const v=make("100000000","94999988");v.meta.AffectedNodes.pop();
+ assert.throws(()=>assess(v),/MISSING_DEX_EXECUTION_PROVENANCE/);
+});
+test("unrelated account cannot claim another wallet's execution",()=>{
+ const v=make("100000000","94999988","12","rOther");
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.Account="rThird";
+ assert.throws(()=>assess(v),/UNATTRIBUTED_DEX_EXECUTION/);
+});
+test("non-DEX transaction cannot claim trade evidence",()=>{
+ const v=make("100000000","94999988");v.tx.TransactionType="TrustSet";
+ assert.throws(()=>assess(v),/UNSUPPORTED_DEX_TRADE_TRANSACTION/);
+});
