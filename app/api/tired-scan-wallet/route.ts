@@ -275,7 +275,10 @@ function getXrpDeltaFromMeta(meta: any, walletAddress: string) {
     throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: duplicate account roots; checkpoint NOT advanced.");
   }
   const maxSafeDelta = BigInt(Number.MAX_SAFE_INTEGER);
-  if (deltaDrops > maxSafeDelta || -deltaDrops > maxSafeDelta) {\n    throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: XRP delta exceeds safe numeric range; checkpoint NOT advanced.");\n  }\n  return Number(deltaDrops) / 1_000_000;
+  if (deltaDrops > maxSafeDelta || -deltaDrops > maxSafeDelta) {
+    throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: XRP delta exceeds safe numeric range; checkpoint NOT advanced.");
+  }
+  return Number(deltaDrops) / 1_000_000;
 }
 
 function getTxObject(entry: any) {
