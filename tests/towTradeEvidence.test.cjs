@@ -85,3 +85,15 @@ test("deleted offer without full executed amounts fails closed",()=>{
  v.meta.AffectedNodes[1]={DeletedNode:v.meta.AffectedNodes[1].ModifiedNode};
  assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
 });
+
+test("decimal issued TOW quantities are accepted as read-only evidence",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1].ModifiedNode.PreviousFields.TakerGets.value="20.5";
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerGets.value="10.25";
+ assert.equal(assess(v).independentlyAttested,false);
+});
+test("malformed issued amount fails closed",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerGets.value="10\\x25";
+ assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
+});
