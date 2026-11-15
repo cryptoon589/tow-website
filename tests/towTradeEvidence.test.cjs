@@ -48,5 +48,5 @@ test("failed transaction fails",()=>{
  const v=make("100000000","95000000");v.meta.TransactionResult="tecFAILED";
  assert.throws(()=>assess(v),/INVALID_TRADE_EVIDENCE/);
 });
-test("missing fee on sender fails",()=>assert.throws(()=>assess(make("100000000","95000000",undefined)),/INVALID_XRP_DROPS_EVIDENCE/));
+test("missing fee on sender fails",()=>{const v=make("100000000","95000000");delete v.tx.Fee;assert.throws(()=>assess(v),/INVALID_XRP_DROPS_EVIDENCE/);});
 test("oversized XRP delta fails",()=>assert.throws(()=>assess(make("99999999999999999999","1")),/XRP_DELTA_OUT_OF_SAFE_RANGE/));
