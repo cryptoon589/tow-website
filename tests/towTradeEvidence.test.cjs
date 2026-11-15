@@ -16,7 +16,7 @@ const make = (before,after,fee="12",sender=wallet)=>({
  meta:{TransactionResult:"tesSUCCESS",AffectedNodes:[{ModifiedNode:{
  LedgerEntryType:"AccountRoot",FinalFields:{Account:wallet,Balance:after},
  PreviousFields:before===undefined?{}:{Balance:before}
- }},{ModifiedNode:{LedgerEntryType:"Offer",FinalFields:{Account:wallet}}}]}
+ }},{ModifiedNode:{LedgerEntryType:"Offer",PreviousFields:{TakerPays:"2000000",TakerGets:{currency:"TOW",issuer:"rIssuer",value:"20"}},FinalFields:{Account:wallet,TakerPays:"1000000",TakerGets:{currency:"TOW",issuer:"rIssuer",value:"10"}}}}]}
 });
 test("buy excludes transaction fee and remains uncertified",()=>{
  const r=assess(make("100000000","94999988"));
@@ -63,4 +63,25 @@ test("unrelated account cannot claim another wallet's execution",()=>{
 test("non-DEX transaction cannot claim trade evidence",()=>{
  const v=make("100000000","94999988");v.tx.TransactionType="TrustSet";
  assert.throws(()=>assess(v),/UNSUPPORTED_DEX_TRADE_TRANSACTION/);
+});
+
+test("offer node without previous executed amounts is rejected",()=>{
+ const v=make("100000000","94999988");
+ delete v.meta.AffectedNodes[1].ModifiedNode.PreviousFields;
+ assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
+});
+test("unchanged offer is not execution evidence",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerPays="2000000";
+ assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
+});
+test("one-sided offer movement is not a verified fill",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerGets.value="20";
+ assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
+});
+test("deleted offer without full executed amounts fails closed",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1]={DeletedNode:v.meta.AffectedNodes[1].ModifiedNode};
+ assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
 });
