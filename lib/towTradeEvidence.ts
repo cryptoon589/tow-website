@@ -42,6 +42,28 @@ export function assessUncertifiedTradeEvidence(input: {
       !Array.isArray(meta?.AffectedNodes)) {
     throw new Error("INVALID_TRADE_EVIDENCE");
   }
+  // Require execution evidence rather than inferring a DEX trade from
+  // coincident XRP/TOW balance changes. This is a prerequisite, NOT a
+  // complete offer/AMM fill or counterparty-cost attestation.
+  if (tx?.TransactionType !== "OfferCreate" && tx?.TransactionType !== "Payment") {
+    throw new Error("UNSUPPORTED_DEX_TRADE_TRANSACTION");
+  }
+  const executionNodes = meta.AffectedNodes.filter((node: any) => {
+    const wrapper = node?.ModifiedNode ?? node?.DeletedNode;
+    return wrapper?.LedgerEntryType === "Offer" || wrapper?.LedgerEntryType === "AMM";
+  });
+  if (executionNodes.length === 0) {
+    throw new Error("MISSING_DEX_EXECUTION_PROVENANCE");
+  }
+  // The wallet must be a participant in the submitted transaction or in
+  // an executed offer. Otherwise its balance changes cannot be attributed
+  // to the claimed execution.
+  const participates = tx?.Account === walletAddress ||
+    executionNodes.some((node: any) => {
+      const wrapper = node?.ModifiedNode ?? node?.DeletedNode;
+      return (wrapper?.FinalFields?.Account ?? wrapper?.PreviousFields?.Account) === walletAddress;
+    });
+  if (!participates) throw new Error("UNATTRIBUTED_DEX_EXECUTION");
   const roots = meta.AffectedNodes.filter((n: any) => {
     const item = n?.ModifiedNode;
     return item?.LedgerEntryType === "AccountRoot" &&
