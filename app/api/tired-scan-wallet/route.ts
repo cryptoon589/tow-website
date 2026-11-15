@@ -254,7 +254,7 @@ function getXrpDeltaFromMeta(meta: any, walletAddress: string) {
     typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value)
       ? BigInt(value) : null;
 
-  let deltaDrops = 0n;
+  let deltaDrops = BigInt(0);
   let matched = 0;
   for (const node of affectedNodes) {
     if (getLedgerEntryType(node) !== "AccountRoot") continue;
