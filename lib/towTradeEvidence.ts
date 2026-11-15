@@ -52,9 +52,6 @@ export function assessUncertifiedTradeEvidence(input: {
   const before = drops(root?.PreviousFields?.Balance);
   const after = drops(root?.FinalFields?.Balance);
   const fee = tx?.Account === walletAddress ? drops(tx?.Fee) : BigInt(0);
-  if (after > before + fee && tx?.Account === walletAddress) {
-    // This is not an error: selling TOW may increase XRP while paying the fee.
-  }
   const net = after - before + fee;
   if (towDelta > 0 && net >= BigInt(0)) {
     throw new Error("TRADE_BUY_XRP_DIRECTION_MISMATCH");
