@@ -61,7 +61,7 @@ export function assessUncertifiedTradeEvidence(input: {
   const parseIssued = (value: any): number | null => {
     if (!value || typeof value !== "object" ||
         typeof value.value !== "string" ||
-        !/^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$/.test(value.value)) return null;
+        !/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value.value)) return null;
     const n = Number(value.value);
     return Number.isFinite(n) && n > 0 ? n : null;
   };
