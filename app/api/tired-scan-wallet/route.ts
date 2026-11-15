@@ -244,48 +244,37 @@ function getTowDeltaFromMeta(
   return Number(delta.toFixed(6));
 }
 
-function getXrpDeltaFromMeta(
-  meta: any,
-  walletAddress: string
-) {
+function getXrpDeltaFromMeta(meta: any, walletAddress: string) {
   const affectedNodes = meta?.AffectedNodes;
-
-  if (!Array.isArray(affectedNodes)) return 0;
-
-  let deltaDrops = 0;
-
-  for (const node of affectedNodes) {
-    if (getLedgerEntryType(node) !== "AccountRoot") {
-      continue;
-    }
-
-    const finalFields = getFinalFields(node);
-    const previousFields = getPreviousFields(node);
-
-    const account = String(finalFields?.Account ?? "");
-
-    if (account !== walletAddress) continue;
-
-    const finalBalanceDrops = Number(
-      finalFields?.Balance ?? 0
-    );
-
-    const previousBalanceDrops = Number(
-      previousFields?.Balance ??
-        finalFields?.Balance ??
-        0
-    );
-
-    if (
-      Number.isFinite(finalBalanceDrops) &&
-      Number.isFinite(previousBalanceDrops)
-    ) {
-      deltaDrops +=
-        finalBalanceDrops - previousBalanceDrops;
-    }
+  if (!Array.isArray(affectedNodes)) {
+    throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: missing affected nodes; checkpoint NOT advanced.");
   }
 
-  return Number((deltaDrops / 1_000_000).toFixed(6));
+  const parseDrops = (value: unknown): bigint | null =>
+    typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value)
+      ? BigInt(value) : null;
+
+  let deltaDrops = 0n;
+  let matched = 0;
+  for (const node of affectedNodes) {
+    if (getLedgerEntryType(node) !== "AccountRoot") continue;
+    const finalFields = getFinalFields(node);
+    if (String(finalFields?.Account ?? "") !== walletAddress) continue;
+    matched++;
+    // AccountRoot modifications must contain both balances to attest an
+    // XRP delta. Never silently substitute the final balance for a missing
+    // previous balance, which could conceal XRP paid in a trade.
+    const before = parseDrops(getPreviousFields(node)?.Balance);
+    const after = parseDrops(finalFields?.Balance);
+    if (before === null || after === null) {
+      throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: missing or malformed account balance; checkpoint NOT advanced.");
+    }
+    deltaDrops += after - before;
+  }
+  if (matched > 1) {
+    throw new Error("UNVERIFIED_XRP_BALANCE_METADATA: duplicate account roots; checkpoint NOT advanced.");
+  }
+  return Number(deltaDrops) / 1_000_000;
 }
 
 function getTxObject(entry: any) {
