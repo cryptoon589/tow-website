@@ -122,7 +122,7 @@ export function assessUncertifiedTradeEvidence(input: {
     const values = [p.TakerPays,a.TakerPays,p.TakerGets,a.TakerGets].map(parseAsset);
     return sameAsset(p.TakerPays,a.TakerPays) &&
       sameAsset(p.TakerGets,a.TakerGets) &&
-      values.every(v => v !== null && Number.isSafeInteger(v) || v !== null && typeof v === "number" && Number.isFinite(v) && v > 0) &&
+      values.every(v => v !== null && Number.isFinite(v) && v > 0) &&
       values[0]! > values[1]! && values[2]! > values[3]!;
   });
   if (!pairOffer) throw new Error("UNVERIFIED_TOW_XRP_EXECUTION_PAIR");
