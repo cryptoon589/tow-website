@@ -11,7 +11,7 @@ const assess = testExports.assessUncertifiedTradeEvidence;
 const wallet = "rFixtureWallet";
 const hash = "A".repeat(64);
 const make = (before,after,fee="12",sender=wallet)=>({
- txHash:hash,walletAddress:wallet,towDelta:10,
+ txHash:hash,walletAddress:wallet,towDelta:10,towCurrency:"TOW",towIssuer:"rIssuer",
  tx:{Account:sender,Fee:fee,TransactionType:"OfferCreate"},
  meta:{TransactionResult:"tesSUCCESS",AffectedNodes:[{ModifiedNode:{
  LedgerEntryType:"AccountRoot",FinalFields:{Account:wallet,Balance:after},
@@ -96,4 +96,28 @@ test("malformed issued amount fails closed",()=>{
  const v=make("100000000","94999988");
  v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerGets.value="10\\x25";
  assert.throws(()=>assess(v),/UNVERIFIED_DEX_EXECUTED_FILL/);
+});
+
+test("executed unrelated issued token cannot attest TOW/XRP trade",()=>{
+ const v=make("100000000","94999988");
+ v.meta.AffectedNodes[1].ModifiedNode.PreviousFields.TakerGets.currency="OTHER";
+ v.meta.AffectedNodes[1].ModifiedNode.FinalFields.TakerGets.currency="OTHER";
+ assert.throws(()=>assess(v),/UNVERIFIED_TOW_XRP_EXECUTION_PAIR/);
+});
+test("executed TOW against another issued asset cannot attest XRP cost",()=>{
+ const v=make("100000000","94999988");
+ const offer=v.meta.AffectedNodes[1].ModifiedNode;
+ offer.PreviousFields.TakerPays={currency:"USD",issuer:"rOtherIssuer",value:"2"};
+ offer.FinalFields.TakerPays={currency:"USD",issuer:"rOtherIssuer",value:"1"};
+ assert.throws(()=>assess(v),/UNVERIFIED_TOW_XRP_EXECUTION_PAIR/);
+});
+test("wrong TOW issuer fails pair verification",()=>{
+ const v=make("100000000","94999988");
+ v.towIssuer="rDifferent";
+ assert.throws(()=>assess(v),/UNVERIFIED_TOW_XRP_EXECUTION_PAIR/);
+});
+test("missing asset identity fails closed",()=>{
+ const v=make("100000000","94999988");
+ delete v.towIssuer;
+ assert.throws(()=>assess(v),/MISSING_TOW_ASSET_IDENTITY/);
 });

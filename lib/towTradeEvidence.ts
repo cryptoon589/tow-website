@@ -34,6 +34,8 @@ export function assessUncertifiedTradeEvidence(input: {
   meta: any;
   walletAddress: string;
   towDelta: number;
+  towCurrency: string;
+  towIssuer: string;
 }): TradeEvidence {
   const { txHash, tx, meta, walletAddress, towDelta } = input;
   if (!/^[0-9A-Fa-f]{64}$/.test(txHash) || !walletAddress ||
@@ -88,6 +90,43 @@ export function assessUncertifiedTradeEvidence(input: {
       beforePays! > afterPays! && beforeGets! > afterGets!;
   });
   if (!executedOffer) throw new Error("UNVERIFIED_DEX_EXECUTED_FILL");
+  // This assessment is specifically for the XRP/TOW pair. An executed
+  // unrelated Offer in the same transaction cannot establish TOW cost.
+  // Caller must supply the exact on-ledger TOW currency and issuer.
+  const pair = input as typeof input & { towCurrency?: string; towIssuer?: string };
+  if (!pair.towCurrency || !pair.towIssuer) {
+    throw new Error("MISSING_TOW_ASSET_IDENTITY");
+  }
+  const normalizeCurrency = (currency: string) => {
+    if (/^[0-9A-Fa-f]{40}$/.test(currency)) {
+      const chars = currency.match(/../g)!.map(hex => String.fromCharCode(parseInt(hex, 16))).join("");
+      return chars.replace(/\\0/g, "").trim().toUpperCase();
+    }
+    return currency.toUpperCase();
+  };
+  const matchesTow = (v: any) =>
+    v && typeof v === "object" && v.issuer === pair.towIssuer &&
+    typeof v.currency === "string" &&
+    normalizeCurrency(v.currency) === normalizeCurrency(pair.towCurrency!);
+  const pairOffer = executionNodes.some((node: any) => {
+    const item = node?.ModifiedNode;
+    if (item?.LedgerEntryType !== "Offer" || !item.PreviousFields || !item.FinalFields) return false;
+    const p = item.PreviousFields, a = item.FinalFields;
+    const isXrp = (v: any) => typeof v === "string";
+    const correctPair = (matchesTow(p.TakerPays) && isXrp(p.TakerGets)) ||
+      (matchesTow(p.TakerGets) && isXrp(p.TakerPays));
+    if (!correctPair) return false;
+    const sameAsset = (x: any,y: any) =>
+      isXrp(x) && isXrp(y) ||
+      matchesTow(x) && matchesTow(y);
+    const values = [p.TakerPays,a.TakerPays,p.TakerGets,a.TakerGets].map(parseAsset);
+    return sameAsset(p.TakerPays,a.TakerPays) &&
+      sameAsset(p.TakerGets,a.TakerGets) &&
+      values.every(v => v !== null && Number.isFinite(v) && v > 0) &&
+      values[0]! > values[1]! && values[2]! > values[3]!;
+  });
+  if (!pairOffer) throw new Error("UNVERIFIED_TOW_XRP_EXECUTION_PAIR");
+
   // The wallet must be a participant in the submitted transaction or in
   // an executed offer. Otherwise its balance changes cannot be attributed
   // to the claimed execution.
