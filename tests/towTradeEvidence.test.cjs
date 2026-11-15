@@ -5,9 +5,9 @@ const vm = require("node:vm");
 const ts = require("typescript");
 const source = fs.readFileSync("lib/towTradeEvidence.ts","utf8");
 const js = ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2019}}).outputText;
-const exports = {};
-vm.runInNewContext(js,{exports,BigInt,Number,String,Array,Error});
-const assess = exports.assessUncertifiedTradeEvidence;
+const testExports = {};
+vm.runInNewContext(js,{exports:testExports,BigInt,Number,String,Array,Error});
+const assess = testExports.assessUncertifiedTradeEvidence;
 const wallet = "rFixtureWallet";
 const hash = "A".repeat(64);
 const make = (before,after,fee="12",sender=wallet)=>({
