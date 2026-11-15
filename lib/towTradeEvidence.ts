@@ -55,6 +55,39 @@ export function assessUncertifiedTradeEvidence(input: {
   if (executionNodes.length === 0) {
     throw new Error("MISSING_DEX_EXECUTION_PROVENANCE");
   }
+  // A modified offer only proves execution when BOTH funded sides decrease.
+  // An Offer node that merely exists in metadata is not a fill. Deleted
+  // offers and AMM nodes need their own independently verified accounting.
+  const parseIssued = (value: any): number | null => {
+    if (!value || typeof value !== "object" ||
+        typeof value.value !== "string" ||
+        !/^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$/.test(value.value)) return null;
+    const n = Number(value.value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const parseAsset = (value: any): number | null =>
+    typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value)
+      ? Number(value) : parseIssued(value);
+  const executedOffer = executionNodes.some((node: any) => {
+    const item = node?.ModifiedNode;
+    if (item?.LedgerEntryType !== "Offer") return false;
+    const previous = item.PreviousFields;
+    const final = item.FinalFields;
+    if (!previous || !final) return false;
+    const beforePays = parseAsset(previous.TakerPays);
+    const afterPays = parseAsset(final.TakerPays);
+    const beforeGets = parseAsset(previous.TakerGets);
+    const afterGets = parseAsset(final.TakerGets);
+    if ([beforePays,afterPays,beforeGets,afterGets].some(v => v === null)) return false;
+    const sameAsset = (a: any,b: any) =>
+      typeof a === "string" && typeof b === "string" ||
+      typeof a === "object" && typeof b === "object" &&
+      a.currency === b.currency && a.issuer === b.issuer;
+    return sameAsset(previous.TakerPays,final.TakerPays) &&
+      sameAsset(previous.TakerGets,final.TakerGets) &&
+      beforePays! > afterPays! && beforeGets! > afterGets!;
+  });
+  if (!executedOffer) throw new Error("UNVERIFIED_DEX_EXECUTED_FILL");
   // The wallet must be a participant in the submitted transaction or in
   // an executed offer. Otherwise its balance changes cannot be attributed
   // to the claimed execution.
